@@ -62,9 +62,9 @@ test("about keeps summary while dialog owns release notes, progress and actions"
   assert.match(render(UpdateDialog, { updater: updater("available"), beforeInstall: async () => {} }), /此版本未提供更新说明/);
 });
 
-test("unknown download size stays indeterminate and check errors describe automatic retry", () => {
+test("unknown download size stays indeterminate and check errors stay manual-only", () => {
   const unknown = render(UpdateDialog, { updater: updater("downloading", { total: null }), beforeInstall: async () => {} });
   assert.match(unknown, /<progress/); assert.doesNotMatch(unknown, /<progress[^>]*value=/);
-  const failed = render(SoftwareUpdate, { updater: updater("check_error", { version: null, next_retry_at: 1800000000000, retry_attempt: 1 }) });
-  assert.match(failed, /自动重试/); assert.match(failed, /检查更新/);
+  const failed = render(SoftwareUpdate, { updater: updater("check_error", { version: null, next_retry_at: null, retry_attempt: 0 }) });
+  assert.doesNotMatch(failed, /自动重试/); assert.match(failed, /检查更新/);
 });

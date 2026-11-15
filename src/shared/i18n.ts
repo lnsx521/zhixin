@@ -137,6 +137,8 @@ const zh = {
     maxVisibleHint: "超出的先关掉最旧的",
     width: "弹窗宽度",
     widthHint: "逻辑像素，随系统缩放自适应；改完下一条通知生效",
+    height: "弹窗高度",
+    heightHint: "0 = 按内容自动；填了就用固定高度",
     filterTitle: "过滤",
     filterDesc:
       "黑名单优先于白名单。App 填 iOS 的 bundle id（如 com.tencent.xin），一行一条。",
@@ -401,6 +403,8 @@ const en: Dict = {
     maxVisibleHint: "Oldest closes first",
     width: "Popup width",
     widthHint: "Logical pixels, DPI-aware; applies to the next notification",
+    height: "Toast height",
+    heightHint: "0 = fit content; otherwise a fixed height",
     filterTitle: "Filters",
     filterDesc:
       "Blocklist wins over allowlist. Apps use iOS bundle ids (e.g. com.tencent.xin), one per line.",

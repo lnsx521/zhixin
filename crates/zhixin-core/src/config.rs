@@ -222,6 +222,10 @@ pub struct PopupOptions {
 
     /// 弹窗宽度（DIP）。
     pub width: f64,
+
+    /// 弹窗高度（DIP），0 = 按内容自动。
+    #[serde(default)]
+    pub height: f64,
 }
 
 impl Default for PopupOptions {
@@ -230,6 +234,7 @@ impl Default for PopupOptions {
             duration_seconds: 8,
             max_visible: 3,
             width: 310.0,
+            height: 0.0,
         }
     }
 }

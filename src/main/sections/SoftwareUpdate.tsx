@@ -14,7 +14,6 @@ function UpdateSummary({ updater }: { updater: Updater }) {
   const { status, error } = updater;
   return <div className="update-panel" aria-live="polite">
     {status && <p className="hint-text">{t[status.phase]}{status.version && ` · v${status.version}`}</p>}
-    {status?.next_retry_at != null && <p className="hint-text">{t.retryAt(new Date(status.next_retry_at).toLocaleTimeString())}</p>}
     {(error || status?.error) && <p className="bad-text" role="alert">{error || status?.error}</p>}
   </div>;
 }

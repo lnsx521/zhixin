@@ -19,6 +19,8 @@ export interface PopupOptions {
   duration_seconds: number;
   max_visible: number;
   width: number;
+  /** 弹窗高度（DIP），0 = 按内容自动 */
+  height: number;
 }
 
 export interface NotificationOptions {

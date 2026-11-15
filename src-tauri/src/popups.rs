@@ -25,7 +25,7 @@ const DEFAULT_HEIGHT: f64 = 96.0;
 
 /// 高度下限/上限（DIP）。上限防止超长通知占满屏幕。
 const MIN_HEIGHT: f64 = 56.0;
-const MAX_HEIGHT: f64 = 240.0;
+const MAX_HEIGHT: f64 = 600.0;
 
 const MARGIN: f64 = 16.0;
 const GAP: f64 = 8.0;
@@ -160,7 +160,18 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
 
 /// 前端量出了真实高度 → 记高度、改尺寸、重排、显示。
 pub fn resize_and_show(app: &AppHandle, label: &str, height_dip: f64) {
-    let height = height_dip.clamp(MIN_HEIGHT, MAX_HEIGHT);
+    // 设置里指定了固定高度就用它；0 = 按内容自动。
+    let configured = app
+        .state::<crate::state::AppState>()
+        .config()
+        .notifications
+        .popup
+        .height;
+    let height = if configured > 0.0 {
+        configured.clamp(MIN_HEIGHT, MAX_HEIGHT)
+    } else {
+        height_dip.clamp(MIN_HEIGHT, MAX_HEIGHT)
+    };
     let state = app.state::<AppState>();
 
     state

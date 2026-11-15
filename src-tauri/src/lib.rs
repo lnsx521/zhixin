@@ -63,7 +63,6 @@ pub fn run() {
             link_worker::spawn(app.handle().clone());
             proximity::spawn(app.handle().clone());
             mdns::spawn(app.handle().clone());
-            updater::start(app.handle().clone());
 
             // 主窗口关到托盘，不退出
             if let Some(main_window) = app.get_webview_window("main") {

@@ -215,22 +215,14 @@ async fn check(app: AppHandle, scheduled_generation: Option<u64>) -> Result<(), 
             Ok(())
         }
         Err(e) => {
+            // 检查更新只由用户手动触发：失败后不再自动重试。
             let error = e.to_string();
-            let mut delay = Duration::ZERO;
-            state.schedule.send_modify(|schedule| {
-                delay = schedule.failed(tokio::time::Instant::now());
-            });
-            let attempt = state.schedule.borrow().failures;
-            let next_retry_at = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .saturating_add(delay)
-                .as_millis() as u64;
+            state.schedule.send_modify(CheckSchedule::success);
             publish(&app, |s| {
                 s.phase = "check_error".into();
                 s.error = Some(error.clone());
-                s.retry_attempt = attempt;
-                s.next_retry_at = Some(next_retry_at);
+                s.retry_attempt = 0;
+                s.next_retry_at = None;
             });
             log::warn!("更新 check_error 失败：{error}");
             Err(error)
@@ -346,24 +338,6 @@ pub async fn install_update(window: tauri::WebviewWindow, app: AppHandle) -> Res
         }
         Err(e) => Err(failure(&app, "download_error", e.to_string())),
     }
-}
-
-pub fn start(app: AppHandle) {
-    if cfg!(debug_assertions) {
-        return;
-    }
-    let state = app.state::<UpdateState>();
-    state.schedule.send_modify(|schedule| {
-        schedule.cancel();
-        schedule.due = Some(tokio::time::Instant::now() + Duration::from_secs(15));
-    });
-    let schedule = state.schedule.subscribe();
-    tauri::async_runtime::spawn(supervise(schedule, move |generation| {
-        let app = app.clone();
-        async move {
-            let _ = check(app, Some(generation)).await;
-        }
-    }));
 }
 
 fn validate_notes_link(url: &str) -> Result<(), String> {

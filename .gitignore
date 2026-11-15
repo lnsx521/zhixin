@@ -28,3 +28,4 @@ Thumbs.db
 # Updater signing secrets (public key belongs in tauri.conf.json)
 *.key
 *.key.password
+.git-rewrite/
