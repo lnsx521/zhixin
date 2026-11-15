@@ -1,0 +1,115 @@
+import { useId } from "react";
+import type { Config, InsertMode } from "../../shared/api";
+import { useT } from "../../shared/i18n";
+import { Disclosure, NumberField, Row, Section, Toggle } from "../components";
+
+interface Props {
+  config: Config;
+  update: (mutate: (draft: Config) => void) => void;
+}
+
+/** 「验证码」页：识别、复制、候选条、填入方式。 */
+export function Otp({ config, update }: Props) {
+  const t = useT();
+  const otp = config.otp;
+  const groupId = useId();
+  const fillMode = otp.auto_fill ? "automatic" : otp.caret.enabled ? "candidate" : "off";
+  const fillOptions = [
+    { value: "off", label: t.otp.fillOff, hint: t.otp.fillOffHint },
+    { value: "candidate", label: t.otp.caretTitle, hint: t.otp.caretDesc },
+    { value: "automatic", label: t.otp.autoFill, hint: t.otp.autoFillHint },
+  ] as const;
+
+  return (
+    <>
+      <Section narrow title={t.ui.detect} action={
+          <Toggle
+            checked={otp.enabled}
+            onChange={(value) => update((d) => void (d.otp.enabled = value))}
+          />
+        }>
+        <Row label={t.otp.autoCopy} hint={t.ui.copyHint}>
+          <Toggle
+            checked={otp.auto_copy}
+            disabled={!otp.enabled}
+            onChange={(value) => update((d) => void (d.otp.auto_copy = value))}
+          />
+        </Row>
+      </Section>
+
+      <Section narrow title={t.otp.insertionTitle} action={
+        <fieldset className="otp-fill-options" role="radiogroup" aria-label={t.otp.insertionTitle}
+          aria-describedby={`${groupId}-hint`} disabled={!otp.enabled}>
+          {fillOptions.map((option) => <label key={option.value} className="otp-fill-option">
+            <input type="radio" name={groupId} value={option.value} checked={fillMode === option.value}
+              onChange={() => update((draft) => {
+                draft.otp.auto_fill = option.value === "automatic";
+                draft.otp.caret.enabled = option.value === "candidate";
+              })} />
+            <span>{option.label}</span>
+          </label>)}
+        </fieldset>
+      }>
+        <p className="otp-fill-hint" id={`${groupId}-hint`}>{fillOptions.find((option) => option.value === fillMode)?.hint}</p>
+        {fillMode === "candidate" && <fieldset className="settings-fields" disabled={!otp.enabled}>
+        <Row label={t.otp.caretDuration}>
+          <NumberField
+            value={otp.caret.duration_seconds}
+            min={2}
+            max={60}
+            suffix={t.common.seconds}
+            onChange={(value) => update((d) => void (d.otp.caret.duration_seconds = value))}
+          />
+        </Row>
+        </fieldset>}
+      </Section>
+      {fillMode !== "off" && <Disclosure title={t.ui.advanced}>
+        <fieldset className="settings-fields" disabled={!otp.enabled}>
+        <Row label={t.otp.watchSeconds} hint={t.otp.watchSecondsHint}>
+          <NumberField
+            value={otp.caret.watch_seconds}
+            min={5}
+            max={600}
+            suffix={t.common.seconds}
+            onChange={(value) => update((d) => void (d.otp.caret.watch_seconds = value))}
+          />
+        </Row>
+        {fillMode === "candidate" && <>
+        <Row label={t.otp.gap} hint={t.otp.gapHint}>
+          <NumberField
+            value={otp.caret.gap}
+            min={0}
+            max={100}
+            suffix="px"
+            onChange={(value) => update((d) => void (d.otp.caret.gap = value))}
+          />
+        </Row>
+        </>}
+        <Row label={t.otp.mode} hint={t.otp.modeHint}>
+          <select
+            className="select"
+            value={otp.insertion.mode}
+            onChange={(event) =>
+              update((d) => void (d.otp.insertion.mode = event.target.value as InsertMode))
+            }
+          >
+            <option value="direct">{t.otp.modeDirect}</option>
+            <option value="simulate">{t.otp.modeSimulate}</option>
+          </select>
+        </Row>
+        {otp.insertion.mode === "simulate" && (
+          <Row label={t.otp.typeDelay}>
+            <NumberField
+              value={otp.insertion.type_delay_ms}
+              min={0}
+              max={1000}
+              suffix="ms"
+              onChange={(value) => update((d) => void (d.otp.insertion.type_delay_ms = value))}
+            />
+          </Row>
+        )}
+        </fieldset>
+      </Disclosure>}
+    </>
+  );
+}

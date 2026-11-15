@@ -1,0 +1,153 @@
+//! 全局应用状态。
+
+use std::collections::{HashMap, VecDeque};
+use std::sync::atomic::{AtomicBool, AtomicU64};
+use std::sync::{Arc, Mutex, RwLock};
+
+use log::{info, warn};
+use zhixin_ble::LinkState;
+use zhixin_core::config::Config;
+use zhixin_core::dedup::NotificationDeduplicator;
+use zhixin_uia::UiaWorker;
+use tauri::AppHandle;
+
+use crate::devices::DeviceRegistry;
+use crate::paths;
+use crate::types::ToastPayload;
+
+pub struct AppState {
+    /// 当前生效的配置（设置界面保存后整体替换）。
+    pub config: RwLock<Config>,
+
+    /// 最近一次链路状态（人话描述 + 补充说明）。
+    pub link_state: RwLock<(LinkState, Option<String>)>,
+
+    /// 通知去重。
+    pub dedup: NotificationDeduplicator,
+
+    /// UIA 工作线程。初始化失败时为 `None`（只损失光标候选功能）。
+    pub uia: RwLock<Option<UiaWorker>>,
+
+    /// 蓝牙链路的停止开关。
+    pub link_stop: Arc<AtomicBool>,
+
+    /// 最近一次「订阅成功」的时间。
+    ///
+    /// iOS 会在订阅成功后重推通知中心存量 —— 之后几秒内到达的通知
+    /// 要按**内容**去重（uid 是新的），否则重启/重连会重弹一堆旧通知。
+    pub subscribed_at: Mutex<Option<std::time::Instant>>,
+
+    /// 本轮 ANCS 会话是否真正收到过 iPhone 数据。
+    ///
+    /// 订阅 API 返回成功不代表 iPhone 已允许「共享系统通知」；只有收到真实
+    /// Notification Source 事件后，UI 才能把链路称为「已就绪」。
+    pub link_verified: AtomicBool,
+
+    /// 低电量提醒是否已弹过（回升后重置，防反复弹）。
+    pub low_battery_warned: AtomicBool,
+
+    pub devices: Mutex<DeviceRegistry>,
+
+    /// 当前打开的 toast 窗口标签（旧的在前）。
+    pub toasts: Mutex<VecDeque<String>>,
+
+    /// 还没来得及被前端取走的 toast 负载（label → payload）。
+    pub pending_toasts: Mutex<HashMap<String, ToastPayload>>,
+
+    /// 最近弹过通知的来源（app_identifier → 显示名），供过滤规则快捷选用。
+    /// 最新在前，去重，上限 50 条。
+    pub known_apps: Mutex<Vec<(String, String)>>,
+
+    /// 每个 toast 的实际高度（DIP）—— 内容多长窗口多高，前端量完报上来。
+    pub toast_heights: Mutex<HashMap<String, f64>>,
+
+    /// toast 窗口编号。
+    pub toast_seq: AtomicU64,
+
+    /// 托盘「开机自启」勾选项（切换时要同步它的勾选状态）。
+    pub autostart_item: Mutex<Option<tauri::menu::CheckMenuItem<tauri::Wry>>>,
+
+    /// 候选会话、目标与写入认领在同一把锁下更新。
+    pub caret: Mutex<crate::caret::CaretState>,
+}
+
+impl AppState {
+    pub fn new(app: &AppHandle) -> Self {
+        let config_path = paths::config_path(app);
+
+        let config = match Config::load_or_default(&config_path) {
+            Ok(config) => config,
+            Err(error) => {
+                // 解析失败（比如旧版配置结构）—— 备份后启用默认，不让用户卡在启动上。
+                warn!("配置读取失败（{error}），备份后使用默认配置");
+                let backup = config_path.with_extension("json.bak");
+                let _ = std::fs::copy(&config_path, backup);
+                Config::default()
+            }
+        };
+
+        let uia =
+            match UiaWorker::spawn(config.otp.insertion.mode, config.otp.insertion.type_delay()) {
+                Ok(worker) => Some(worker),
+                Err(error) => {
+                    warn!("UIA 工作线程启动失败：{error}（光标候选功能不可用）");
+                    None
+                }
+            };
+
+        Self {
+            config: RwLock::new(config),
+            link_state: RwLock::new((LinkState::Stopped, None)),
+            dedup: NotificationDeduplicator::default(),
+            uia: RwLock::new(uia),
+            link_stop: Arc::new(AtomicBool::new(false)),
+            subscribed_at: Mutex::new(None),
+            link_verified: AtomicBool::new(false),
+            low_battery_warned: AtomicBool::new(false),
+            devices: Mutex::new(DeviceRegistry::load(paths::devices_path(app))),
+            toasts: Mutex::new(VecDeque::new()),
+            pending_toasts: Mutex::new(HashMap::new()),
+            known_apps: Mutex::new(Vec::new()),
+            toast_heights: Mutex::new(HashMap::new()),
+            toast_seq: AtomicU64::new(0),
+            autostart_item: Mutex::new(None),
+            caret: Mutex::new(crate::caret::CaretState::default()),
+        }
+    }
+
+    /// 读一份配置快照。
+    pub fn config(&self) -> Config {
+        self.config
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone()
+    }
+
+    /// 替换配置；如果填入方式变了，顺带重启 UIA 工作线程让新配置生效。
+    pub fn apply_config(&self, config: Config) {
+        let mut guard = self
+            .config
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let old = guard.clone();
+        // Same lock order as watch(): no old-config session can start after cancellation.
+        if old.otp != config.otp {
+            self.caret.lock().unwrap().cancel();
+        }
+        *guard = config.clone();
+        drop(guard);
+
+        let insertion_changed = old.otp.insertion.mode != config.otp.insertion.mode
+            || old.otp.insertion.type_delay() != config.otp.insertion.type_delay();
+
+        if insertion_changed {
+            info!("填入方式变化，重启 UIA 工作线程");
+            let mut uia = self
+                .uia
+                .write()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            *uia =
+                UiaWorker::spawn(config.otp.insertion.mode, config.otp.insertion.type_delay()).ok();
+        }
+    }
+}

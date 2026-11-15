@@ -1,0 +1,60 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "知信",
+  "version": "1.0.0",
+  "identifier": "com.zhixin.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "知信",
+        "url": "index.html",
+        "width": 860,
+        "height": 640,
+        "minWidth": 720,
+        "minHeight": 560,
+        "decorations": false,
+        "shadow": true,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "createUpdaterArtifacts": true,
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZEMUQzQ0ZFMkMyMTU2RUQKUldUdFZpRXMvandkL1UyeWd2dm01UWtEcDZQeDhGbFkvd2hDUFUvSDhGOFJjZEdaUDJTMEovbUgK",
+      "endpoints": [
+        "https://github.com/lnsx521/zhixin/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

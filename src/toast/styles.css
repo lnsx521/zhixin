@@ -1,0 +1,222 @@
+/* 知信通知弹窗 —— macOS 通知风格
+ *
+ * 白色半透明玻璃卡 + 16px 圆角 + 细阴影；图标左置，标题半粗、正文次级灰。
+ * 验证码胶囊用品牌蓝，点亮即复制。
+ * 关闭按钮平时隐藏，鼠标悬停卡片才浮出来——和 macOS 一致。
+ * 窗口本身透明，卡片浮在上面（高度由前端量出报给 Rust）。
+ */
+
+html,
+body {
+  background: transparent;
+  overflow: hidden;
+}
+
+body {
+  padding: 4px; /* 给阴影留位置 */
+}
+
+.toast {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  /* 高度由内容决定：前端量它的高度报给 Rust 调窗口 */
+  padding: 12px 14px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.18),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  overflow: hidden;
+  animation: toast-in 0.24s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+:root[data-theme="dark"] .toast {
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(28px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* App 图标：圆角方块底，像 macOS 通知里的小图标 */
+.toast-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  color: var(--text-secondary);
+}
+
+/* 品牌图标：内置官方图标（macosicons.com 256px PNG），整图直显 */
+.toast-icon-img {
+  display: block;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+.toast-icon.brand-official {
+  background: transparent;
+}
+
+.toast-text {
+  flex: 1;
+  min-width: 0;
+  padding-right: 16px; /* 给右上角关闭按钮留位置 */
+}
+
+.toast-origin {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 3px;
+}
+
+.toast-origin-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast-time {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.toast-body {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 验证码：品牌蓝胶囊，点一下即复制 */
+.toast-code {
+  border: 0;
+  cursor: pointer;
+  display: inline-block;
+  margin-top: 0;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.4px;
+  transition: transform 0.15s ease-out;
+}
+.toast-code:active { transform: scale(0.97); }
+
+.toast-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+/* 按钮：macOS 胶囊 */
+.toast-actions button,
+.toast-open {
+  min-height: 24px;
+  padding: 3px 11px;
+  line-height: 17px;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.toast-actions button:hover,
+.toast-open:hover { background: color-mix(in srgb, var(--text) 12%, transparent); }
+
+.toast-error {
+  font-size: 12px;
+  color: var(--danger);
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.toast-code.copied {
+  background: color-mix(in srgb, var(--success) 16%, transparent);
+  color: var(--success);
+}
+
+/* 悬停才出现的关闭按钮（macOS：左上角圆形 ×） */
+.toast-dismiss {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+
+.toast:hover .toast-dismiss { opacity: 1; }
+.toast-dismiss:hover { background: color-mix(in srgb, var(--text) 18%, transparent); color: var(--text); }
+.toast-dismiss:focus-visible { opacity: 1; }
+
+.toast-countdown {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: color-mix(in srgb, var(--text) 18%, transparent);
+  transform-origin: left;
+  animation-name: countdown;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}

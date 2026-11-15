@@ -1,0 +1,202 @@
+/* 知信 设计令牌 —— 所有窗口共用
+ *
+ * 设计取向：苹果系统设置那种「安静的白」。
+ * 浅灰画布上放纯白卡片，靠一层几乎察觉不到的柔和阴影和发丝线分层；
+ * 圆角收敛（10-12px），全局只有一个强调色（苹果蓝），
+ * 开关开启态用苹果绿——全界面唯一两处颜色，其余全是灰阶。
+ */
+
+:root {
+  /* ── 画布与表面 ── */
+  --bg: #f5f5f7;
+  --sidebar: #efeff1;
+  --surface: #ffffff;
+  --surface-hover: #f6f6f8;
+  --border: #e5e5ea;
+
+  /* ── 文字 ── */
+  --text: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-faint: #9a9aa0;
+
+  /* ── 强调 ── */
+  --accent: #3478f6;
+  --accent-strong: #2865d8;
+  --accent-soft: #e9f1fe;
+  --on-accent: #ffffff;
+  --focus: #3478f6;
+
+  /* ── 状态（小面积）── */
+  --success: #2f9e5f;
+  --warning: #c07a17;
+  --danger: #e5484d;
+
+  /* ── 开关 ── */
+  --toggle-on: #34c759;
+  --toggle-off: #d4d4d9;
+
+  /* ── 形状与阴影 ── */
+  --radius: 10px;
+  --radius-lg: 12px;
+
+  /* ── 玻璃（毛玻璃层：标题栏/侧边栏/弹窗）── */
+  --glass-fill: rgba(255, 255, 255, 0.42);
+  --glass-fill-strong: rgba(255, 255, 255, 0.66);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  --glass-highlight: rgba(255, 255, 255, 0.3);
+  --glass-blur: blur(40px) saturate(190%);
+  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), inset 0 -1px 0 rgba(0, 0, 0, 0.05), 0 8px 32px rgba(20, 60, 130, 0.1);
+
+  /* 背景渐变（四套可选，见通用页；深色由底部覆盖块定义） */
+  --bg-g1: #f7f8fa;
+  --bg-g2: #e8eef8;
+
+    /* 背景光斑（玻璃必须有东西可模糊）——液态玻璃路数：光要够亮 */
+  --glow-1: rgba(52, 120, 246, 0.22);
+  --glow-2: rgba(23, 190, 187, 0.16);
+  --glow-3: rgba(255, 170, 80, 0.1);
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-focus: 0 0 0 3px rgba(52, 120, 246, 0.18);
+
+  font-family: -apple-system, "SF Pro Text", "PingFang SC", "Microsoft YaHei", "Segoe UI", Inter, sans-serif;
+  color-scheme: light;
+}
+
+/* 深色：同一套结构，换成夜间灰 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1e1e20;
+    --sidebar: #242426;
+    --surface: #2a2a2d;
+    --surface-hover: #333336;
+    --border: #3a3a3e;
+
+    --text: #f2f2f4;
+    --text-secondary: #a6a6ab;
+    --text-faint: #85858a;
+
+    --accent: #6ea8ff;
+    --accent-strong: #8fbcff;
+    --accent-soft: #2a3547;
+    --on-accent: #ffffff;
+    --focus: #6ea8ff;
+
+    --success: #58c98a;
+    --warning: #dba55a;
+    --danger: #ef8080;
+
+    --toggle-on: #34c759;
+    --toggle-off: #3f3f44;
+
+    --glass-fill: rgba(40, 42, 48, 0.46);
+    --glass-fill-strong: rgba(48, 50, 56, 0.66);
+    --glass-border: rgba(255, 255, 255, 0.16);
+    --glass-highlight: rgba(255, 255, 255, 0.08);
+    --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 -1px 0 rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.45);
+    --glow-1: rgba(110, 168, 255, 0.2);
+    --glow-2: rgba(45, 90, 140, 0.42);
+    --glow-3: rgba(23, 190, 187, 0.12);
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.3);
+    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.25);
+    --shadow-focus: 0 0 0 3px rgba(110, 168, 255, 0.25);
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #1e1e20;
+  --sidebar: #242426;
+  --surface: #2a2a2d;
+  --surface-hover: #333336;
+  --border: #3a3a3e;
+
+  --text: #f2f2f4;
+  --text-secondary: #a6a6ab;
+  --text-faint: #85858a;
+
+  --accent: #6ea8ff;
+  --accent-strong: #8fbcff;
+  --accent-soft: #2a3547;
+  --on-accent: #ffffff;
+  --focus: #6ea8ff;
+
+  --success: #58c98a;
+  --warning: #dba55a;
+  --danger: #ef8080;
+
+  --toggle-on: #34c759;
+  --toggle-off: #3f3f44;
+
+  --glass-fill: rgba(40, 42, 48, 0.46);
+  --glass-fill-strong: rgba(48, 50, 56, 0.66);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --glass-highlight: rgba(255, 255, 255, 0.08);
+  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 -1px 0 rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.45);
+  --glow-1: rgba(110, 168, 255, 0.2);
+  --glow-2: rgba(45, 90, 140, 0.42);
+  --glow-3: rgba(23, 190, 187, 0.12);
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-focus: 0 0 0 3px rgba(110, 168, 255, 0.25);
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: linear-gradient(155deg, var(--bg-g1) 0%, var(--bg-g2) 100%) fixed;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── 背景渐变四套：浅色覆盖 + 深色覆盖（含 classic）── */
+:root[data-bg="blue"] { --bg-g1: #d3e6ff; --bg-g2: #eef6ff; }
+:root[data-bg="warm"] { --bg-g1: #ffe2c8; --bg-g2: #fff2e2; }
+:root[data-bg="mint"] { --bg-g1: #c9efdd; --bg-g2: #ecfff6; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg-g1: #23252b; --bg-g2: #16171c; }
+  :root:not([data-theme="light"])[data-bg="blue"] { --bg-g1: #17283f; --bg-g2: #0f1723; }
+  :root:not([data-theme="light"])[data-bg="warm"] { --bg-g1: #342417; --bg-g2: #191310; }
+  :root:not([data-theme="light"])[data-bg="mint"] { --bg-g1: #12291f; --bg-g2: #0e1713; }
+}
+:root[data-theme="dark"] { --bg-g1: #23252b; --bg-g2: #16171c; }
+:root[data-theme="dark"][data-bg="blue"] { --bg-g1: #17283f; --bg-g2: #0f1723; }
+:root[data-theme="dark"][data-bg="warm"] { --bg-g1: #342417; --bg-g2: #191310; }
+:root[data-theme="dark"][data-bg="mint"] { --bg-g1: #12291f; --bg-g2: #0e1713; }
