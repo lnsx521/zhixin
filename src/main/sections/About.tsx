@@ -41,7 +41,7 @@ export function About({ updater }: { updater: Updater }) {
       </div>
       <div className="about-support"><p className="about-community-note"><Icon name="star" size={14} />{t.about.starHint}</p>
         <button className="about-stars" aria-label={t.about.starAction} onClick={() => void open("repository")}>
-          <Badge src="https://img.shields.io/github/stars/fxaxg/sms-pop-rs?style=flat-square&label=Stars&color=737373" label={t.about.starsBadge} />
+          <Badge src="https://img.shields.io/github/stars/lnsx521/zhixin?style=flat-square&label=Stars&color=737373" label={t.about.starsBadge} />
         </button>
       </div>
     </section>
@@ -51,9 +51,9 @@ export function About({ updater }: { updater: Updater }) {
     <section className="about-community" aria-label={t.about.contributors}>
       <div className="about-community-heading"><h2>{t.about.contributors}</h2></div>
       <div className="about-contributors">
-        <button className="about-maintainer" onClick={() => void open("author")}>
-          <span className="about-avatar">F</span>
-          <span><strong>@fxaxg</strong><small>{t.about.maintainer}</small></span>
+        <button className="about-maintainer" onClick={() => void open("maintainer")}>
+          <span className="about-avatar">L</span>
+          <span><strong>@lnsx521</strong><small>{t.about.maintainer}</small></span>
           <Icon name="external" size={14} />
         </button>
         <button className="btn about-link" onClick={() => void open("contributors")}>{t.about.allContributors}<Icon name="external" size={14} /></button>

@@ -99,7 +99,7 @@ export const setAutostart = (enabled: boolean) =>
 export const openConfigDir = () => invoke<void>("open_config_dir");
 export const openLogsDir = () => invoke<void>("open_logs_dir");
 export const openBluetoothSettings = () => invoke<void>("open_bluetooth_settings");
-export type ProjectLink = "repository" | "contributors" | "issues" | "author";
+export type ProjectLink = "repository" | "maintainer" | "contributors" | "issues" | "author";
 export const openProjectLink = (target: ProjectLink) => invoke<void>("open_project_link", { target });
 
 export interface HttpDevice { id: string; name: string; allow_copy: boolean; last_received: number | null }

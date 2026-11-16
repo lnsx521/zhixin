@@ -130,6 +130,7 @@ pub fn open_project_link(window: tauri::WebviewWindow, target: String) -> Result
     }
     let url = match target.as_str() {
         "repository" => "https://github.com/lnsx521/zhixin",
+        "maintainer" => "https://github.com/lnsx521",
         "contributors" => "https://github.com/lnsx521/zhixin/graphs/contributors",
         "issues" => "https://github.com/lnsx521/zhixin/issues",
         "author" => "https://github.com/fxaxg",
