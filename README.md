@@ -69,11 +69,10 @@
 
 ## 开发
 
-### 官网与文档
+### 文档站
 
-网站源码位于 `website/`，独立于桌面应用构建。运行 `npm --prefix website ci` 安装依赖，
-运行 `npm --prefix website run dev` 本地预览。内容维护、CI 范围与 GitHub Pages 发布设置见
-[网站说明](website/README.md)。
+仓库内附带 `website/` 文档站源码（沿用自上游），独立于桌面应用构建，可按需修改或移除。
+运行 `npm --prefix website ci` 安装依赖，`npm --prefix website run dev` 本地预览。
 
 ### 桌面应用
 
@@ -114,10 +113,6 @@ Windows 安装包输出到 `target/release/bundle/nsis/`。应用图标源文件
 ## 贡献
 
 欢迎提交可复现的问题、设备兼容性结果和改进建议。开发流程、测试要求见 [CONTRIBUTING.md](CONTRIBUTING.md)。
-
-## 友链
-
-- [Linux.do](https://linux.do/)
 
 ## 许可证
 
