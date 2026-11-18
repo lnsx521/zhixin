@@ -11,7 +11,6 @@
 //! （Origin 必须与 Host 一致，导航与 curl 无 Origin 不受限）。
 
 use std::collections::HashMap;
-use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 
 use axum::{
@@ -195,38 +194,6 @@ fn collect_files<'a>(
     })
 }
 
-/// 图片/视频扩展名判断（按日期归档用）。
-fn is_media(name: &str) -> bool {
-    let lower = name.to_lowercase();
-    [".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".bmp", ".mp4", ".mov"]
-        .iter()
-        .any(|ext| lower.ends_with(ext))
-}
-
-/// 本地日期（YYYY-MM-DD），用于媒体归档子目录（东八区，主场景中国用户）。
-fn today_folder() -> String {
-    let secs = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs() as i64
-        + 8 * 3600;
-    civil_from_days(secs / 86400)
-}
-
-fn civil_from_days(days: i64) -> String {
-    let z = days + 719_468;
-    let era = z / 146_097;
-    let doe = z - era * 146_097;
-    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
-    let y = yoe + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let d = doy - (153 * mp + 2) / 5 + 1;
-    let m = if mp < 10 { mp + 3 } else { mp - 9 };
-    let y = if m <= 2 { y + 1 } else { y };
-    format!("{y:04}-{m:02}-{d:02}")
-}
-
 async fn upload(
     State(app): State<AppHandle>,
     headers: HeaderMap,
@@ -250,15 +217,8 @@ async fn upload(
         let Some(name) = sanitize_name(&raw_name) else {
             continue;
         };
-        // 图片/视频按日期归档：接收文件夹/图片/2026-11-18/文件名
-        let target_dir = if is_media(&name) {
-            let sub = dir.join("图片").join(&today);
-            let _ = std::fs::create_dir_all(&sub);
-            sub
-        } else {
-            dir.clone()
-        };
-        let target = unique_path(&target_dir, &name);
+        // 一律平铺在接收文件夹根目录（老板定：不按类型/日期建子文件夹）
+        let target = unique_path(&dir, &name);
         let file = match tokio::fs::File::create(&target).await {
             Ok(f) => f,
             Err(e) => {
