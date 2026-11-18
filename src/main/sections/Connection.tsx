@@ -22,15 +22,20 @@ export function Connection() {
   const [devices, setDevices] = useState<ManagedDevice[]>([]);
   const [deviceError, setDeviceError] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+  // 配对修复引导：已配对但通知共享未开启（长时间不就绪）→ 显示修复指引
+  const [notReadySince, setNotReadySince] = useState<number | null>(null);
+  const [, tick] = useState(0);
 
   useEffect(() => {
     getLinkState().then(setLink).catch(() => {});
     listDevices().then(setDevices).catch(() => {});
     const unlisten = onLinkState(setLink);
     const unlistenDevices = onDevicesChanged(setDevices);
+    const timer = setInterval(() => tick((n) => n + 1), 3000);
     return () => {
       unlisten.then((fn) => fn());
       unlistenDevices.then((fn) => fn());
+      clearInterval(timer);
     };
   }, []);
 
@@ -47,6 +52,17 @@ export function Connection() {
   const unsupported = link?.state === "adapter_unsupported";
   const failed = unsupported || link?.state === "faulted";
   const ready = link?.ready ?? false;
+
+  // 已连接但长时间不就绪 → 很可能是 iPhone 通知共享开关没开
+  useEffect(() => {
+    if (link && !link.ready && !unsupported && !failed) {
+      if (notReadySince === null) setNotReadySince(Date.now());
+    } else {
+      setNotReadySince(null);
+    }
+  }, [link?.state, link?.ready, notReadySince, unsupported, failed]);
+  const showPairingGuide =
+    notReadySince !== null && Date.now() - notReadySince > 20000 && !showGuide;
   const stateLabel = link
     ? link.ready
       ? t.connection.readyTitle
@@ -136,6 +152,16 @@ export function Connection() {
         )}
       </Section>
 
+      {showPairingGuide && (
+        <div className="status-card" style={{ borderLeft: "3px solid #34c759" }}>
+          <div>
+            <strong>{t.connection.pairingGuideTitle}</strong>
+            <p className="status-detail">{t.connection.pairingGuideStep1}</p>
+            <p className="status-detail">{t.connection.pairingGuideStep2}</p>
+          </div>
+          <button className="btn" onClick={() => setShowGuide(true)}>{t.connection.diagnostics}</button>
+        </div>
+      )}
       {failed && <button className="btn" onClick={() => setShowGuide(true)}>{t.connection.diagnostics}</button>}
       {link?.detail && <details className="diagnostic-details"><summary>{t.connection.details}</summary><p className="status-detail">{link.detail}</p></details>}
       {showGuide && <ConnectionGuide onClose={() => setShowGuide(false)} />}

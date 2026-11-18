@@ -109,6 +109,18 @@ export const setAppIcon = (appId: string, name: string, dataUrl: string) =>
 export const resetAppIcon = (appId: string) => invoke<void>("reset_app_icon", { appId });
 export const clearIconCache = () => invoke<void>("clear_icon_cache");
 export const openIconsDir = () => invoke<void>("open_icons_dir");
+export interface HistoryEntry {
+  received_at: number;
+  app_id: string | null;
+  origin: string;
+  body: string;
+  code: string | null;
+  category: number | null;
+}
+export const listNotificationHistory = (query: string, limit: number) =>
+  invoke<HistoryEntry[]>("list_notification_history", { query, limit });
+export const clearNotificationHistory = () => invoke<void>("clear_notification_history");
+export const exportNotificationHistory = () => invoke<string>("export_notification_history");
 export const openBluetoothSettings = () => invoke<void>("open_bluetooth_settings");
 export type ProjectLink = "repository" | "maintainer" | "contributors" | "issues" | "author";
 export const openProjectLink = (target: ProjectLink) => invoke<void>("open_project_link", { target });

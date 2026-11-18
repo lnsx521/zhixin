@@ -5,6 +5,7 @@ import appIcon from "../shared/app-icon.svg";
 import { Connection } from "./sections/Connection";
 import { Notifications } from "./sections/Notifications";
 import { General } from "./sections/General";
+import { History } from "./sections/History";
 import { Proximity } from "./sections/Proximity";
 import { About } from "./sections/About";
 import { Network } from "./sections/Network";
@@ -16,14 +17,14 @@ import { Titlebar } from "./Titlebar";
 import { useUpdater } from "./useUpdater";
 import { UpdateNotice, UpdateDialog } from "./sections/SoftwareUpdate";
 
-type Page = "connection" | "notifications" | "proximity" | "network" | "transfer" | "general" | "about";
+type Page = "connection" | "notifications" | "proximity" | "network" | "transfer" | "history" | "general" | "about";
 
 const NAV_ICONS: Record<Page, IconName> = {
   connection: "phone",
   notifications: "bell",
   proximity: "lock",
   network: "external",
-  transfer: "folder",
+  transfer: "folder", history: "message",
   general: "settings",
   about: "info",
 };
@@ -148,6 +149,7 @@ function Shell(props: {
     { key: "connection", label: t.nav.connection },
     { key: "network", label: t.nav.network },
     { key: "transfer", label: t.nav.transfer },
+    { key: "history", label: t.nav.history },
     { key: "notifications", label: t.nav.notifications },
     { key: "proximity", label: t.nav.proximity },
     { key: "general", label: t.nav.general },
@@ -199,6 +201,7 @@ function Shell(props: {
                 <button className="btn" onClick={() => void openTransferFolder().catch(() => {})}>{t.general.openDir}</button>
               </div>
             )}
+            {page === "history" && <History />}
           </header>
           {error && <div className="error-banner">{error}</div>}
           {saveError && <div className="error-banner" role="alert">

@@ -52,8 +52,49 @@ pub fn list_known_apps(
         .collect())
 }
 
+/// 全屏勿扰：检测系统进入全屏（视频/投屏/游戏）时通知暂存，退出全屏后自动补弹。
+fn is_fullscreen() -> bool {
+    use windows::Win32::UI::Shell::SHQueryUserNotificationState;
+    unsafe {
+        match SHQueryUserNotificationState() {
+            Ok(state) => matches!(
+                state,
+                windows::Win32::UI::Shell::QUERY_USER_NOTIFICATION_STATE(2)
+                    | windows::Win32::UI::Shell::QUERY_USER_NOTIFICATION_STATE(4)
+                    | windows::Win32::UI::Shell::QUERY_USER_NOTIFICATION_STATE(6)
+            ),
+            Err(_) => false,
+        }
+    }
+}
+
+/// 全屏退出轮询：每 2 秒检查一次，退出全屏后按序补弹暂存通知。
+pub fn start_fullscreen_watch(app: &AppHandle) {
+    let app = app.clone();
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_secs(2));
+        if is_fullscreen() {
+            continue;
+        }
+        let pending: Vec<PhoneNotification> = {
+            let state = app.state::<AppState>();
+            let mut queue = state.deferred_notifications.lock().unwrap();
+            std::mem::take(&mut *queue)
+        };
+        for notification in pending {
+            show(&app, &notification);
+        }
+    });
+}
+
 /// 弹一条通知。
 pub fn show(app: &AppHandle, notification: &PhoneNotification) {
+    if is_fullscreen() {
+        let state = app.state::<AppState>();
+        state.deferred_notifications.lock().unwrap().push(notification.clone());
+        info!("全屏勿扰：通知暂存（{} 条待补弹）", state.deferred_notifications.lock().unwrap().len());
+        return;
+    }
     let state = app.state::<AppState>();
     let config = state.config();
     let popup = &config.notifications.popup;
@@ -88,6 +129,9 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
     };
 
     info!("弹窗：{} — {}", payload.origin, payload.body);
+
+    // 通知历史留档（含验证码，敏感数据仅本地存储）
+    crate::history::record(app, notification);
 
     // 联网获取 App 图标（开关打开时）：后台静默，失败不影响通知
     if let Some(app_id) = payload.app_id.clone().filter(|id| !id.trim().is_empty()) {

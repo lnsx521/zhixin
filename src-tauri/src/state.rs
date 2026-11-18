@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use log::{info, warn};
 use zhixin_ble::LinkState;
 use zhixin_core::config::Config;
+use zhixin_core::model::PhoneNotification;
 use zhixin_core::dedup::NotificationDeduplicator;
 use zhixin_uia::UiaWorker;
 use tauri::AppHandle;
@@ -16,6 +17,8 @@ use crate::paths;
 use crate::types::ToastPayload;
 
 pub struct AppState {
+    /// 全屏勿扰：暂存待补弹的通知。
+    pub deferred_notifications: std::sync::Mutex<Vec<PhoneNotification>>,
     /// 当前生效的配置（设置界面保存后整体替换）。
     pub config: RwLock<Config>,
 
@@ -96,6 +99,7 @@ impl AppState {
             };
 
         Self {
+            deferred_notifications: std::sync::Mutex::new(Vec::new()),
             config: RwLock::new(config),
             link_state: RwLock::new((LinkState::Stopped, None)),
             dedup: NotificationDeduplicator::default(),

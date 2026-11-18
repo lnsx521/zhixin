@@ -23,6 +23,7 @@ use axum::{
 };
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
+use tauri_plugin_clipboard_manager::ClipboardExt;
 
 use crate::state::AppState;
 
@@ -387,8 +388,21 @@ pub fn router(app: AppHandle) -> Router {
         .route("/transfer/upload", post(upload))
         .route("/transfer/list", get(list))
         .route("/transfer/file/{name}", get(download))
+        .route("/transfer/clipboard", get(get_clipboard).post(set_clipboard))
         .layer(DefaultBodyLimit::max(MAX_BODY))
         .with_state(app)
+}
+
+// ── 剪贴板双向同步（手机网页 ⇄ 电脑剪贴板）──────────────────
+
+async fn get_clipboard(State(app): State<AppHandle>) -> impl IntoResponse {
+    let text = app.clipboard().read_text().unwrap_or_default();
+    ([(axum::http::header::CONTENT_TYPE, "text/plain; charset=utf-8")], text)
+}
+
+async fn set_clipboard(State(app): State<AppHandle>, body: String) -> impl IntoResponse {
+    let _ = app.clipboard().write_text(body.trim().to_string());
+    ([(axum::http::header::CONTENT_TYPE, "text/plain; charset=utf-8")], "ok")
 }
 
 // ── 手机页面 ──────────────────────────────
@@ -470,11 +484,31 @@ const PAGE_HTML: &str = r#"<!doctype html>
     <p class="muted" style="margin:0 0 4px">电脑上的文件</p>
     <div id="list"></div>
   </div>
+  <div class="card">
+    <h2>剪贴板</h2>
+    <p style="font-size:13px;color:#5f5e5a;margin:0 0 10px">手机贴入文字，传到电脑剪贴板；也可以把电脑剪贴板取过来。</p>
+    <textarea id="clip" style="width:100%;min-height:70px;font:inherit;box-sizing:border-box" placeholder="输入要传到电脑的文字"></textarea>
+    <button class="btn" id="clip-send" style="margin-top:8px">发送到电脑剪贴板</button>
+    <button class="btn" id="clip-get" style="margin-top:8px">取电脑剪贴板</button>
+    <div id="clip-out" style="margin-top:8px;font-size:13px;color:#5f5e5a;white-space:pre-wrap;word-break:break-all"></div>
+  </div>
   <div class="toast" id="toast"></div>
 <script>
   var TOKEN = new URLSearchParams(location.search).get('t') || new URLSearchParams(location.search).get('token') || '';
   var toastEl = document.getElementById('toast');
   var toastTimer = null;
+  var clipOut = document.getElementById('clip-out');
+  document.getElementById('clip-send').onclick = async function () {
+    var text = document.getElementById('clip').value;
+    if (!text.trim()) { toast('先输入文字'); return; }
+    var res = await fetch('/transfer/clipboard?t=' + encodeURIComponent(TOKEN), { method: 'POST', body: text });
+    toast(res.ok ? '已发送到电脑剪贴板' : '发送失败');
+  };
+  document.getElementById('clip-get').onclick = async function () {
+    var res = await fetch('/transfer/clipboard?t=' + encodeURIComponent(TOKEN));
+    clipOut.textContent = await res.text();
+  };
+
   function toast(text) {
     toastEl.textContent = text; toastEl.classList.add('show');
     clearTimeout(toastTimer);

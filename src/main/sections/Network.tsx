@@ -47,6 +47,24 @@ export function Network() {
         </div>
       </div>
     </Section>
+    <Section wide title={text("安卓推送接入","Android push setup")} action={
+      <button className="network-interface" disabled={!status||!status.token} onClick={async () => {
+        if (!status?.token) return;
+        const config = [
+          "知信 · 安卓推送接入配置（SmsForwarder / MacroDroid）",
+          `服务地址: http://${host}:${port}/api/v1/notifications?t=${status.token}&text=[短信内容]`,
+          `服务器: http://${host}:${port}`,
+          `令牌: ${status.token}`,
+          "",
+          "SmsForwarder 步骤：主动上报 → 短信 → Webhook，请求方式 POST，URL 填上面第一条。",
+          "MacroDroid 步骤：触发器=收到短信 → 动作=HTTP POST → URL 同上。",
+        ].join("\n");
+        await writeText(config);
+        window.alert(text("安卓配置已复制到剪贴板","Android setup copied to clipboard"));
+      }}>复制安卓接入配置</button>
+    }>
+      <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0 }}>{text("安卓手机不用装本软件：用自动化工具（SmsForwarder / MacroDroid）把短信 POST 到知信即可。点右上角按钮复制完整配置。","Android phones don't need this app: use automation tools to POST SMS to zhixin. Copy the full config from the button.")}</p>
+    </Section>
     <Disclosure title={t.guide} hint={t.guideHint}>
       <p className="hint-text">{text("若无法访问，请检查本机防火墙配置。","If unreachable, check your local firewall configuration.")}</p>
       <Disclosure title={t.generic}>

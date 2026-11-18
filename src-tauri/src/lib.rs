@@ -6,6 +6,7 @@ mod app_launcher;
 mod caret;
 mod commands;
 mod devices;
+mod history;
 mod http_ingress;
 mod icon_store;
 mod link_worker;
@@ -119,6 +120,9 @@ pub fn run() {
             icon_store::reset_app_icon,
             icon_store::clear_icon_cache,
             icon_store::open_icons_dir,
+            history::list_notification_history,
+            history::clear_notification_history,
+            history::export_notification_history,
             commands::open_config_dir,
             commands::open_logs_dir,
             commands::open_project_link,
