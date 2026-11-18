@@ -145,7 +145,6 @@ body::before {
 
 /* 普通流式布局：左对齐、限宽 980px——当前窗口铺满，超宽屏不散架 */
 .content > * { max-width: 980px; margin-left: 0; margin-right: auto; }
-.content > .about-page { max-width: 840px; margin-inline: auto; }
 
 /* ── 分区卡片 ────────────────────────────── */
 
@@ -566,14 +565,15 @@ body::before {
 
 /* ── 关于页 ─────────────────────────────── */
 
-.about-page { max-width: 840px; margin: 0 auto; display: flex; flex-direction: column; }
+.about-page { width: 100%; max-width: 980px; display: flex; flex-direction: column; }
 .about-page .about-footer { margin-top: auto; }
 .content:has(.about-page) { padding-bottom: 28px; display: flex; flex-direction: column; }
 .content:has(.about-page) .about-page { flex: 1; }
 .content:has(.about-page) .page-header { margin-bottom: 20px; }
 .about-hero {
-  padding: 22px 24px 20px; border: 1px solid var(--border); border-radius: var(--radius-lg);
-  background: var(--surface); box-shadow: var(--shadow); margin-bottom: 18px;
+  padding: 22px 26px 20px; border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+  background: var(--glass-fill); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  margin-bottom: 18px;
 }
 .about-identity { display: flex; flex-direction: row; align-items: stretch; gap: 14px; }
 /* 文字列撑满图标高度：软件名顶端对齐图标顶端，slogan 底端对齐图标底端 */
@@ -591,7 +591,7 @@ body::before {
 .about-version { display: inline; margin-left: 6px; font-size: 12.5px; letter-spacing: 0; color: var(--text-secondary); font-weight: 400; }
 .about-identity p { margin: 0; color: var(--text-secondary); }
 .about-identity .about-hero-content p { font-size: 14px; }
-.about-update { padding: 4px 26px 20px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); margin-bottom: 18px; }
+.about-update { padding: 4px 26px 20px; border: 1px solid var(--glass-border); border-radius: var(--radius-lg); background: var(--glass-fill); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); margin-bottom: 18px; }
 .about-update .row { align-items: center; padding-bottom: 8px; }
 .about-update .row-label > span { font-weight: 600; }
 .about-update .update-panel > p:first-child { margin: 0; font-size: 12px; }
@@ -883,3 +883,6 @@ body::before {
   0%, 70% { opacity: 1; }
   100% { opacity: 0; }
 }
+
+/* 关于页按钮不折行 */
+.about-update .btn { white-space: nowrap; }

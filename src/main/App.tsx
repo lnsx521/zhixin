@@ -13,7 +13,6 @@ import { Transfer } from "./sections/Transfer";
 import { Icon, type IconName } from "../shared/Icon";
 import { applyTheme } from "../shared/theme";
 import { AutoSave, type SaveStatus } from "../shared/autosave";
-import { getSettingsMeta } from "../shared/api";
 import { Titlebar } from "./Titlebar";
 import { useUpdater } from "./useUpdater";
 import { UpdateNotice, UpdateDialog } from "./sections/SoftwareUpdate";
@@ -145,12 +144,8 @@ function Shell(props: {
   const t = useT();
   const updater = useUpdater();
   const [historyQuery, setHistoryQuery] = useState("");
-  const [appVersion, setAppVersion] = useState("");
   const { page, setPage, config, update, saveStatus, saveError, error, retry, beforeClose } = props;
 
-  useEffect(() => {
-    getSettingsMeta().then((meta) => setAppVersion(meta.version)).catch(() => {});
-  }, []);
 
   const nav: { key: Page; label: string }[] = [
     { key: "connection", label: t.nav.connection },
@@ -191,7 +186,6 @@ function Shell(props: {
           </nav>
           <div className="sidebar-foot">
             <UpdateNotice updater={updater} />
-            <div className="sidebar-version">知信 v{appVersion || "…"}</div>
           </div>
         </aside>
 

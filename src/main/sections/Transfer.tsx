@@ -137,6 +137,15 @@ export function Transfer() {
         <p className="hint-text">{text("未找到可用网卡地址。", "No usable network address found.")}</p>
       )}
 
+      <Disclosure title={text("iOS 快捷指令设置（把手机文件分享到电脑）", "iOS Shortcuts setup (share phone files to PC)")} hint={text("教程已从手机页移到这里", "Moved from the phone page")}>
+        <p style={{ fontSize: 13.5, lineHeight: 1.75, margin: "0 0 10px", color: "var(--text-secondary)" }}>
+          {text(
+            "在 iPhone 的快捷指令 App 新建指令：① 添加「从共享表单接收」，类型选「图像」或「文件」；② 添加「获取 URL 内容」：方法选 POST，URL 填下方地址（选择上方局域网地址），请求体选「表单」，添加字段 file，值选「快捷指令输入」；③ 命名保存。以后在照片里点「分享」→ 选它，照片直接传到这台电脑。",
+            "In the iPhone Shortcuts app: 1) Add "Receive from Share Sheet" (Images/Files); 2) Add "Get contents of URL" — POST to the LAN address above, Form body, field file = Shortcut Input; 3) Save. Then share photos to it from the share menu."
+          )}
+        </p>
+      </Disclosure>
+
       {error && <p className="bad-text" role="alert">{error}</p>}
     </>
   );

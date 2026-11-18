@@ -448,17 +448,6 @@ const PAGE_HTML: &str = r#"<!doctype html>
     font-family: -apple-system, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
     background: #f5f5f7; color: #1d1d1f; font-size: 15px; line-height: 1.6;
   }
-  @media (prefers-color-scheme: dark) {
-    body { background: #1e1e20; color: #f2f2f4; }
-    .card { background: #2a2a2d; border-color: #3a3a3e; }
-    .muted { color: #a6a6ab; }
-    .file-meta { color: #a6a6ab; }
-    .empty { color: #a6a6ab; }
-    .row { border-bottom-color: rgba(255,255,255,.09); }
-    .btn.secondary { background: #2c3d5c; color: #8ab4ff; }
-    .file-get { background: #2c3d5c; color: #8ab4ff; }
-    .toast { background: rgba(60,60,64,.96); }
-  }
   .card {
     background: #ffffff; border: 1px solid #e5e5ea; border-radius: 14px;
     padding: 18px; margin-bottom: 16px;
@@ -489,26 +478,40 @@ const PAGE_HTML: &str = r#"<!doctype html>
     font-size: 13px; opacity: 0; transition: all .25s; pointer-events: none; max-width: 86vw;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .help-toggle {
+    border: 0; background: transparent; color: #3478f6; font-size: 12px;
+    font-weight: 600; cursor: pointer; padding: 2px 4px;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1e1e20; color: #f2f2f4; }
+    .card { background: #2a2a2d; border-color: #3a3a3e; }
+    .muted { color: #a6a6ab; }
+    .file-meta { color: #a6a6ab; }
+    .empty { color: #a6a6ab; }
+    .row { border-bottom-color: rgba(255,255,255,.09); }
+    .btn.secondary { background: #2c3d5c; color: #8ab4ff; }
+    .file-get { background: #2c3d5c; color: #8ab4ff; }
+    .toast { background: rgba(60,60,64,.96); }
+    .help-toggle { color: #8ab4ff; }
+  }
 </style>
 </head>
 <body>
   <div class="card">
-    <h1>知信 · 文件互传</h1>
-    <p class="muted">上传的文件会出现在电脑的接收文件夹；下方列表可下载到手机。</p>
-  </div>
-  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="font-size:12px;color:#6e6e73">知信 · 文件互传</span>
+      <button class="help-toggle" id="help-toggle">ⓘ 帮助</button>
+    </div>
     <button class="btn" id="pick">选择文件上传</button>
     <button class="btn secondary" id="camera">拍照或录像上传</button>
     <input type="file" id="files" multiple>
     <input type="file" id="capture" accept="image/*,video/*" capture="environment">
-  </div>
-  <div class="card">
-    <p class="muted" style="margin:0 0 6px">配到 iPhone「分享」菜单（可选）</p>
-    <p style="font-size:13.5px;line-height:1.75;margin:0 0 12px">在快捷指令 App 新建指令：<br>① 添加「从共享表单接收」，类型选「图像」或「文件」；<br>② 添加「获取 URL 内容」：方法选 POST，URL 填下面这条，请求体选「表单」，添加字段 file，值选「快捷指令输入」；<br>③ 命名保存。以后在照片里点「分享」→ 选它，照片直接传到这台电脑。</p>
-    <button class="btn secondary" id="copyurl">复制上传地址</button>
-  </div>
-  <div class="card">
-    <p class="muted" style="margin:0 0 4px">电脑上的文件</p>
+    <div id="help-box" style="display:none">
+      <p class="muted" style="margin:10px 0 6px">配到 iPhone「分享」菜单（可选）</p>
+      <p style="font-size:13px;line-height:1.7;margin:0 0 10px">在快捷指令 App 新建指令：<br>① 添加「从共享表单接收」，类型选「图像」或「文件」；<br>② 添加「获取 URL 内容」：方法选 POST，URL 填下面这条，请求体选「表单」，添加字段 file，值选「快捷指令输入」；<br>③ 命名保存。以后在照片里点「分享」→ 选它，照片直接传到这台电脑。</p>
+      <button class="btn secondary" id="copyurl">复制上传地址</button>
+    </div>
+    <p class="muted" style="margin:12px 0 4px">电脑上的文件</p>
     <div id="list"></div>
   </div>
   </div>
@@ -523,6 +526,11 @@ const PAGE_HTML: &str = r#"<!doctype html>
   var TOKEN = new URLSearchParams(location.search).get('t') || new URLSearchParams(location.search).get('token') || '';
   var toastEl = document.getElementById('toast');
   var toastTimer = null;
+  document.getElementById('help-toggle').onclick = function () {
+    var box = document.getElementById('help-box');
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  };
+
   function toast(text) {
     toastEl.textContent = text; toastEl.classList.add('show');
     clearTimeout(toastTimer);
