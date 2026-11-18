@@ -12,6 +12,7 @@ mod icon_store;
 mod link_worker;
 mod mdns;
 mod paths;
+mod phone_location;
 mod popups;
 mod proximity;
 mod state;

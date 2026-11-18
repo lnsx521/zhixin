@@ -220,6 +220,8 @@ export interface ToastPayload {
   duration_secs: number;
   /** iOS 通知分类：1 = 来电 */
   category: number | null;
+  /** 来电归属地（"城市 · 运营商"），来电且有号段数据时提供 */
+  location: string | null;
 }
 
 export const getToastPayload = () => invoke<ToastPayload | null>("get_toast_payload");
