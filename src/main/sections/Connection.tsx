@@ -25,6 +25,19 @@ export function Connection() {
   // 配对修复引导：已配对但通知共享未开启（长时间不就绪）→ 显示修复指引
   const [notReadySince, setNotReadySince] = useState<number | null>(null);
   const [, tick] = useState(0);
+  // 静默窗口：来电挂断等场景链路 ~3 秒内自愈，界面保持原状态不闪烁；
+  // 超过 3 秒仍未恢复才显示「重连中」。
+  const [displayLink, setDisplayLink] = useState<LinkStatePayload | null>(null);
+
+  useEffect(() => {
+    if (!link || link.ready || link.state === "adapter_unsupported" || link.state === "faulted") {
+      setDisplayLink(link);
+      return;
+    }
+    // 非就绪状态：延迟 3 秒才上屏
+    const timer = setTimeout(() => setDisplayLink(link), 3000);
+    return () => clearTimeout(timer);
+  }, [link?.state, link?.ready, link?.label]);
 
   useEffect(() => {
     getLinkState().then(setLink).catch(() => {});
