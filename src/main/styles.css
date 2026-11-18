@@ -564,23 +564,29 @@ body::before {
 
 /* ── 关于页 ─────────────────────────────── */
 
-.about-page { max-width: 780px; margin: 0 auto; }
+.about-page { max-width: 840px; margin: 0 auto; }
 .content:has(.about-page) { padding-bottom: 28px; }
 .content:has(.about-page) .page-header { margin-bottom: 20px; }
 .about-hero {
   padding: 22px 24px 20px; border: 1px solid var(--border); border-radius: var(--radius-lg);
   background: var(--surface); box-shadow: var(--shadow); margin-bottom: 18px;
 }
-.about-identity { display: flex; flex-direction: row; align-items: center; gap: 14px; }
-.about-hero-content { min-width: 0; max-width: 100%; text-align: left; }
+.about-identity { display: flex; flex-direction: row; align-items: stretch; gap: 14px; }
+/* 文字列撑满图标高度：软件名顶端对齐图标顶端，slogan 底端对齐图标底端 */
+.about-hero-content { display: flex; flex-direction: column; justify-content: space-between; }
+.about-hero-content { min-width: 0; max-width: 100%; text-align: left; display: flex; flex-direction: column; justify-content: space-between; }
+.about-hero-content h2 { line-height: 1.1; margin: 0; }
+.about-hero-content p { line-height: 1.4; margin: 0; font-size: 16px; }
+.about-actions { justify-content: flex-start; margin-top: 12px; }
 .about-hero-content h2 { margin: 0; }
-.about-hero-content p { margin: 2px 0 0; }
+.about-hero-content p { margin: 2px 0 0; font-size: 16px; }
 .about-hero .about-app-icon { margin: 0; }
-.about-app-icon { width: 76px; height: 76px; flex-shrink: 0; filter: drop-shadow(0 6px 12px rgba(0,0,0,.10)); }
+.about-app-icon { width: 64px; height: 64px; flex-shrink: 0; filter: drop-shadow(0 6px 12px rgba(0,0,0,.10)); }
 .about-eyebrow { font-size: 10px; letter-spacing: 2px; color: var(--text-faint); font-weight: 600; }
-.about-identity h2 { margin: 0 0 10px; font-size: 28px; letter-spacing: -0.8px; line-height: 1.3; font-weight: 700; }
-.about-version { display: block; margin-top: 6px; font-size: 12px; letter-spacing: 0; color: var(--text-secondary); font-weight: 400; }
-.about-identity p { margin: 0; font-size: 13px; color: var(--text-secondary); }
+.about-identity h2 { margin: 0 0 4px; font-size: 28px; letter-spacing: -0.8px; line-height: 1.3; font-weight: 700; }
+.about-version { display: inline; margin-left: 6px; font-size: 12.5px; letter-spacing: 0; color: var(--text-secondary); font-weight: 400; }
+.about-identity p { margin: 0; color: var(--text-secondary); }
+.about-identity .about-hero-content p { font-size: 14px; }
 .about-update { padding: 4px 26px 20px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); margin-bottom: 18px; }
 .about-update .row { align-items: center; padding-bottom: 8px; }
 .about-update .row-label > span { font-weight: 600; }
@@ -617,7 +623,7 @@ body::before {
 
 @media (max-width: 780px) {
   .about-hero, .about-community { padding: 22px; }
-  .about-app-icon { width: 60px; height: 60px; }
+  .about-app-icon { width: 52px; height: 52px; }
 }
 
 /* ── 网络接入页 ─────────────────────────── */

@@ -33,15 +33,11 @@ export function About({ updater }: { updater: Updater }) {
         <div className="about-hero-content">
           <h2>知信 <span className="about-version">v{version}</span></h2>
           <p>{t.about.tagline}</p>
-          <div className="about-actions">
-            <button className="btn about-primary" onClick={() => void open("repository")}><Icon name="external" size={16} />{t.about.repository}</button>
-            <button className="btn about-link" onClick={() => void open("issues")}>{t.about.feedback}<Icon name="external" size={14} /></button>
-          </div>
         </div>
       </div>
       <div style={{ borderTop: "0.5px solid rgba(128,128,128,0.3)", margin: "12px 0 0", paddingTop: "12px", display: "flex", alignItems: "center", gap: 8 }}>
         <p className="about-maintainer-line" style={{ margin: 0, fontSize: 12, cursor: "pointer" }} onClick={() => void open("maintainer")} role="link" tabIndex={0}>
-          {t.about.maintainer}：<b style={{ color: "#1D9E75" }}>lnsx521</b>
+          {t.about.maintainer}：<b style={{ color: "#1D9E75" }}>lnsx521</b> <Icon name="external" size={12} />
         </p>
         <span style={{ color: "rgba(128,128,128,0.5)", margin: "0 2px" }}>·</span>
         <p className="about-community-note" style={{ margin: 0, display: "flex", alignItems: "center", gap: 6 }}><Icon name="star" size={14} />{t.about.starHint}</p>

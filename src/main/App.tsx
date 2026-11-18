@@ -201,7 +201,6 @@ function Shell(props: {
                 <button className="btn" onClick={() => void openTransferFolder().catch(() => {})}>{t.general.openDir}</button>
               </div>
             )}
-            {page === "history" && <History />}
           </header>
           {error && <div className="error-banner">{error}</div>}
           {saveError && <div className="error-banner" role="alert">
@@ -212,6 +211,7 @@ function Shell(props: {
           {config ? (
             <>
               {page === "connection" && <Connection />}
+              {page === "history" && <History />}
               {page === "notifications" && <Notifications config={config} update={update} />}
               {page === "proximity" && <Proximity config={config} update={update} />}
               {page === "network" && <Network />}

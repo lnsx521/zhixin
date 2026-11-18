@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { openUpdateLink } from "../../shared/api";
+import { openProjectLink, openUpdateLink } from "../../shared/api";
 import { updateActions } from "../../shared/updater";
 import { useT } from "../../shared/i18n";
 import { Modal, Row } from "../components";
+import { Icon } from "../../shared/Icon";
 import type { Updater } from "../useUpdater";
 import { UpdateNotes } from "../UpdateNotes";
 import { UpdatePreview } from "../dev/UpdatePreview";
@@ -20,6 +21,10 @@ function UpdateSummary({ updater }: { updater: Updater }) {
 
 export function SoftwareUpdate({ updater }: { updater: Updater }) {
   const t = useT().updater;
+  const tAll = useT();
+  const openIssues = async () => {
+    try { await openProjectLink("issues"); } catch { /* 忽略 */ }
+  };
   // 页面级状态：进入关于页显示默认提示，点过检查才显示真实结果；切走再切回自动重置。
   const [interacted, setInteracted] = useState(false);
   const actions = updateActions(updater.status, updater.busy);
@@ -29,7 +34,8 @@ export function SoftwareUpdate({ updater }: { updater: Updater }) {
   return <>
     <Row label={t.title}>
       {actions.notice && <button className="btn" onClick={updater.controller.show}>{t.details}</button>}
-      <button className="btn" disabled={!actions.check} onClick={() => { setInteracted(true); void updater.controller.check(); }}>{t.check}</button>
+      <button className="btn" onClick={() => void openIssues()}>{tAll.about.feedback}<Icon name="external" size={14} /></button>
+      <button className="btn" disabled={!actions.check} onClick={() => { setInteracted(true); void updater.controller.check(); }}>{t.check}<Icon name="external" size={14} /></button>
     </Row>
     {interacted ? <UpdateSummary updater={updater} /> : (
       <div className="update-panel" aria-live="polite">

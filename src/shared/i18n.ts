@@ -54,7 +54,7 @@ const zh = {
     transfer: "文件互传",
     general: "通用",
     about: "关于",
-    history: "History",
+    history: "历史消息",
   },
   common: {
     autoSave: "设置自动保存",
