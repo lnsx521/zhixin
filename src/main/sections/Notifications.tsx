@@ -152,17 +152,7 @@ export function Notifications({ config, update }: Props) {
       {/* 验证码是消息流程的下半段：消息进来 → 识别验证码 → 复制/填入。
           同一页承接，不再单独占一个导航项。 */}
       <Otp config={config} update={update} />
-      <Section narrow title={t.notifications.historyTitle} description={t.notifications.historyDesc} action={
-        <NumberField
-          value={notifications.history_limit}
-          min={0}
-          max={300}
-          suffix={t.common.seconds.replace("秒", "条")}
-          onChange={(value) =>
-            update((d) => void (d.notifications.history_limit = Math.max(0, Math.min(300, value))))
-          }
-        />
-      }><span /></Section>
+
     </>
   );
 }

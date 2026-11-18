@@ -3,7 +3,7 @@ import { clearNotificationHistory, listNotificationHistory, type HistoryEntry } 
 import { useT } from "../../shared/i18n";
 import { Section, Row } from "../components";
 
-/** 「历史」页：所有弹过的通知留档，可搜索/复制/清空/导出。 */
+/** 「历史消息」页：弹过的通知留档，可搜索/复制/清空。 */
 export function History() {
   const t = useT();
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
@@ -26,7 +26,7 @@ export function History() {
 
   return (
     <>
-      <Section narrow title={t.history.title} description={t.history.desc} action={
+      <Section narrow title={t.history.title} action={
         <input
           className="history-search"
           placeholder={t.history.searchPlaceholder}

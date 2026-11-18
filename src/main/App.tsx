@@ -194,7 +194,7 @@ function Shell(props: {
           <header className="page-header">
             <div>
               <h1>{t.nav[page]}</h1>
-              <p>{t.shell[page]}</p>
+              <p>{page === "history" ? `最多保留 ${config?.notifications.history_limit ?? 10} 条。内容仅存储在本机。` : t.shell[page]}</p>
             </div>
             {page === "transfer" && (
               <div className="page-actions">

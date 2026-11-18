@@ -61,7 +61,8 @@ export function Otp({ config, update }: Props) {
             onChange={(value) => update((d) => void (d.otp.caret.duration_seconds = value))}
           />
         </Row>
-        </fieldset>}
+        </fieldset>
+        }
       </Section>
       {fillMode !== "off" && <Disclosure title={t.ui.advanced}>
         <fieldset className="settings-fields" disabled={!otp.enabled}>
@@ -108,6 +109,19 @@ export function Otp({ config, update }: Props) {
             />
           </Row>
         )}
+        </fieldset>
+        <fieldset className="settings-fields">
+        <Row label={t.notifications.historyTitle} hint={t.notifications.historyDesc}>
+          <NumberField
+            value={config.notifications.history_limit}
+            min={0}
+            max={300}
+            suffix="条"
+            onChange={(value) =>
+              update((d) => void (d.notifications.history_limit = Math.max(0, Math.min(300, value))))
+            }
+          />
+        </Row>
         </fieldset>
       </Disclosure>}
     </>
