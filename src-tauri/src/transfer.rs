@@ -152,11 +152,42 @@ async fn list(
     }
     let dir = folder(&app);
     let _ = std::fs::create_dir_all(&dir);
+    // 目录导航：dir 参数指定当前浏览的子目录（默认根目录），返回其直接子文件夹与文件
+    let current = params.get("dir").and_then(|d| sanitize_rel(d)).unwrap_or_default();
+    let browse_dir = if current.is_empty() { dir.clone() } else { dir.join(&current) };
+    if let Err(_) = tokio::fs::metadata(&browse_dir).await {
+        return reply(StatusCode::NOT_FOUND, "dir_not_found");
+    }
+    let mut folders: Vec<String> = Vec::new();
     let mut entries: Vec<FileEntry> = Vec::new();
-    collect_files(&dir, "", &mut entries, 0).await;
+    if let Ok(mut read) = tokio::fs::read_dir(&browse_dir).await {
+        while let Ok(Some(entry)) = read.next_entry().await {
+            let Ok(meta) = entry.metadata().await else { continue };
+            let Some(name) = entry.file_name().to_str().map(str::to_string) else { continue };
+            if meta.is_dir() {
+                folders.push(name);
+            } else {
+                entries.push(FileEntry {
+                    name,
+                    size: meta.len(),
+                    mtime: meta
+                        .modified()
+                        .ok()
+                        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0),
+                });
+            }
+        }
+    }
+    folders.sort();
     entries.sort_by_key(|a| std::cmp::Reverse(a.mtime));
     entries.truncate(LIST_LIMIT);
-    Json(serde_json::json!({ "ok": true, "folder": "transfer", "files": entries })).into_response()
+    (
+        [(header::CACHE_CONTROL, "no-store")],
+        Json(serde_json::json!({ "ok": true, "dir": current, "folders": folders, "files": entries })),
+    )
+        .into_response()
 }
 
 /// 递归收集接收文件夹内的文件（相对路径，最深 3 层）。
@@ -586,6 +617,17 @@ const PAGE_HTML: &str = r#"<!doctype html>
     cursor: pointer; border-bottom: 1px solid rgba(0,0,0,.06);
   }
   .folder-row:active { opacity: .6; }
+  .row { position: relative; overflow: hidden; }
+  .row-swipe {
+    position: relative; z-index: 1; display: flex; align-items: center; gap: 12px;
+    flex: 1; min-width: 0; background: inherit;
+    transition: transform .2s ease;
+  }
+  .swipe-del {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 72px;
+    border: 0; background: #c0392b; color: #fff;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+  }
   .file-n { font-weight: 500; }
   .file-ext {
     display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 5px;
@@ -647,7 +689,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     .file-thumb { background: rgba(255,255,255,.08); }
     .thumb-icon { color: #a6a6ab; }
     .empty { color: #a6a6ab; }
-    .file-del { background: rgba(192,57,43,.22); color: #ff9c95; }
+    .swipe-del { background: #c0392b; }
     .folder-row { border-bottom-color: rgba(255,255,255,.09); color: #8ab4ff; }
     .row { border-bottom-color: rgba(255,255,255,.09); }
     .btn.secondary { background: #2c3d5c; color: #8ab4ff; }
@@ -720,6 +762,72 @@ const PAGE_HTML: &str = r#"<!doctype html>
     document.getElementById('preview-overlay').style.display = 'none';
   };
 
+  // ── 左滑露出删除（iOS 原生同款手势，长按也可）──
+  var swipeState = { row: null, startX: 0, moved: false, timer: null };
+  function closeSwipe() {
+    if (swipeState.row) {
+      var el = swipeState.row.querySelector('.row-swipe');
+      if (el) el.style.transform = '';
+    }
+    swipeState.row = null;
+  }
+  function openSwipe(row) {
+    closeSwipe();
+    var el = row.querySelector('.row-swipe');
+    el.style.transform = 'translateX(-72px)';
+    swipeState.row = row;
+  }
+  document.getElementById('list').addEventListener('touchstart', function (e) {
+    var row = e.target.closest('.row');
+    if (!row || e.touches.length !== 1) return;
+    swipeState.row = row;
+    swipeState.startX = e.touches[0].clientX;
+    swipeState.moved = false;
+    var swipe = row.querySelector('.row-swipe');
+    swipe.style.transition = 'none';
+    swipeState.timer = setTimeout(function () {
+      if (swipeState.row === row && !swipeState.moved) openSwipe(row);
+    }, 600);
+  }, { passive: true });
+  document.getElementById('list').addEventListener('touchmove', function (e) {
+    if (!swipeState.row || e.touches.length !== 1) return;
+    var dx = e.touches[0].clientX - swipeState.startX;
+    if (Math.abs(dx) > 6) { swipeState.moved = true; clearTimeout(swipeState.timer); }
+    if (!swipeState.moved) return;
+    var swipe = swipeState.row.querySelector('.row-swipe');
+    swipe.style.transition = 'none';
+    var base = swipe.style.transform.indexOf('-72') !== -1 ? -72 : 0;
+    var offset = Math.max(-72, Math.min(0, base + dx));
+    swipe.style.transform = 'translateX(' + offset + 'px)';
+    swipeState.dx = offset;
+  }, { passive: true });
+  document.getElementById('list').addEventListener('touchend', function () {
+    clearTimeout(swipeState.timer);
+    if (!swipeState.row) return;
+    var swipe = swipeState.row.querySelector('.row-swipe');
+    swipe.style.transition = 'transform .2s ease';
+    var match = swipe.style.transform.match(/-?(\d+)/);
+    var offset = match ? parseInt(match[1], 10) : 0;
+    if (offset < -36) { swipe.style.transform = 'translateX(-72px)'; swipeState.row = swipeState.row; }
+    else { swipe.style.transform = ''; swipeState.row = null; }
+  });
+  document.getElementById('list').addEventListener('click', function (e) {
+    var del = e.target.closest('.swipe-del');
+    if (del) {
+      var name = decodeURIComponent(del.getAttribute('data-name'));
+      if (!confirm('删除「' + name.split('/').pop() + '」？\n将同时删除电脑上的这个文件。')) return;
+      fetch('/transfer/delete?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(name), { method: 'POST' })
+        .then(function (r) { if (r.ok) { toast('已删除'); refresh(); } else toast('删除失败'); })
+        .catch(function () { toast('删除失败，检查网络'); });
+      return;
+    }
+    var row = e.target.closest('.row');
+    if (row && row.querySelector('.row-swipe') && row.querySelector('.row-swipe').style.transform.indexOf('-72') !== -1) {
+      closeSwipe();
+      return;
+    }
+  });
+
   function toast(text) {
     toastEl.textContent = text; toastEl.classList.add('show');
     clearTimeout(toastTimer);
@@ -775,13 +883,16 @@ const PAGE_HTML: &str = r#"<!doctype html>
         }
         var rootRel = curDir ? curDir + '/' + f.name : f.name;
         return '<div class="row" data-name="' + encodeURIComponent(rootRel) + '" data-preview="' + (previewable ? '1' : '0') + '">'
+          + '<button class="swipe-del" data-name="' + encodeURIComponent(rootRel) + '">删除</button>'
+          + '<div class="row-swipe">'
           + '<div class="file-thumb">' + thumb + '</div>'
           + '<div class="file-name"><span class="file-n">' + esc(baseName) + '</span><span class="file-ext">' + esc(ext) + '</span>'
           + '<div class="file-meta">' + fmtSize(f.size) + ' · ' + fmtTime(f.mtime) + '</div></div>'
           + '<div class="file-ops">'
           + '<a class="file-get" href="/transfer/file?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(rootRel) + '">下载</a>'
-          + '<button class="file-del" data-name="' + encodeURIComponent(rootRel) + '">删除</button>'
-          + '</div></div>';
+          + '</div>'
+          + '</div>'
+          + '</div>';
       }).join('');
     }).catch(function () { toast('刷新失败'); });
   }
