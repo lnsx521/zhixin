@@ -39,7 +39,12 @@ export function About({ updater }: { updater: Updater }) {
           </div>
         </div>
       </div>
-      <div className="about-support"><p className="about-community-note"><Icon name="star" size={14} />{t.about.starHint}</p>
+      <div style={{ borderTop: "0.5px solid rgba(128,128,128,0.3)", margin: "12px 0 0", paddingTop: "12px" }}>
+        <p className="about-maintainer-line" style={{ margin: 0, fontSize: 13, cursor: "pointer" }} onClick={() => void open("maintainer")} role="link" tabIndex={0}>
+          {t.about.maintainer}：<b style={{ color: "#1D9E75" }}>lnsx521</b>
+        </p>
+      </div>
+      <div className="about-support" style={{ borderTop: "none", marginTop: 8 }}><p className="about-community-note"><Icon name="star" size={14} />{t.about.starHint}</p>
         <button className="about-stars" aria-label={t.about.starAction} onClick={() => void open("repository")}>
           <Badge src="https://img.shields.io/github/stars/lnsx521/zhixin?style=flat-square&label=Stars&color=737373" label={t.about.starsBadge} />
         </button>
@@ -47,17 +52,6 @@ export function About({ updater }: { updater: Updater }) {
     </section>
     <section className="about-update" aria-label={t.updater.title}>
       <SoftwareUpdate updater={updater} />
-    </section>
-    <section className="about-community" aria-label={t.about.contributors}>
-      <div className="about-community-heading"><h2>{t.about.contributors}</h2></div>
-      <div className="about-contributors">
-        <button className="about-maintainer" onClick={() => void open("maintainer")}>
-          <span className="about-avatar">L</span>
-          <span><strong>@lnsx521</strong><small>{t.about.maintainer}</small></span>
-          <Icon name="external" size={14} />
-        </button>
-        <button className="btn about-link" onClick={() => void open("contributors")}>{t.about.allContributors}<Icon name="external" size={14} /></button>
-      </div>
     </section>
     <footer className="about-footer"><p>{t.about.privacy}</p><span>© 知信 · 基于 SmsPop（fxaxg/sms-pop-rs）二次开发 · MIT License</span></footer>
     {error && <p className="bad-text" role="alert">{error}</p>}

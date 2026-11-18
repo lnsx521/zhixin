@@ -1,6 +1,6 @@
 //! 更新任务由后端持有，设置窗口隐藏或页面卸载不影响下载。
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
@@ -73,6 +73,7 @@ pub struct UpdateStatus {
     pub error: Option<String>,
     pub retry_attempt: u32,
     pub next_retry_at: Option<u64>,
+    pub last_check_at: Option<u64>,
 }
 
 pub struct UpdateState {
@@ -213,6 +214,12 @@ async fn check(app: AppHandle, scheduled_generation: Option<u64>) -> Result<(), 
                 s.total = None;
                 s.retry_attempt = 0;
                 s.next_retry_at = None;
+                s.last_check_at = Some(
+                    SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis() as u64,
+                );
             });
             Ok(())
         }
@@ -220,11 +227,16 @@ async fn check(app: AppHandle, scheduled_generation: Option<u64>) -> Result<(), 
             // 检查更新只由用户手动触发：失败后不再自动重试。
             let error = e.to_string();
             state.schedule.send_modify(CheckSchedule::success);
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as u64;
             publish(&app, |s| {
                 s.phase = "check_error".into();
                 s.error = Some(error.clone());
                 s.retry_attempt = 0;
                 s.next_retry_at = None;
+                s.last_check_at = Some(now);
             });
             log::warn!("更新 check_error 失败：{error}");
             Err(error)

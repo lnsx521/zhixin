@@ -6129,7 +6129,7 @@ dependencies = [
 
 [[package]]
 name = "zhixin-app"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "axum",
  "dirs 5.0.1",
@@ -6159,7 +6159,7 @@ dependencies = [
 
 [[package]]
 name = "zhixin-ble"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "log",
  "pollster",
@@ -6169,7 +6169,7 @@ dependencies = [
 
 [[package]]
 name = "zhixin-core"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -6177,7 +6177,7 @@ dependencies = [
 
 [[package]]
 name = "zhixin-uia"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "log",
  "windows",

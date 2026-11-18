@@ -62,6 +62,14 @@ export function Notifications({ config, update }: Props) {
             }
           />
         </Row>
+        <Row label={t.notifications.sound} hint={t.notifications.soundHint}>
+          <Toggle
+            checked={notifications.popup.sound}
+            onChange={(value) =>
+              update((d) => void (d.notifications.popup.sound = value))
+            }
+          />
+        </Row>
         <Row label={t.notifications.maxVisible} hint={t.notifications.maxVisibleHint}>
           <NumberField
             value={notifications.popup.max_visible}

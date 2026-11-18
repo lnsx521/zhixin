@@ -1,7 +1,7 @@
 <div align="center">
   <img src="src-tauri/icons/128x128.png" width="112" height="112" alt="知信 logo" />
   <h1>知信</h1>
-  <p><strong>让 iPhone 通知来到 Windows，让验证码少一次切换。</strong></p>
+  <p><strong>让手机偷个懒，我来传话。</strong></p>
   <p>通过蓝牙接收通知，复制验证码，按需填入，并打开对应的电脑应用。</p>
   <p>
     <a href="https://github.com/lnsx521/zhixin/actions/workflows/ci.yml"><img src="https://github.com/lnsx521/zhixin/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>

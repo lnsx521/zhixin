@@ -20,13 +20,23 @@ function UpdateSummary({ updater }: { updater: Updater }) {
 
 export function SoftwareUpdate({ updater }: { updater: Updater }) {
   const t = useT().updater;
+  // 页面级状态：进入关于页显示默认提示，点过检查才显示真实结果；切走再切回自动重置。
+  const [interacted, setInteracted] = useState(false);
   const actions = updateActions(updater.status, updater.busy);
+  const lastCheck = updater.status?.last_check_at
+    ? t.lastCheck(new Date(updater.status.last_check_at).toLocaleTimeString())
+    : null;
   return <>
     <Row label={t.title}>
       {actions.notice && <button className="btn" onClick={updater.controller.show}>{t.details}</button>}
-      <button className="btn" disabled={!actions.check} onClick={() => void updater.controller.check()}>{t.check}</button>
+      <button className="btn" disabled={!actions.check} onClick={() => { setInteracted(true); void updater.controller.check(); }}>{t.check}</button>
     </Row>
-    <UpdateSummary updater={updater} />
+    {interacted ? <UpdateSummary updater={updater} /> : (
+      <div className="update-panel" aria-live="polite">
+        <p className="hint-text">{t.hintDefault}</p>
+        {lastCheck && <p className="hint-text">{lastCheck}</p>}
+      </div>
+    )}
     {import.meta.env.DEV && <UpdatePreview updater={updater} />}
   </>;
 }

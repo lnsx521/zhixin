@@ -160,6 +160,17 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
 
 /// 前端量出了真实高度 → 记高度、改尺寸、重排、显示。
 pub fn resize_and_show(app: &AppHandle, label: &str, height_dip: f64) {
+    if app
+        .state::<crate::state::AppState>()
+        .config()
+        .notifications
+        .popup
+        .sound
+    {
+        use windows::Win32::System::Diagnostics::Debug::MessageBeep;
+        use windows::Win32::UI::WindowsAndMessaging::MB_ICONASTERISK;
+        unsafe { let _ = MessageBeep(MB_ICONASTERISK); }
+    }
     // 设置里指定了固定高度就用它；0 = 按内容自动。
     let configured = app
         .state::<crate::state::AppState>()

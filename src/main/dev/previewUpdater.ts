@@ -23,7 +23,7 @@ const notes = `## 知信 更新预览 / Update preview
 export class PreviewUpdateBackend implements UpdateBackend {
   private status: UpdateStatus = {
     revision: 0, phase: "available", version: "999.0.0-preview", notes,
-    downloaded: 0, total: null, error: null, retry_attempt: 0, next_retry_at: null,
+    downloaded: 0, total: null, error: null, retry_attempt: 0, last_check_at: null, next_retry_at: null,
   };
   private listeners = new Set<(status: UpdateStatus) => void>();
   private abort = new AbortController();
@@ -62,7 +62,7 @@ export class PreviewUpdateBackend implements UpdateBackend {
     this.emit({
       phase: scenario, version: scenario === "latest" || scenario === "check_error" ? null : "999.0.0-preview",
       notes: scenario === "latest" || scenario === "check_error" ? null : notes,
-      error: null, downloaded: 0, total: null, retry_attempt: 0, next_retry_at: null,
+      error: null, downloaded: 0, total: null, retry_attempt: 0, last_check_at: null, next_retry_at: null,
     });
     if (scenario === "check_error") {
       this.emit({ error: "Preview: offline", retry_attempt: 1, next_retry_at: Date.now() + 30_000 });

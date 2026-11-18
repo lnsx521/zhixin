@@ -21,6 +21,8 @@ export interface PopupOptions {
   width: number;
   /** 弹窗高度（DIP），0 = 按内容自动 */
   height: number;
+  /** 弹出通知时播放系统提示音 */
+  sound: boolean;
 }
 
 export interface NotificationOptions {
@@ -133,6 +135,7 @@ export interface UpdateStatus {
   total: number | null;
   error: string | null;
   retry_attempt: number;
+  last_check_at: number | null;
   next_retry_at: number | null;
 }
 export const getUpdateStatus = () => invoke<UpdateStatus>("get_update_status");

@@ -226,6 +226,14 @@ pub struct PopupOptions {
     /// 弹窗高度（DIP），0 = 按内容自动。
     #[serde(default)]
     pub height: f64,
+
+    /// 弹出通知时播放系统提示音。
+    #[serde(default = "default_sound")]
+    pub sound: bool,
+}
+
+fn default_sound() -> bool {
+    true
 }
 
 impl Default for PopupOptions {
@@ -235,6 +243,7 @@ impl Default for PopupOptions {
             max_visible: 3,
             width: 310.0,
             height: 0.0,
+            sound: true,
         }
     }
 }
