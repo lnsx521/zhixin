@@ -667,8 +667,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     border: 0; border-radius: 999px; padding: 8px 18px;
     background: rgba(255,255,255,.14); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;
   }
-  #preview-body { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0 10px 10px; position: relative; }
-  .preview-gesture { position: absolute; inset: 0; z-index: 10; }
+  #preview-body { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0 10px 10px; }
 
   #fab {
     position: fixed; right: 16px; bottom: 20px; width: 66px; height: 66px;
@@ -754,14 +753,11 @@ const PAGE_HTML: &str = r#"<!doctype html>
     if (/\.(mp4|m4v|mov|webm)$/.test(lower)) {
       body.innerHTML = '<video controls autoplay playsinline style="max-width:100%;max-height:100%" src="' + url + '"></video>';
     } else if (/\.pdf$/.test(lower)) {
-      body.innerHTML = '<iframe style="width:100%;height:100%;border:0" src="' + url + '"></iframe>'
-        + '<div class="preview-gesture"></div>';
+      body.innerHTML = '<iframe style="width:100%;height:100%;border:0" src="' + url + '"></iframe>';
     } else {
       body.innerHTML = '<img style="max-width:100%;max-height:100%;object-fit:contain" src="' + url + '">';
     }
     document.getElementById('preview-name').textContent = item.rootRel.split('/').pop() + '（' + (index + 1) + '/' + previewItems.length + '）';
-    var gestureLayer = body.querySelector('.preview-gesture');
-    if (gestureLayer) bindPreviewGestures(gestureLayer);
     document.getElementById('preview-overlay').style.display = 'flex';
   }
   function closePreview() {
@@ -792,7 +788,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
       else openPreviewAt(previewIndex - 1);
     }, { passive: true });
   }
-  bindPreviewGestures(document.getElementById('preview-overlay'));
+
 
   // ── 左滑露出删除（iOS 原生同款手势，长按也可）──
   var swipeState = { row: null, startX: 0, moved: false, timer: null };
@@ -843,15 +839,10 @@ const PAGE_HTML: &str = r#"<!doctype html>
     if (offset < -36) { swipe.style.transform = 'translateX(-72px)'; swipeState.row = swipeState.row; }
     else { swipe.style.transform = ''; swipeState.row = null; }
   });
-  var skipNextListClick = false;
   document.getElementById('list').addEventListener('click', function (e) {
-    if (skipNextListClick) { skipNextListClick = false; return; }
     var del = e.target.closest('.swipe-del');
     if (del) {
       var name = decodeURIComponent(del.getAttribute('data-name'));
-      skipNextListClick = true;
-      if (!confirm('删除「' + name.split('/').pop() + '」？\n将同时删除电脑上的这个文件。')) { skipNextListClick = false; return; }
-      ignoreListClickUntil = Date.now() + 600;
       fetch('/transfer/delete?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(name), { method: 'POST' })
         .then(function (r) { if (r.ok) { toast('已删除'); refresh(); } else toast('删除失败'); })
         .catch(function () { toast('删除失败，检查网络'); });
