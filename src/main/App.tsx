@@ -143,6 +143,7 @@ function Shell(props: {
 }) {
   const t = useT();
   const updater = useUpdater();
+  const [historyQuery, setHistoryQuery] = useState("");
   const { page, setPage, config, update, saveStatus, saveError, error, retry, beforeClose } = props;
 
   const nav: { key: Page; label: string }[] = [
@@ -201,6 +202,17 @@ function Shell(props: {
                 <button className="btn" onClick={() => void openTransferFolder().catch(() => {})}>{t.general.openDir}</button>
               </div>
             )}
+            {page === "history" && (
+              <div className="page-actions">
+                <input
+                  className="history-search"
+                  placeholder="搜索发件人或内容"
+                  value={historyQuery}
+                  onChange={(event) => setHistoryQuery(event.target.value)}
+                  style={{ padding: "6px 12px", borderRadius: 8, border: "0.5px solid var(--border)", font: "inherit", background: "var(--surface)", color: "var(--text)", minWidth: 200 }}
+                />
+              </div>
+            )}
           </header>
           {error && <div className="error-banner">{error}</div>}
           {saveError && <div className="error-banner" role="alert">
@@ -211,7 +223,7 @@ function Shell(props: {
           {config ? (
             <>
               {page === "connection" && <Connection />}
-              {page === "history" && <History />}
+              {page === "history" && <History query={historyQuery} />}
               {page === "notifications" && <Notifications config={config} update={update} />}
               {page === "proximity" && <Proximity config={config} update={update} />}
               {page === "network" && <Network />}
