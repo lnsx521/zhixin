@@ -85,6 +85,9 @@ pub struct GeneralOptions {
     /// 手机电量跌破阈值时弹窗提醒充电。
     #[serde(default = "default_low_battery_notify")]
     pub low_battery_notify: bool,
+    /// 联网获取 App 官方图标（默认关闭；关闭时未知 App 用兜底图标）。
+    #[serde(default)]
+    pub icon_fetch: bool,
     /// 低电量阈值（百分比，5-50）。
     #[serde(default = "default_low_battery_threshold")]
     pub low_battery_threshold: u8,
@@ -119,6 +122,7 @@ impl Default for GeneralOptions {
             background: "classic".to_string(),
             low_battery_notify: true,
             low_battery_threshold: 20,
+            icon_fetch: false,
         }
     }
 }

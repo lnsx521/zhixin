@@ -89,6 +89,11 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
 
     info!("弹窗：{} — {}", payload.origin, payload.body);
 
+    // 联网获取 App 图标（开关打开时）：后台静默，失败不影响通知
+    if let Some(app_id) = payload.app_id.clone().filter(|id| !id.trim().is_empty()) {
+        crate::icon_store::spawn_fetch(app.clone(), app_id, payload.origin.clone());
+    }
+
     // 记住来源（过滤规则页可直接选用），最新在前、去重、上限 50。
     if let Some(app_id) = payload.app_id.clone().filter(|id| !id.trim().is_empty()) {
         let mut known = state.known_apps.lock().unwrap();

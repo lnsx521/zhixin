@@ -74,6 +74,7 @@ export interface Config {
     background: string; // "classic" | "blue" | "warm" | "mint" | "custom"
     low_battery_notify: boolean;
     low_battery_threshold: number;
+    icon_fetch: boolean;
   };
   proximity: {
     enabled: boolean; // 感应锁屏总开关
@@ -100,6 +101,14 @@ export const setAutostart = (enabled: boolean) =>
   invoke<boolean>("set_autostart", { enabled });
 export const openConfigDir = () => invoke<void>("open_config_dir");
 export const openLogsDir = () => invoke<void>("open_logs_dir");
+export interface IconCacheEntry { app_id: string; name: string; manual: boolean }
+export const listIconCache = () => invoke<IconCacheEntry[]>("list_icon_cache");
+export const getAppIcon = (appId: string) => invoke<string | null>("get_app_icon", { appId });
+export const setAppIcon = (appId: string, name: string, dataUrl: string) =>
+  invoke<void>("set_app_icon", { appId, name, dataUrl });
+export const resetAppIcon = (appId: string) => invoke<void>("reset_app_icon", { appId });
+export const clearIconCache = () => invoke<void>("clear_icon_cache");
+export const openIconsDir = () => invoke<void>("open_icons_dir");
 export const openBluetoothSettings = () => invoke<void>("open_bluetooth_settings");
 export type ProjectLink = "repository" | "maintainer" | "contributors" | "issues" | "author";
 export const openProjectLink = (target: ProjectLink) => invoke<void>("open_project_link", { target });

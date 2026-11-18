@@ -37,9 +37,12 @@ tokio-util = { version = "0.7", features = ["io"] }
 if-addrs = "0.14"
 dirs = "5"
 mdns-sd = "0.21.7"
+base64 = "0.22"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["test-util", "rt"] }
+
 
 [dependencies.windows]
 workspace = true

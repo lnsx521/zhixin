@@ -10,6 +10,7 @@ import {
   type ThemeSetting,
 } from "../../shared/api";
 import { useT } from "../../shared/i18n";
+import { clearIconCache, listIconCache, openIconsDir, resetAppIcon, type IconCacheEntry } from "../../shared/api";
 import { NumberField, Row, Section, Toggle } from "../components";
 
 interface Props {
@@ -23,7 +24,12 @@ export function General({ config, update }: Props) {
   const [meta, setMeta] = useState<SettingsMeta | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [iconCache, setIconCache] = useState<IconCacheEntry[]>([]);
   const bgFileRef = useRef<HTMLInputElement>(null);
+
+  const refreshIcons = async () => {
+    try { setIconCache(await listIconCache()); } catch { /* 忽略 */ }
+  };
 
   const onPickBackground = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -37,6 +43,7 @@ export function General({ config, update }: Props) {
 
   useEffect(() => {
     getSettingsMeta().then(setMeta).catch(() => {});
+    void refreshIcons();
   }, []);
 
   return (
@@ -89,6 +96,30 @@ export function General({ config, update }: Props) {
             <input ref={bgFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => void onPickBackground(e)} />
           </div>
         </Row>
+      </Section>
+      <Section narrow title={t.general.iconsTitle} description={t.general.iconsDesc} action={
+          <Toggle
+            checked={config.general.icon_fetch}
+            onChange={(value) => update((d) => void (d.general.icon_fetch = value))}
+          />
+        }>
+        <Row label={t.general.iconsFetch} hint={t.general.iconsFetchHint}><span /></Row>
+        <Row label={t.general.iconsOpenDir}>
+          <button className="btn" onClick={() => { void openIconsDir().catch((err) => setError(String(err))); }}>{t.general.iconsOpenDir}</button>
+        </Row>
+        <Row label={t.general.iconsClear}>
+          <button className="btn" onClick={async () => {
+            try { await clearIconCache(); await refreshIcons(); } catch (err) { setError(String(err)); }
+          }}>{t.general.iconsClear}</button>
+        </Row>
+        {iconCache.length === 0 && <Row label={t.general.iconsEmpty}><span /></Row>}
+        {iconCache.map((entry) => (
+          <Row key={entry.app_id} label={`${entry.name || entry.app_id}${entry.manual ? `（${t.general.iconsManual}）` : ""}`} hint={entry.app_id}>
+            <button className="btn" onClick={async () => {
+              try { await resetAppIcon(entry.app_id); await refreshIcons(); } catch (err) { setError(String(err)); }
+            }}>{t.general.iconsReset}</button>
+          </Row>
+        ))}
       </Section>
       <Section narrow title={t.general.startupTitle}>
         <Row label={t.general.autostart} hint={t.general.autostartHint}>

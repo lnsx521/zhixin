@@ -7,6 +7,7 @@ mod caret;
 mod commands;
 mod devices;
 mod http_ingress;
+mod icon_store;
 mod link_worker;
 mod mdns;
 mod paths;
@@ -112,6 +113,12 @@ pub fn run() {
             commands::get_settings_meta,
             commands::set_autostart,
             popups::toast_expand,
+            icon_store::get_app_icon,
+            icon_store::list_icon_cache,
+            icon_store::set_app_icon,
+            icon_store::reset_app_icon,
+            icon_store::clear_icon_cache,
+            icon_store::open_icons_dir,
             commands::open_config_dir,
             commands::open_logs_dir,
             commands::open_project_link,

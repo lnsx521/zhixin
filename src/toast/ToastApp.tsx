@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   getConfig,
+  getAppIcon,
   getToastPayload,
   toastClick,
   toastClose,
@@ -47,6 +48,7 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lang, setLang] = useState<Lang>("zh");
+  const [cachedIcon, setCachedIcon] = useState<string | null>(null);
   const [truncated, setTruncated] = useState(false);
   const bodyRef = useRef<HTMLParagraphElement | null>(null);
 
@@ -64,6 +66,13 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
       setPayload(payload);
     });
   }, []);
+
+  // 联网获取的/手动设置的图标（Rust 缓存，data URL）优先于内置品牌图
+  useEffect(() => {
+    const appId = payload?.app_id;
+    if (!appId) { setCachedIcon(null); return; }
+    getAppIcon(appId).then((url) => setCachedIcon(url)).catch(() => setCachedIcon(null));
+  }, [payload?.app_id]);
 
   // 渲染完后量出真实高度报给 Rust：它调窗口尺寸 + 重排 + 显示。
   useEffect(() => {
@@ -91,7 +100,7 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
 
   const t = dict(lang);
   const isCall = payload.category === 1;
-  const asset = isCall ? null : brandAsset(payload.app_id);
+  const asset = isCall ? null : (cachedIcon ?? brandAsset(payload.app_id));
 
   const onCopy = async () => {
     if (copied) return;
