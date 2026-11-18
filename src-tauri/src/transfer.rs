@@ -580,6 +580,12 @@ const PAGE_HTML: &str = r#"<!doctype html>
     font-size: 18px; color: #6e6e73;
   }
   .thumb-doc { font-size: 10px; font-weight: 700; letter-spacing: .5px; }
+  .folder-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 0; font-size: 13px; font-weight: 600; color: #3478f6;
+    cursor: pointer; border-bottom: 1px solid rgba(0,0,0,.06);
+  }
+  .folder-row:active { opacity: .6; }
   .file-n { font-weight: 500; }
   .file-ext {
     display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 5px;
@@ -642,6 +648,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     .thumb-icon { color: #a6a6ab; }
     .empty { color: #a6a6ab; }
     .file-del { background: rgba(192,57,43,.22); color: #ff9c95; }
+    .folder-row { border-bottom-color: rgba(255,255,255,.09); color: #8ab4ff; }
     .row { border-bottom-color: rgba(255,255,255,.09); }
     .btn.secondary { background: #2c3d5c; color: #8ab4ff; }
     .file-get { background: #2c3d5c; color: #8ab4ff; }
@@ -788,7 +795,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     bar.style.display = 'block';
     fill.style.width = '0%';
     var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/transfer/upload?t=' + encodeURIComponent(TOKEN));
+    xhr.open('POST', '/transfer/upload?t=' + encodeURIComponent(TOKEN) + '&dir=' + encodeURIComponent(curDir));
     xhr.upload.onprogress = function (e) {
       if (e.lengthComputable) {
         var pct = Math.floor(e.loaded / e.total * 100);
