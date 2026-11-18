@@ -44,7 +44,7 @@ pub fn run() {
         )
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            None,
+            Some(vec!["--silent"]),
         ))
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -74,8 +74,18 @@ pub fn run() {
                     }
                 });
 
-                // 首次运行 → 打开主窗口（默认落在「连接引导」页）
-                if first_run {
+                // 手动双击启动 → 立即打开主窗口；开机自启（--silent）→ 静默托盘。
+                // 旧版注册的自启动命令行没有 --silent 参数，这里刷新一次注册以补上。
+                let silent_launch = std::env::args().any(|a| a == "--silent");
+                if !silent_launch {
+                    use tauri_plugin_autostart::ManagerExt;
+                    if app.autolaunch().is_enabled().unwrap_or(false) {
+                        let _ = app.autolaunch().enable();
+                    }
+                }
+
+                // 首次运行或手动启动 → 打开主窗口（首次默认落在「连接引导」页）
+                if first_run || !silent_launch {
                     let _ = main_window.show();
                     let _ = main_window.set_focus();
                 }

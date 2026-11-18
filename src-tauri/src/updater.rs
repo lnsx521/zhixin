@@ -1,6 +1,6 @@
 //! 更新任务由后端持有，设置窗口隐藏或页面卸载不影响下载。
 use std::sync::Mutex;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
@@ -26,6 +26,7 @@ impl CheckSchedule {
         self.failures = 0;
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     fn failed(&mut self, now: tokio::time::Instant) -> Duration {
         self.cancel();
         self.failures = self.failures.saturating_add(1);
@@ -42,6 +43,7 @@ impl CheckSchedule {
     }
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 async fn supervise<F, Fut>(mut schedule: watch::Receiver<CheckSchedule>, mut check: F)
 where
     F: FnMut(u64) -> Fut,
