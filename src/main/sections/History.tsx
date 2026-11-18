@@ -20,7 +20,7 @@ export function History({ query }: { query: string }) {
 
   return (
     <>
-      <Section narrow title={t.history.title}>
+      <Section narrow>
         {error && <p className="bad-text">{error}</p>}
         {entries.length === 0 && <p className="hint-text">{query ? t.history.noResults : t.history.empty}</p>}
         <div className="history-list">
