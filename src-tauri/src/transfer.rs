@@ -182,6 +182,38 @@ async fn list(
     Json(serde_json::json!({ "ok": true, "folder": "transfer", "files": entries })).into_response()
 }
 
+/// 图片/视频扩展名判断（按日期归档用）。
+fn is_media(name: &str) -> bool {
+    let lower = name.to_lowercase();
+    [".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".bmp", ".mp4", ".mov"]
+        .iter()
+        .any(|ext| lower.ends_with(ext))
+}
+
+/// 本地日期（YYYY-MM-DD），用于媒体归档子目录（东八区，主场景中国用户）。
+fn today_folder() -> String {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64
+        + 8 * 3600;
+    civil_from_days(secs / 86400)
+}
+
+fn civil_from_days(days: i64) -> String {
+    let z = days + 719_468;
+    let era = z / 146_097;
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if m <= 2 { y + 1 } else { y };
+    format!("{y:04}-{m:02}-{d:02}")
+}
+
 async fn upload(
     State(app): State<AppHandle>,
     headers: HeaderMap,
@@ -196,6 +228,7 @@ async fn upload(
         log::warn!("文件互传：创建接收文件夹失败：{e}");
         return reply(StatusCode::INTERNAL_SERVER_ERROR, "cannot_create_folder");
     }
+    let today = today_folder();
     let mut saved: Vec<String> = Vec::new();
     while let Ok(Some(mut field)) = multipart.next_field().await {
         let Some(raw_name) = field.file_name().map(str::to_string) else {
@@ -204,7 +237,15 @@ async fn upload(
         let Some(name) = sanitize_name(&raw_name) else {
             continue;
         };
-        let target = unique_path(&dir, &name);
+        // 图片/视频按日期归档：接收文件夹/图片/2026-11-18/文件名
+        let target_dir = if is_media(&name) {
+            let sub = dir.join("图片").join(&today);
+            let _ = std::fs::create_dir_all(&sub);
+            sub
+        } else {
+            dir.clone()
+        };
+        let target = unique_path(&target_dir, &name);
         let file = match tokio::fs::File::create(&target).await {
             Ok(f) => f,
             Err(e) => {
@@ -471,6 +512,12 @@ const PAGE_HTML: &str = r#"<!doctype html>
     <div id="list"></div>
   </div>
   </div>
+  <div class="card" id="progress-wrap" style="display:none">
+    <div style="height:8px;border-radius:6px;background:#e2e0d8;overflow:hidden">
+      <div id="progress-fill" style="height:100%;width:0%;background:#3b82d6;border-radius:6px;transition:width .2s"></div>
+    </div>
+    <p id="progress-text" style="font-size:12px;color:#5f5e5a;margin:6px 0 0">上传中…</p>
+  </div>
   <div class="toast" id="toast"></div>
 <script>
   var TOKEN = new URLSearchParams(location.search).get('t') || new URLSearchParams(location.search).get('token') || '';
@@ -516,14 +563,30 @@ const PAGE_HTML: &str = r#"<!doctype html>
     if (!input.files.length) return;
     var form = new FormData();
     for (var i = 0; i < input.files.length; i++) form.append('file', input.files[i], input.files[i].name);
-    toast('正在上传…');
-    fetch('/transfer/upload?t=' + encodeURIComponent(TOKEN), { method: 'POST', body: form })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
+    var bar = document.getElementById('progress-wrap');
+    var fill = document.getElementById('progress-fill');
+    var label = document.getElementById('progress-text');
+    bar.style.display = 'block';
+    fill.style.width = '0%';
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/transfer/upload?t=' + encodeURIComponent(TOKEN));
+    xhr.upload.onprogress = function (e) {
+      if (e.lengthComputable) {
+        var pct = Math.floor(e.loaded / e.total * 100);
+        fill.style.width = pct + '%';
+        label.textContent = '上传中 ' + pct + '%（' + fmtSize(e.loaded) + ' / ' + fmtSize(e.total) + '）';
+      }
+    };
+    xhr.onload = function () {
+      bar.style.display = 'none';
+      try {
+        var data = JSON.parse(xhr.responseText);
         if (data.ok) { toast('已传 ' + data.saved.length + ' 个文件'); refresh(); }
         else toast('上传失败：' + (data.status || '未知错误'));
-      })
-      .catch(function () { toast('上传失败，检查网络'); });
+      } catch (err) { toast('上传失败，检查网络'); }
+    };
+    xhr.onerror = function () { bar.style.display = 'none'; toast('上传失败，检查网络'); };
+    xhr.send(form);
     input.value = '';
   }
   document.getElementById('copyurl').onclick = function () {

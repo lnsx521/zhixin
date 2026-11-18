@@ -235,19 +235,3 @@ body {
 }
 
 
-/* 大窗：验证码大号居中展示（点击复制） */
-.toast-otp-big {
-  margin: 14px auto 4px;
-  padding: 12px 24px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
-  font-size: 30px;
-  font-weight: 600;
-  letter-spacing: 6px;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-  cursor: pointer;
-  user-select: all;
-}
-.toast-otp-big:active { transform: scale(0.98); }

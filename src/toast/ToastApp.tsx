@@ -144,13 +144,8 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
           {payload.body}
           {truncated && <span className="toast-more"> 查看全文</span>}
         </p>
-        {expanded && payload.code && (
-          <div className="toast-otp-big" onClick={(event) => { event.stopPropagation(); void onCopy(); }} role="button" aria-label={t.toast.copied}>
-            {payload.code}
-          </div>
-        )}
-        {(payload.open_app_name || (payload.code && !expanded)) && <div className="toast-actions">
-          {payload.code && !expanded && (
+        {(payload.open_app_name || payload.code) && <div className="toast-actions">
+          {payload.code && (
             <button className={`toast-code ${copied ? "copied" : ""}`} onClick={(event) => { event.stopPropagation(); void onCopy(); }}>
               {copied ? t.toast.copied : t.toast.copyCode(payload.code)}
             </button>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { clearNotificationHistory, exportNotificationHistory, listNotificationHistory, type HistoryEntry } from "../../shared/api";
+import { clearNotificationHistory, listNotificationHistory, type HistoryEntry } from "../../shared/api";
 import { useT } from "../../shared/i18n";
 import { Section, Row } from "../components";
 
@@ -54,9 +54,6 @@ export function History() {
             if (!confirm(t.history.clearConfirm)) return;
             try { await clearNotificationHistory(); await refresh(query); } catch (err) { setError(String(err)); }
           }}>{t.history.clear}</button>
-          <button className="btn" onClick={async () => {
-            try { await exportNotificationHistory(); } catch (err) { setError(String(err)); }
-          }}>{t.history.export}</button>
         </Row>
       </Section>
     </>
