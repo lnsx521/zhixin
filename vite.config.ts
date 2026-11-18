@@ -21,6 +21,7 @@ export default defineConfig({
       input: {
         main: root("index.html"),
         toast: root("toast.html"),
+        expanded: root("expanded.html"),
         caret: root("caret.html"),
       },
     },

@@ -55,6 +55,7 @@ struct Shared {
     /// 本次请求期望收到几个 tuple —— 收满才算完整。
     expected_tuples: Mutex<usize>,
     pending_uid: Mutex<Option<u32>>,
+    pending_category: Mutex<Option<u8>>,
     response_ready: Condvar,
     stopping: AtomicBool,
     failed: AtomicBool,
@@ -250,10 +251,16 @@ impl AncsSession {
                             attributes.message.as_deref().map(str::len).unwrap_or(0)
                         );
 
+                        let pending_category = ds_shared
+                            .pending_category
+                            .lock()
+                            .unwrap()
+                            .take();
                         let notification = PhoneNotification::from_ancs(
                             ds_device_id.clone(),
                             ds_device_name.clone(),
                             attributes,
+                            pending_category,
                         );
 
                         let mut pending = ds_shared.pending_uid.lock().unwrap();
@@ -321,6 +328,7 @@ impl AncsSession {
                 );
 
                 // ★ 关键：只丢 UID 过去，绝不在这里直接写 Control Point
+                *ns_shared.pending_category.lock().unwrap() = Some(event.category);
                 let _ = ns_writer_tx.send(WriterCommand::Fetch([
                     bytes[4], bytes[5], bytes[6], bytes[7],
                 ]));

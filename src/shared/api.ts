@@ -195,6 +195,8 @@ export interface ToastPayload {
   body: string;
   code: string | null;
   duration_secs: number;
+  /** iOS 通知分类：1 = 来电 */
+  category: number | null;
 }
 
 export const getToastPayload = () => invoke<ToastPayload | null>("get_toast_payload");
@@ -202,6 +204,8 @@ export interface KnownApp { id: string; name: string }
 export const listKnownApps = () => invoke<KnownApp[]>("list_known_apps");
 export const toastClick = () =>
   invoke<string | null>("toast_click", { label: getCurrentWindow().label });
+export const toastExpand = () =>
+  invoke<void>("toast_expand");
 export const toastClose = () =>
   invoke<void>("toast_close", { label: getCurrentWindow().label });
 export const toastResize = (height: number) =>

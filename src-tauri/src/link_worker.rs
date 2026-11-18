@@ -105,6 +105,7 @@ fn check_low_battery(app: &AppHandle, level: u8) {
                 message: Some(format!("手机电量仅剩 {level}%，请及时充电。")),
                 ..Default::default()
             },
+            None,
         );
         info!("低电量提醒：{level}%（阈值 {threshold}%）");
         popups::show(app, &notification);

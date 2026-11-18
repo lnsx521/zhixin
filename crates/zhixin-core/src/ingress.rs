@@ -116,6 +116,7 @@ impl IncomingNotification {
             subtitle: None,
             message: Some(self.body),
             code: None,
+            category: None,
             received_at: SystemTime::now(),
         };
         n.code = otp::extract_otp(&n.full_text());

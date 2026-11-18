@@ -30,6 +30,9 @@ pub struct PhoneNotification {
     /// 识别出的验证码，没有则为 `None`。
     pub code: Option<String>,
 
+    /// iOS 通知分类（ANCS category）：1 = 来电，4 = 短信。HTTP 接入的通知没有分类。
+    pub category: Option<u8>,
+
     pub received_at: SystemTime,
 }
 
@@ -39,6 +42,7 @@ impl PhoneNotification {
         device_id: impl Into<String>,
         device_name: Option<String>,
         attributes: Attributes,
+        category: Option<u8>,
     ) -> Self {
         let mut notification = Self {
             device_id: device_id.into(),
@@ -49,6 +53,7 @@ impl PhoneNotification {
             subtitle: attributes.subtitle.clone(),
             message: attributes.message.clone(),
             code: None,
+            category,
             received_at: SystemTime::now(),
         };
 

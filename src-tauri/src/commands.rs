@@ -235,6 +235,7 @@ pub fn send_test_notification_from(app: AppHandle) {
                 message: Some("这是一条测试通知，验证码：123456。".to_string()),
                 ..Default::default()
             },
+            None,
         );
 
         info!("发送测试通知");

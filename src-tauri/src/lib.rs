@@ -111,6 +111,7 @@ pub fn run() {
             commands::save_config,
             commands::get_settings_meta,
             commands::set_autostart,
+            popups::toast_expand,
             commands::open_config_dir,
             commands::open_logs_dir,
             commands::open_project_link,

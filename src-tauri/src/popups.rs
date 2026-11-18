@@ -84,6 +84,7 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
         body: notification.summary(),
         code: notification.code.clone(),
         duration_secs: popup.duration_seconds,
+        category: notification.category,
     };
 
     info!("弹窗：{} — {}", payload.origin, payload.body);
@@ -156,6 +157,77 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
         tokio::time::sleep(Duration::from_secs(duration)).await;
         close_toast(&app_for_timer, &label_for_timer);
     });
+}
+
+/// 点小弹窗展开 → 关小窗，开一个 Mac 风格大窗展示全文。
+#[tauri::command]
+pub fn toast_expand(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {
+    let small_label = window.label().to_string();
+    let state = app.state::<AppState>();
+
+    let Some(payload) = state.pending_toasts.lock().unwrap().get(&small_label).cloned() else {
+        return Err("payload gone".into());
+    };
+
+    let id = state.toast_seq.fetch_add(1, Ordering::Relaxed);
+    let label = format!("expanded-{id}");
+    state
+        .pending_toasts
+        .lock()
+        .unwrap()
+        .insert(label.clone(), payload);
+
+    let width = state.config().notifications.popup.width + 80.0;
+    let builder = WebviewWindowBuilder::new(
+        &app,
+        &label,
+        WebviewUrl::App("expanded.html".into()),
+    )
+    .title("知信")
+    .decorations(false)
+    .transparent(true)
+    .shadow(false)
+    .always_on_top(true)
+    .skip_taskbar(true)
+    .resizable(false)
+    .inner_size(width, 220.0)
+    .visible(false);
+
+    let window = match builder.build() {
+        Ok(window) => window,
+        Err(error) => {
+            state.pending_toasts.lock().unwrap().remove(&label);
+            return Err(error.to_string());
+        }
+    };
+
+    // 大窗销毁 → 清理负载
+    let app_for_event = app.clone();
+    let label_for_event = label.clone();
+    window.on_window_event(move |event| {
+        if matches!(event, WindowEvent::Destroyed) {
+            app_for_event
+                .state::<AppState>()
+                .pending_toasts
+                .lock()
+                .unwrap()
+                .remove(&label_for_event);
+        }
+    });
+
+    // 居中显示（高度等前端量完报上来再调）
+    if let Some(monitor) = app.primary_monitor().ok().flatten() {
+        let scale = window.scale_factor().unwrap_or(1.0);
+        let work = monitor.work_area();
+        let _ = window.set_position(Position::Physical(PhysicalPosition::new(
+            work.position.x + ((work.size.width as f64 - width * scale) / 2.0).ceil() as i32,
+            work.position.y + ((work.size.height as f64 - 220.0 * scale) / 3.0).ceil() as i32,
+        )));
+    }
+
+    // 关掉小弹窗（负载已迁移，大窗接管展示）
+    close_toast(&app, &small_label);
+    Ok(())
 }
 
 /// 前端量出了真实高度 → 记高度、改尺寸、重排、显示。

@@ -54,6 +54,8 @@ pub struct ToastPayload {
     pub code: Option<String>,
     /// 停留秒数（前端倒计时条用；Rust 侧也有定时器兜底关闭）。
     pub duration_secs: u32,
+    /// iOS 通知分类：1 = 来电。其余场景 None。
+    pub category: Option<u8>,
 }
 
 /// 当前生效的候选条提议。

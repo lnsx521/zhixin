@@ -28,18 +28,14 @@ body {
   backdrop-filter: blur(30px) saturate(180%);
   -webkit-backdrop-filter: blur(30px) saturate(180%);
   border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
-  box-shadow:
-    0 12px 36px rgba(0, 0, 0, 0.18),
-    0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.10);
   cursor: pointer;
   overflow: hidden;
   animation: toast-in 0.24s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 :root[data-theme="dark"] .toast {
-  box-shadow:
-    0 12px 36px rgba(0, 0, 0, 0.5),
-    0 2px 8px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.30);
 }
 
 @keyframes toast-in {
@@ -57,10 +53,10 @@ body {
 .toast-icon {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--text) 7%, transparent);
   color: var(--text-secondary);
 }
@@ -68,9 +64,9 @@ body {
 /* 品牌图标：内置官方图标（macosicons.com 256px PNG），整图直显 */
 .toast-icon-img {
   display: block;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
 }
 .toast-icon.brand-official {
   background: transparent;
@@ -91,7 +87,7 @@ body {
 }
 
 .toast-origin-title {
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
   letter-spacing: -0.1px;
   color: var(--text);
@@ -109,12 +105,29 @@ body {
 
 .toast-body {
   font-size: 12.5px;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--text-secondary);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.toast-more {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* 大窗：全文不截断、无倒计时 */
+.toast-expanded .toast-body {
+  -webkit-line-clamp: unset;
+  font-size: 13.5px;
+  line-height: 1.8;
+}
+
+/* 来电卡：绿色描边醒目 */
+.toast-call {
+  border: 1.5px solid #34C759;
 }
 
 /* 验证码：品牌蓝胶囊，点一下即复制 */
@@ -220,3 +233,21 @@ body {
     transform: scaleX(0);
   }
 }
+
+
+/* 大窗：验证码大号居中展示（点击复制） */
+.toast-otp-big {
+  margin: 14px auto 4px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 6px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  cursor: pointer;
+  user-select: all;
+}
+.toast-otp-big:active { transform: scale(0.98); }

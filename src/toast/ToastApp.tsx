@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getConfig,
   getToastPayload,
   toastClick,
   toastClose,
+  toastExpand,
   toastResize,
   toastOpenApp,
   type ToastPayload,
@@ -13,10 +14,11 @@ import { Icon } from "../shared/Icon";
 import { useSavedTheme } from "../shared/theme";
 
 /**
- * 右下角通知弹窗。
+ * 通知弹窗（小窗与 Mac 风格大窗共用）。
  *
  * 负载不由事件下发（事件可能早于页面加载），而是页面挂载后主动向 Rust 取。
- * 点击：有验证码 → 复制 + 短暂反馈；无验证码 → 直接关闭。
+ * 小窗：内容最多 3 行，超出显示「查看全文」；点卡片任意处（除按钮）→ 展开成大窗。
+ * 大窗（mode=expanded）：全文展示、无倒计时；✕ 关闭。
  */
 
 /** 常见 App → 内置官方图标资源（bundle id → 资源路径）。
@@ -37,13 +39,16 @@ function brandAsset(appId: string | null): string | null {
   return null;
 }
 
-export function ToastApp() {
+export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
+  const expanded = mode === "expanded";
   useSavedTheme();
   const [payload, setPayload] = useState<ToastPayload | null>(null);
   const [copied, setCopied] = useState(false);
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lang, setLang] = useState<Lang>("zh");
+  const [truncated, setTruncated] = useState(false);
+  const bodyRef = useRef<HTMLParagraphElement | null>(null);
 
   useEffect(() => {
     getConfig()
@@ -61,34 +66,45 @@ export function ToastApp() {
   }, []);
 
   // 渲染完后量出真实高度报给 Rust：它调窗口尺寸 + 重排 + 显示。
-  // （内容两行三行都可能，固定高度会裁掉「点击复制」那一行。）
   useEffect(() => {
     if (!payload) return;
     const card = document.querySelector(".toast");
     if (!card) return;
-    const height = Math.ceil(card.getBoundingClientRect().height) + 8; // body 上下各 4px 阴影留白
+    const height = Math.ceil(card.getBoundingClientRect().height) + 8; // body 上下各 4px 留白
     toastResize(height);
   }, [payload, error, lang]);
+
+  // 小窗：检测正文是否被 3 行截断 → 显示「查看全文」
+  useEffect(() => {
+    if (expanded || !payload) {
+      setTruncated(false);
+      return;
+    }
+    const el = bodyRef.current;
+    if (!el) return;
+    setTruncated(el.scrollHeight > el.clientHeight + 1);
+  }, [payload, expanded, lang]);
 
   if (!payload) {
     return null;
   }
 
   const t = dict(lang);
-  const asset = brandAsset(payload.app_id);
+  const isCall = payload.category === 1;
+  const asset = isCall ? null : brandAsset(payload.app_id);
 
   const onCopy = async () => {
     if (copied) return;
     const code = await toastClick().catch(() => null);
     if (code) {
       setCopied(true);
-      setTimeout(() => toastClose(), 700);
+      if (!expanded) setTimeout(() => toastClose(), 700);
     } else {
       toastClose();
     }
   };
 
-  const onClick = async () => {
+  const onOpen = async () => {
     if (!payload.open_app_name) { await onCopy(); return; }
     if (opening) return;
     setOpening(true); setError(null);
@@ -96,22 +112,43 @@ export function ToastApp() {
     catch (err) { setError(String(err)); setOpening(false); }
   };
 
+  // 小窗：点卡片任意处（除按钮）→ 展开成大窗；大窗点空白不动作
+  const onCardClick = () => {
+    if (!expanded) void toastExpand().catch(() => {});
+  };
+
   return (
-    <div className="toast" onClick={onClick}>
-      <div className={`toast-icon ${asset ? "brand-official" : ""}`}>{asset ? <img className="toast-icon-img" src={asset} alt="" /> : <Icon name={payload.code ? "code" : "message"} size={20} />}</div>
+    <div className={`toast ${expanded ? "toast-expanded" : ""} ${isCall ? "toast-call" : ""}`} onClick={onCardClick}>
+      <div className={`toast-icon ${asset ? "brand-official" : ""}`}>
+        {isCall ? (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M6.6 2.7c.5-.5 1.3-.5 1.8 0l2.6 2.6c.5.5.5 1.3 0 1.8L9.7 8.4c.8 1.7 2.2 3.1 3.9 3.9l1.3-1.3c.5-.5 1.3-.5 1.8 0l2.6 2.6c.5.5.5 1.3 0 1.8l-1.5 1.5c-1 1-2.6 1.4-4 .9-2.5-1-4.9-2.6-7-4.7-2.1-2.1-3.7-4.5-4.7-7-.5-1.4-.1-3 .9-4l1.6-1.4z"/></svg>
+        ) : asset ? (
+          <img className="toast-icon-img" src={asset} alt="" />
+        ) : (
+          <Icon name={payload.code ? "code" : "message"} size={20} />
+        )}
+      </div>
       <div className="toast-text">
         <div className="toast-origin">
           <span className="toast-origin-title">{payload.origin}</span>
           <span className="toast-time">{new Date().toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { hour: "2-digit", minute: "2-digit" })}</span>
         </div>
-        <div className="toast-body">{payload.body}</div>
-        {(payload.code || payload.open_app_name) && <div className="toast-actions">
-        {payload.code && (
-          <button className={`toast-code ${copied ? "copied" : ""}`} onClick={(event) => { event.stopPropagation(); void onCopy(); }}>
-            {copied ? t.toast.copied : t.toast.copyCode(payload.code)}
-          </button>
+        <p ref={bodyRef} className={`toast-body ${truncated ? "truncated" : ""}`}>
+          {payload.body}
+          {truncated && <span className="toast-more"> 查看全文</span>}
+        </p>
+        {expanded && payload.code && (
+          <div className="toast-otp-big" onClick={(event) => { event.stopPropagation(); void onCopy(); }} role="button" aria-label={t.toast.copied}>
+            {payload.code}
+          </div>
         )}
-        {payload.open_app_name && <button className="toast-open" disabled={opening} onClick={(event) => { event.stopPropagation(); void onClick(); }}>{opening ? t.rules.opening : t.rules.open(payload.open_app_name)}</button>}
+        {(payload.open_app_name || (payload.code && !expanded)) && <div className="toast-actions">
+          {payload.code && !expanded && (
+            <button className={`toast-code ${copied ? "copied" : ""}`} onClick={(event) => { event.stopPropagation(); void onCopy(); }}>
+              {copied ? t.toast.copied : t.toast.copyCode(payload.code)}
+            </button>
+          )}
+          {payload.open_app_name && <button className="toast-open" disabled={opening} onClick={(event) => { event.stopPropagation(); void onOpen(); }}>{opening ? t.rules.opening : t.rules.open(payload.open_app_name)}</button>}
         </div>}
         {error && <p className="toast-error" role="alert">{error}</p>}
       </div>
@@ -125,10 +162,12 @@ export function ToastApp() {
       >
         ×
       </button>
-      <div
-        className="toast-countdown"
-        style={{ animationDuration: `${payload.duration_secs}s` }}
-      />
+      {!expanded && (
+        <div
+          className="toast-countdown"
+          style={{ animationDuration: `${payload.duration_secs}s` }}
+        />
+      )}
     </div>
   );
 }
