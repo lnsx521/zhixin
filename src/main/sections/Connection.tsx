@@ -166,12 +166,9 @@ export function Connection() {
       </Section>
 
       {showPairingGuide && (
-        <div className="status-card" style={{ borderLeft: "3px solid #34c759" }}>
-          <div>
-            <strong>{t.connection.pairingGuideTitle}</strong>
-            <p className="status-detail">{t.connection.pairingGuideStep1}</p>
-            <p className="status-detail">{t.connection.pairingGuideStep2}</p>
-          </div>
+        <div className="pairing-hint">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#f0a13a" aria-hidden="true"><path d="M12 2 1 21h22L12 2zm1 14h-2v2h2v-2zm0-7h-2v5h2V9z"/></svg>
+          <span>{t.connection.pairingGuideTitle}</span>
           <button className="btn" onClick={() => setShowGuide(true)}>{t.connection.diagnostics}</button>
         </div>
       )}
