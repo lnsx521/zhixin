@@ -50,7 +50,6 @@ export function History({ query }: { query: string }) {
                 <span className="history-time">{time(entry.received_at)}</span>
               </div>
               <p className="history-body">{entry.body}</p>
-              {entry.code && <button className="btn" onClick={() => { void navigator.clipboard.writeText(entry.code!); }}>{t.history.copy(entry.code)}</button>}
               </div>
             </article>
           ))}
