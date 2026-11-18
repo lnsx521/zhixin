@@ -153,33 +153,45 @@ async fn list(
     let dir = folder(&app);
     let _ = std::fs::create_dir_all(&dir);
     let mut entries: Vec<FileEntry> = Vec::new();
-    if let Ok(mut read) = tokio::fs::read_dir(&dir).await {
-        while let Ok(Some(entry)) = read.next_entry().await {
-            let meta = match entry.metadata().await {
-                Ok(m) => m,
-                Err(_) => continue,
-            };
-            if !meta.is_file() {
-                continue;
-            }
-            let Some(name) = entry.file_name().to_str().map(str::to_string) else {
-                continue;
-            };
-            entries.push(FileEntry {
-                name,
-                size: meta.len(),
-                mtime: meta
-                    .modified()
-                    .ok()
-                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-                    .map(|d| d.as_secs())
-                    .unwrap_or(0),
-            });
-        }
-    }
+    collect_files(&dir, "", &mut entries, 0).await;
     entries.sort_by_key(|a| std::cmp::Reverse(a.mtime));
     entries.truncate(LIST_LIMIT);
     Json(serde_json::json!({ "ok": true, "folder": "transfer", "files": entries })).into_response()
+}
+
+/// 递归收集接收文件夹内的文件（相对路径，最深 3 层）。
+fn collect_files<'a>(
+    dir: &'a std::path::Path,
+    rel: &'a str,
+    entries: &'a mut Vec<FileEntry>,
+    depth: u32,
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send + 'a>> {
+    Box::pin(async move {
+        if depth > 3 {
+            return;
+        }
+        if let Ok(mut read) = tokio::fs::read_dir(dir).await {
+            while let Ok(Some(entry)) = read.next_entry().await {
+                let Ok(meta) = entry.metadata().await else { continue };
+                let Some(name) = entry.file_name().to_str().map(str::to_string) else { continue };
+                let child_rel = if rel.is_empty() { name.clone() } else { format!("{rel}/{name}") };
+                if meta.is_dir() {
+                    Box::pin(collect_files(&dir.join(&name), &child_rel, entries, depth + 1)).await;
+                } else {
+                    entries.push(FileEntry {
+                        name: child_rel,
+                        size: meta.len(),
+                        mtime: meta
+                            .modified()
+                            .ok()
+                            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                            .map(|d| d.as_secs())
+                            .unwrap_or(0),
+                    });
+                }
+            }
+        }
+    })
 }
 
 /// 图片/视频扩展名判断（按日期归档用）。
@@ -290,16 +302,65 @@ async fn upload(
     Json(serde_json::json!({ "ok": true, "saved": saved })).into_response()
 }
 
-async fn download(
+/// 相对路径清洗：允许子目录，拒绝穿越。
+fn sanitize_rel(rel: &str) -> Option<String> {
+    let trimmed = rel.trim();
+    if trimmed.is_empty()
+        || trimmed.len() > 400
+        || trimmed.starts_with('/')
+        || trimmed.starts_with('\\')
+        || trimmed.contains("..")
+        || trimmed.split('/').any(|part| part.contains('\\') || part.is_empty())
+        || trimmed.chars().any(|c| c.is_control())
+    {
+        return None;
+    }
+    Some(trimmed.to_string())
+}
+
+/// 手机端删除电脑文件（带令牌校验 + 路径防穿越）。
+async fn delete_file(
     State(app): State<AppHandle>,
-    AxumPath(name): AxumPath<String>,
     headers: HeaderMap,
     Query(params): Query<HashMap<String, String>>,
 ) -> Response {
     if let Err(response) = guard(&app, &headers, query_token(&params).as_deref()) {
         return response;
     }
-    let Some(name) = sanitize_name(&name) else {
+    let Some(raw) = params.get("name") else {
+        return reply(StatusCode::BAD_REQUEST, "invalid_name");
+    };
+    let Some(name) = sanitize_rel(raw) else {
+        return reply(StatusCode::BAD_REQUEST, "invalid_name");
+    };
+    let dir = folder(&app);
+    let path = dir.join(&name);
+    let Ok(canon_dir) = dir.canonicalize() else {
+        return reply(StatusCode::INTERNAL_SERVER_ERROR, "folder_error");
+    };
+    match path.canonicalize() {
+        Ok(canon) if canon.starts_with(&canon_dir) && canon.is_file() => {
+            match tokio::fs::remove_file(&canon).await {
+                Ok(()) => ([(header::CONTENT_TYPE, "application/json")], Json(serde_json::json!({"ok": true}))).into_response(),
+                Err(e) => reply(StatusCode::INTERNAL_SERVER_ERROR, &format!("delete_failed:{e}")),
+            }
+        }
+        _ => reply(StatusCode::NOT_FOUND, "not_found"),
+    }
+}
+
+async fn download(
+    State(app): State<AppHandle>,
+    headers: HeaderMap,
+    Query(params): Query<HashMap<String, String>>,
+) -> Response {
+    if let Err(response) = guard(&app, &headers, query_token(&params).as_deref()) {
+        return response;
+    }
+    let Some(raw) = params.get("name") else {
+        return reply(StatusCode::BAD_REQUEST, "invalid_name");
+    };
+    let Some(name) = sanitize_rel(raw) else {
         return reply(StatusCode::BAD_REQUEST, "invalid_name");
     };
     let path = folder(&app).join(&name);
@@ -427,7 +488,8 @@ pub fn router(app: AppHandle) -> Router {
         .route("/transfer", get(page))
         .route("/transfer/upload", post(upload))
         .route("/transfer/list", get(list))
-        .route("/transfer/file/{name}", get(download))
+        .route("/transfer/file", get(download))
+        .route("/transfer/delete", post(delete_file))
         .layer(DefaultBodyLimit::max(MAX_BODY))
         .with_state(app)
 }
@@ -472,12 +534,27 @@ const PAGE_HTML: &str = r#"<!doctype html>
     text-decoration: none; display: inline-block;
   }
   .empty { text-align: center; color: #6e6e73; padding: 18px 0 6px; font-size: 13.5px; }
+  .file-sub { display: block; font-size: 10.5px; color: #a6a6ab; }
+  .file-ops { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; align-items: stretch; }
+  .file-del {
+    border: 0; border-radius: 9px; padding: 6px 12px;
+    background: #fdeaea; color: #c0392b; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+
   .toast {
     position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(12px);
     background: rgba(29,29,31,.92); color: #fff; border-radius: 999px; padding: 9px 20px;
     font-size: 13px; opacity: 0; transition: all .25s; pointer-events: none; max-width: 86vw;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #fab {
+    position: fixed; right: 16px; bottom: 20px; width: 78px; height: 78px;
+    border: 0; border-radius: 50%; background: #3478f6; color: #fff;
+    font-size: 36px; line-height: 72px; text-align: center; cursor: pointer;
+    box-shadow: 0 10px 28px rgba(52,120,246,.55), 0 2px 6px rgba(0,0,0,.18);
+    z-index: 60; padding: 0; transition: transform .15s, box-shadow .15s;
+  }
+  #fab:active { transform: scale(0.92); }
   .help-toggle {
     border: 0; background: transparent; color: #3478f6; font-size: 12px;
     font-weight: 600; cursor: pointer; padding: 2px 4px;
@@ -488,6 +565,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     .muted { color: #a6a6ab; }
     .file-meta { color: #a6a6ab; }
     .empty { color: #a6a6ab; }
+    .file-del { background: rgba(192,57,43,.22); color: #ff9c95; }
     .row { border-bottom-color: rgba(255,255,255,.09); }
     .btn.secondary { background: #2c3d5c; color: #8ab4ff; }
     .file-get { background: #2c3d5c; color: #8ab4ff; }
@@ -502,10 +580,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
       <span style="font-size:12px;color:#6e6e73">知信 · 文件互传</span>
       <button class="help-toggle" id="help-toggle">ⓘ 帮助</button>
     </div>
-    <button class="btn" id="pick">选择文件上传</button>
-    <button class="btn secondary" id="camera">拍照或录像上传</button>
     <input type="file" id="files" multiple>
-    <input type="file" id="capture" accept="image/*,video/*" capture="environment">
     <div id="help-box" style="display:none">
       <p class="muted" style="margin:10px 0 6px">配到 iPhone「分享」菜单（可选）</p>
       <p style="font-size:13px;line-height:1.7;margin:0 0 10px">在快捷指令 App 新建指令：<br>① 添加「从共享表单接收」，类型选「图像」或「文件」；<br>② 添加「获取 URL 内容」：方法选 POST，URL 填下面这条，请求体选「表单」，添加字段 file，值选「快捷指令输入」；<br>③ 命名保存。以后在照片里点「分享」→ 选它，照片直接传到这台电脑。</p>
@@ -521,6 +596,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     </div>
     <p id="progress-text" style="font-size:12px;color:#5f5e5a;margin:6px 0 0">上传中…</p>
   </div>
+  <button id="fab" aria-label="上传">+</button>
   <div class="toast" id="toast"></div>
 <script>
   var TOKEN = new URLSearchParams(location.search).get('t') || new URLSearchParams(location.search).get('token') || '';
@@ -561,9 +637,16 @@ const PAGE_HTML: &str = r#"<!doctype html>
         return;
       }
       box.innerHTML = data.files.map(function (f) {
-        return '<div class="row"><div class="file-name">' + esc(f.name)
+        var displayName = f.name.split('/').pop();
+        var inSub = f.name.indexOf('/') !== -1;
+        return '<div class="row"><div class="file-name">'
+          + (inSub ? '<span class="file-sub">' + esc(f.name.split('/').slice(0, -1).join('/')) + '</span>' : '')
+          + esc(displayName)
           + '<div class="file-meta">' + fmtSize(f.size) + ' · ' + fmtTime(f.mtime) + '</div></div>'
-          + '<a class="file-get" href="/transfer/file/' + encodeURIComponent(f.name) + '?t=' + encodeURIComponent(TOKEN) + '">下载</a></div>';
+          + '<div class="file-ops">'
+          + '<a class="file-get" href="/transfer/file?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(f.name) + '">下载</a>'
+          + '<button class="file-del" data-name="' + encodeURIComponent(f.name) + '">删除</button>'
+          + '</div></div>';
       }).join('');
     }).catch(function () { toast('刷新失败'); });
   }
@@ -606,10 +689,17 @@ const PAGE_HTML: &str = r#"<!doctype html>
     catch (e) { toast('复制失败，请长按手动复制'); }
     ta.remove();
   };
-  document.getElementById('pick').onclick = function () { document.getElementById('files').click(); };
-  document.getElementById('camera').onclick = function () { document.getElementById('capture').click(); };
+  document.getElementById('fab').onclick = function () { document.getElementById('files').click(); };
   document.getElementById('files').onchange = function () { upload(this); };
-  document.getElementById('capture').onchange = function () { upload(this); };
+  document.getElementById('list').addEventListener('click', function (e) {
+    var btn = e.target.closest('.file-del');
+    if (!btn) return;
+    var name = decodeURIComponent(btn.getAttribute('data-name'));
+    if (!confirm('删除「' + name.split('/').pop() + '」？\n将同时删除电脑上的这个文件。')) return;
+    fetch('/transfer/delete?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(name), { method: 'POST' })
+      .then(function (r) { if (r.ok) { toast('已删除'); refresh(); } else toast('删除失败'); })
+      .catch(function () { toast('删除失败，检查网络'); });
+  });
   refresh();
 </script>
 </body>
