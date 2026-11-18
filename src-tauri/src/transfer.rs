@@ -763,7 +763,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     document.getElementById('preview-overlay').style.display = 'none';
   }
   document.getElementById('list').addEventListener('click', function (e) {
-    if (e.target.closest('.file-del') || e.target.closest('.file-get')) return;
+    if (e.target.closest('.swipe-del') || e.target.closest('.file-del') || e.target.closest('.file-get')) return;
     var row = e.target.closest('.row[data-preview="1"]');
     if (!row) return;
     var name = decodeURIComponent(row.getAttribute('data-name'));
@@ -969,15 +969,6 @@ const PAGE_HTML: &str = r#"<!doctype html>
   });
   document.getElementById('fab').onclick = function () { document.getElementById('files').click(); };
   document.getElementById('files').onchange = function () { upload(this); };
-  document.getElementById('list').addEventListener('click', function (e) {
-    var btn = e.target.closest('.file-del');
-    if (!btn) return;
-    var name = decodeURIComponent(btn.getAttribute('data-name'));
-    if (!confirm('删除「' + name.split('/').pop() + '」？\n将同时删除电脑上的这个文件。')) return;
-    fetch('/transfer/delete?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(name), { method: 'POST' })
-      .then(function (r) { if (r.ok) { toast('已删除'); refresh(); } else toast('删除失败'); })
-      .catch(function () { toast('删除失败，检查网络'); });
-  });
   refresh();
 </script>
 </body>
