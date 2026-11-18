@@ -13,6 +13,7 @@ import { Transfer } from "./sections/Transfer";
 import { Icon, type IconName } from "../shared/Icon";
 import { applyTheme } from "../shared/theme";
 import { AutoSave, type SaveStatus } from "../shared/autosave";
+import { getSettingsMeta } from "../shared/api";
 import { Titlebar } from "./Titlebar";
 import { useUpdater } from "./useUpdater";
 import { UpdateNotice, UpdateDialog } from "./sections/SoftwareUpdate";
@@ -144,7 +145,12 @@ function Shell(props: {
   const t = useT();
   const updater = useUpdater();
   const [historyQuery, setHistoryQuery] = useState("");
+  const [appVersion, setAppVersion] = useState("");
   const { page, setPage, config, update, saveStatus, saveError, error, retry, beforeClose } = props;
+
+  useEffect(() => {
+    getSettingsMeta().then((meta) => setAppVersion(meta.version)).catch(() => {});
+  }, []);
 
   const nav: { key: Page; label: string }[] = [
     { key: "connection", label: t.nav.connection },
@@ -185,16 +191,19 @@ function Shell(props: {
           </nav>
           <div className="sidebar-foot">
             <UpdateNotice updater={updater} />
-            <div className={`autosave-status ${saveStatus === "error" ? "bad-text" : ""}`} role="status">
-              {saveStatus === "idle" ? t.common.autoSave : saveStatus === "saved" ? t.common.saved : saveStatus === "error" ? t.common.saveFailed : t.common.saving}
-            </div>
+            <div className="sidebar-version">知信 v{appVersion || "…"}</div>
           </div>
         </aside>
 
         <main className="content">
           <header className="page-header">
             <div>
-              <h1>{t.nav[page]}</h1>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+                <h1>{t.nav[page]}</h1>
+                {saveStatus === "saved" && <span className="save-toast" role="status">{t.common.saved}</span>}
+                {saveStatus === "error" && <span className="save-toast bad-text" role="alert">{t.common.saveFailed}</span>}
+                {saveStatus === "saving" && <span className="save-toast" style={{ opacity: 0.6 }}>{t.common.saving}</span>}
+              </div>
               <p>{page === "history" ? `最多保留 ${config?.notifications.history_limit ?? 10} 条。内容仅存储在本机。` : t.shell[page]}</p>
             </div>
             {page === "transfer" && (
