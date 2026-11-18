@@ -11,6 +11,7 @@
 //! （Origin 必须与 Host 一致，导航与 curl 无 Origin 不受限）。
 
 use std::collections::HashMap;
+use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 
 use axum::{
@@ -302,6 +303,45 @@ async fn upload(
     Json(serde_json::json!({ "ok": true, "saved": saved })).into_response()
 }
 
+/// 按扩展名推断 MIME 类型。
+fn mime_by_ext(name: &str) -> String {
+    let lower = name.to_lowercase();
+    let ext = lower.rsplit('.').next().unwrap_or("");
+    match ext {
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "heic" => "image/heic",
+        "bmp" => "image/bmp",
+        "mp4" | "m4v" => "video/mp4",
+        "mov" => "video/quicktime",
+        "webm" => "video/webm",
+        "mp3" => "audio/mpeg",
+        "m4a" => "audio/mp4",
+        "wav" => "audio/wav",
+        "pdf" => "application/pdf",
+        "txt" => "text/plain; charset=utf-8",
+        _ => "application/octet-stream",
+    }
+    .to_string()
+}
+
+/// 解析 Range 头（bytes=start-end / bytes=start-）。
+fn parse_range(range: &str, total: u64) -> Option<(u64, u64)> {
+    let spec = range.strip_prefix("bytes=")?;
+    let (start_s, end_s) = spec.split_once('-')?;
+    let start: u64 = start_s.trim().parse().ok()?;
+    let end: u64 = match end_s.trim().parse::<u64>() {
+        Ok(value) => value.min(total.saturating_sub(1)),
+        Err(_) => total.saturating_sub(1),
+    };
+    if start > end || start >= total {
+        return None;
+    }
+    Some((start, end))
+}
+
 /// 相对路径清洗：允许子目录，拒绝穿越。
 fn sanitize_rel(rel: &str) -> Option<String> {
     let trimmed = rel.trim();
@@ -363,19 +403,57 @@ async fn download(
     let Some(name) = sanitize_rel(raw) else {
         return reply(StatusCode::BAD_REQUEST, "invalid_name");
     };
+    let inline = params.get("mode").map(|m| m == "view").unwrap_or(false);
+    let mime = mime_by_ext(&name);
     let path = folder(&app).join(&name);
+    let meta = match tokio::fs::metadata(&path).await {
+        Ok(m) if m.is_file() => m,
+        _ => return reply(StatusCode::NOT_FOUND, "not_found"),
+    };
+    let total = meta.len();
+
+    // 视频拖进度条：处理 Range 请求（206 分段流式）
+    let range_header = headers.get(header::RANGE).and_then(|v| v.to_str().ok()).map(str::to_string);
+    if let Some(range) = range_header.filter(|_| !inline || mime.starts_with("video/") || mime.starts_with("audio/")) {
+        if let Some((start, end)) = parse_range(&range, total) {
+            let file = match tokio::fs::File::open(&path).await {
+                Ok(f) => f,
+                Err(_) => return reply(StatusCode::INTERNAL_SERVER_ERROR, "open_failed"),
+            };
+            use tokio::io::{AsyncSeekExt, AsyncReadExt};
+            let mut f = std::pin::pin!(file);
+            let _ = f.seek(std::io::SeekFrom::Start(start)).await;
+            let length = (end - start + 1).min(total - start);
+            let mut buffer = vec![0u8; length as usize];
+            if f.read_exact(&mut buffer).await.is_err() {
+                return reply(StatusCode::INTERNAL_SERVER_ERROR, "read_failed");
+            }
+            let mut headers_out = HeaderMap::new();
+            headers_out.insert(header::CONTENT_TYPE, HeaderValue::from_str(&mime).unwrap_or(HeaderValue::from_static("application/octet-stream")));
+            headers_out.insert(header::CONTENT_LENGTH, HeaderValue::from(length));
+            headers_out.insert(header::CONTENT_RANGE, HeaderValue::from_str(&format!("bytes {start}-{end}/{total}")).unwrap_or(HeaderValue::from_static("bytes */*")));
+            headers_out.insert(header::ACCEPT_RANGES, HeaderValue::from_static("bytes"));
+            if inline {
+                headers_out.insert(header::CONTENT_DISPOSITION, HeaderValue::from_static("inline"));
+            }
+            return (StatusCode::PARTIAL_CONTENT, headers_out, buffer).into_response();
+        }
+    }
+
     let file = match tokio::fs::File::open(&path).await {
         Ok(f) => f,
         Err(_) => return reply(StatusCode::NOT_FOUND, "not_found"),
     };
     let length = file.metadata().await.map(|m| m.len()).unwrap_or(0);
     let encoded = utf8_percent_encode(&name, NON_ALPHANUMERIC_KEPT);
+    let disposition = if inline { "inline" } else { "attachment" };
     let mut response = Response::builder()
         .status(StatusCode::OK)
-        .header(header::CONTENT_TYPE, "application/octet-stream")
+        .header(header::CONTENT_TYPE, mime)
+        .header(header::ACCEPT_RANGES, "bytes")
         .header(
             header::CONTENT_DISPOSITION,
-            format!("attachment; filename*=UTF-8''{encoded}"),
+            format!("{disposition}; filename*=UTF-8''{encoded}"),
         )
         .header(header::CACHE_CONTROL, "no-store")
         .body(Body::from_stream(tokio_util::io::ReaderStream::new(file)))
@@ -527,6 +605,12 @@ const PAGE_HTML: &str = r#"<!doctype html>
   .row { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid rgba(0,0,0,.06); }
   .row:last-child { border-bottom: 0; }
   .file-name { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 14.5px; }
+  .file-n { font-weight: 500; }
+  .file-ext {
+    display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 5px;
+    background: rgba(0,0,0,.06); color: #6e6e73; font-size: 10px; font-weight: 600;
+    vertical-align: middle; letter-spacing: .5px;
+  }
   .file-meta { color: #6e6e73; font-size: 11.5px; margin-top: 2px; }
   .file-get {
     flex-shrink: 0; border: 0; border-radius: 9px; padding: 8px 14px;
@@ -547,10 +631,24 @@ const PAGE_HTML: &str = r#"<!doctype html>
     font-size: 13px; opacity: 0; transition: all .25s; pointer-events: none; max-width: 86vw;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #preview-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.92);
+    display: flex; flex-direction: column; z-index: 100;
+  }
+  #preview-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; flex-shrink: 0;
+  }
+  #preview-name { color: #f2f2f4; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70vw; }
+  #preview-close {
+    border: 0; border-radius: 999px; padding: 8px 18px;
+    background: rgba(255,255,255,.14); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  #preview-body { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0 10px 10px; }
   #fab {
-    position: fixed; right: 16px; bottom: 20px; width: 78px; height: 78px;
+    position: fixed; right: 16px; bottom: 20px; width: 66px; height: 66px;
     border: 0; border-radius: 50%; background: #3478f6; color: #fff;
-    font-size: 36px; line-height: 72px; text-align: center; cursor: pointer;
+    font-size: 28px; line-height: 60px; text-align: center; cursor: pointer;
     box-shadow: 0 10px 28px rgba(52,120,246,.55), 0 2px 6px rgba(0,0,0,.18);
     z-index: 60; padding: 0; transition: transform .15s, box-shadow .15s;
   }
@@ -564,6 +662,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     .card { background: #2a2a2d; border-color: #3a3a3e; }
     .muted { color: #a6a6ab; }
     .file-meta { color: #a6a6ab; }
+    .file-ext { background: rgba(255,255,255,.10); color: #a6a6ab; }
     .empty { color: #a6a6ab; }
     .file-del { background: rgba(192,57,43,.22); color: #ff9c95; }
     .row { border-bottom-color: rgba(255,255,255,.09); }
@@ -597,6 +696,10 @@ const PAGE_HTML: &str = r#"<!doctype html>
     <p id="progress-text" style="font-size:12px;color:#5f5e5a;margin:6px 0 0">上传中…</p>
   </div>
   <button id="fab" aria-label="上传">+</button>
+  <div id="preview-overlay" style="display:none">
+    <div id="preview-topbar"><span id="preview-name"></span><button id="preview-close">完成</button></div>
+    <div id="preview-body"></div>
+  </div>
   <div class="toast" id="toast"></div>
 <script>
   var TOKEN = new URLSearchParams(location.search).get('t') || new URLSearchParams(location.search).get('token') || '';
@@ -605,6 +708,30 @@ const PAGE_HTML: &str = r#"<!doctype html>
   document.getElementById('help-toggle').onclick = function () {
     var box = document.getElementById('help-box');
     box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  };
+
+  var previewableExt = /\.(jpe?g|png|gif|webp|bmp|mp4|m4v|mov|webm|pdf)$/i;
+  document.getElementById('list').addEventListener('click', function (e) {
+    if (e.target.closest('.file-del') || e.target.closest('.file-get')) return;
+    var row = e.target.closest('.row[data-preview="1"]');
+    if (!row) return;
+    var name = decodeURIComponent(row.getAttribute('data-name'));
+    var url = '/transfer/file?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(name) + '&mode=view';
+    var body = document.getElementById('preview-body');
+    var lower = name.toLowerCase();
+    if (/\.(mp4|m4v|mov|webm)$/.test(lower)) {
+      body.innerHTML = '<video controls autoplay playsinline style="max-width:100%;max-height:100%" src="' + url + '"></video>';
+    } else if (/\.pdf$/.test(lower)) {
+      body.innerHTML = '<iframe style="width:100%;height:100%;border:0" src="' + url + '"></iframe>';
+    } else {
+      body.innerHTML = '<img style="max-width:100%;max-height:100%;object-fit:contain" src="' + url + '">';
+    }
+    document.getElementById('preview-name').textContent = name;
+    document.getElementById('preview-overlay').style.display = 'flex';
+  });
+  document.getElementById('preview-close').onclick = function () {
+    document.getElementById('preview-body').innerHTML = '';
+    document.getElementById('preview-overlay').style.display = 'none';
   };
 
   function toast(text) {
@@ -637,11 +764,12 @@ const PAGE_HTML: &str = r#"<!doctype html>
         return;
       }
       box.innerHTML = data.files.map(function (f) {
-        var displayName = f.name.split('/').pop();
-        var inSub = f.name.indexOf('/') !== -1;
-        return '<div class="row"><div class="file-name">'
-          + (inSub ? '<span class="file-sub">' + esc(f.name.split('/').slice(0, -1).join('/')) + '</span>' : '')
-          + esc(displayName)
+        var dot = f.name.lastIndexOf('.');
+        var baseName = dot > 0 ? f.name.slice(0, dot) : f.name;
+        var ext = dot > 0 ? f.name.slice(dot + 1).toUpperCase() : '文件';
+        var previewable = /\.(jpe?g|png|gif|webp|bmp|mp4|m4v|mov|webm|pdf)$/i.test(f.name);
+        return '<div class="row" data-name="' + encodeURIComponent(f.name) + '" data-preview="' + (previewable ? '1' : '0') + '">'
+          + '<div class="file-name"><span class="file-n">' + esc(baseName) + '</span><span class="file-ext">' + esc(ext) + '</span>'
           + '<div class="file-meta">' + fmtSize(f.size) + ' · ' + fmtTime(f.mtime) + '</div></div>'
           + '<div class="file-ops">'
           + '<a class="file-get" href="/transfer/file?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(f.name) + '">下载</a>'
