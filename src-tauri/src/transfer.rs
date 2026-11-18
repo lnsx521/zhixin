@@ -740,7 +740,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     box.style.display = box.style.display === 'none' ? 'block' : 'none';
   };
 
-  var previewableExt = /\.(jpe?g|png|gif|webp|bmp|mp4|m4v|mov|webm|pdf)$/i;
+  var previewableExt = /\.(jpe?g|png|gif|webp|bmp|mp4|m4v|mov|webm)$/i;
   var previewItems = [];
   var previewIndex = 0;
   function openPreviewAt(index) {
@@ -752,8 +752,6 @@ const PAGE_HTML: &str = r#"<!doctype html>
     var lower = item.rootRel.toLowerCase();
     if (/\.(mp4|m4v|mov|webm)$/.test(lower)) {
       body.innerHTML = '<video controls autoplay playsinline style="max-width:100%;max-height:100%" src="' + url + '"></video>';
-    } else if (/\.pdf$/.test(lower)) {
-      body.innerHTML = '<iframe style="width:100%;height:100%;border:0" src="' + url + '"></iframe>';
     } else {
       body.innerHTML = '<img style="max-width:100%;max-height:100%;object-fit:contain" src="' + url + '">';
     }
@@ -898,7 +896,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
         var dot = f.name.lastIndexOf('.');
         var baseName = dot > 0 ? f.name.slice(0, dot) : f.name;
         var ext = (dot > 0 ? f.name.slice(dot + 1) : 'file').toUpperCase();
-        var previewable = /\.(jpe?g|png|gif|webp|bmp|mp4|m4v|mov|webm|pdf)$/i.test(f.name);
+        var previewable = /\.(jpe?g|png|gif|webp|bmp|mp4|m4v|mov|webm)$/i.test(f.name);
         var rootRel = curDir ? curDir + '/' + f.name : f.name;
         if (previewable) previewQueue.push({ rootRel: rootRel });
         var fileUrl = '/transfer/file?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(rootRel) + '&mode=view';
