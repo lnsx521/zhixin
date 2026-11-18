@@ -75,7 +75,7 @@ export function Connection() {
           <span className="status-dot" />
           <div>
             <strong>{stateLabel}</strong>
-            <p className="status-detail">{failed && link?.detail ? link.detail : ready ? t.connection.readyHint : link?.awaiting_verification ? t.connection.verificationHint : t.connection.waitingHint}</p>
+            <p className="status-detail">{failed && displayLink?.detail ? displayLink.detail : ready ? t.connection.readyHint : displayLink?.awaiting_verification ? t.connection.verificationHint : t.connection.waitingHint}</p>
           </div>
       </div>
 
@@ -163,7 +163,7 @@ export function Connection() {
         </div>
       )}
       {failed && <button className="btn" onClick={() => setShowGuide(true)}>{t.connection.diagnostics}</button>}
-      {link?.detail && <details className="diagnostic-details"><summary>{t.connection.details}</summary><p className="status-detail">{link.detail}</p></details>}
+      {displayLink?.detail && <details className="diagnostic-details"><summary>{t.connection.details}</summary><p className="status-detail">{displayLink.detail}</p></details>}
       {showGuide && <ConnectionGuide onClose={() => setShowGuide(false)} />}
     </>
   );
