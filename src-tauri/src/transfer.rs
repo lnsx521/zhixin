@@ -203,12 +203,17 @@ async fn upload(
     if let Err(response) = guard(&app, &headers, query_token(&params).as_deref()) {
         return response;
     }
-    let dir = folder(&app);
-    if let Err(e) = std::fs::create_dir_all(&dir) {
+    let root = folder(&app);
+    if let Err(e) = std::fs::create_dir_all(&root) {
         log::warn!("文件互传：创建接收文件夹失败：{e}");
         return reply(StatusCode::INTERNAL_SERVER_ERROR, "cannot_create_folder");
     }
-    let today = today_folder();
+    // 上传目标 = 手机当前浏览的子目录（无则根目录）；子目录须已存在
+    let current = params.get("dir").and_then(|d| sanitize_rel(d)).unwrap_or_default();
+    let dir = if current.is_empty() { root.clone() } else { root.join(&current) };
+    if let Err(_) = tokio::fs::metadata(&dir).await {
+        return reply(StatusCode::NOT_FOUND, "dir_not_found");
+    }
     let mut saved: Vec<String> = Vec::new();
     while let Ok(Some(mut field)) = multipart.next_field().await {
         let Some(raw_name) = field.file_name().map(str::to_string) else {
@@ -675,6 +680,8 @@ const PAGE_HTML: &str = r#"<!doctype html>
   <div class="toast" id="toast"></div>
 <script>
   var TOKEN = new URLSearchParams(location.search).get('t') || new URLSearchParams(location.search).get('token') || '';
+  var curDir = '';
+  function setDir(dir) { curDir = dir; refresh(); }
   var toastEl = document.getElementById('toast');
   var toastTimer = null;
   document.getElementById('help-toggle').onclick = function () {
@@ -729,10 +736,19 @@ const PAGE_HTML: &str = r#"<!doctype html>
     });
   }
   function refresh() {
-    fetch('/transfer/list?t=' + encodeURIComponent(TOKEN)).then(function (r) { return r.json(); }).then(function (data) {
+    fetch('/transfer/list?t=' + encodeURIComponent(TOKEN) + '&dir=' + encodeURIComponent(curDir)).then(function (r) { return r.json(); }).then(function (data) {
       var box = document.getElementById('list');
+      var html = '';
+      if (curDir) {
+        var parent = curDir.split('/');
+        parent.pop();
+        html += '<div class="folder-row" data-dir="' + esc(parent.join('/')) + '">📁 返回上级</div>';
+      }
+      html += (data.folders || []).map(function (d) {
+        return '<div class="folder-row" data-dir="' + esc(curDir ? curDir + '/' + d : d) + '">📁 ' + esc(d) + '</div>';
+      }).join('');
       if (!data.ok || !data.files.length) {
-        box.innerHTML = '<div class="empty">还没有文件</div>';
+        box.innerHTML = html + '<div class="empty">还没有文件</div>';
         return;
       }
       box.innerHTML = data.files.map(function (f) {
@@ -740,7 +756,8 @@ const PAGE_HTML: &str = r#"<!doctype html>
         var baseName = dot > 0 ? f.name.slice(0, dot) : f.name;
         var ext = (dot > 0 ? f.name.slice(dot + 1) : 'file').toUpperCase();
         var previewable = /\.(jpe?g|png|gif|webp|bmp|mp4|m4v|mov|webm|pdf)$/i.test(f.name);
-        var fileUrl = '/transfer/file?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(f.name) + '&mode=view';
+        var rootRel = curDir ? curDir + '/' + f.name : f.name;
+        var fileUrl = '/transfer/file?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(rootRel) + '&mode=view';
         var thumb;
         if (/\.(jpe?g|png|gif|webp|bmp)$/i.test(f.name)) {
           thumb = '<img loading="lazy" src="' + fileUrl + '" alt="">';
@@ -749,13 +766,14 @@ const PAGE_HTML: &str = r#"<!doctype html>
         } else {
           thumb = '<span class="thumb-icon thumb-doc">' + esc(ext.slice(0, 4)) + '</span>';
         }
-        return '<div class="row" data-name="' + encodeURIComponent(f.name) + '" data-preview="' + (previewable ? '1' : '0') + '">'
+        var rootRel = curDir ? curDir + '/' + f.name : f.name;
+        return '<div class="row" data-name="' + encodeURIComponent(rootRel) + '" data-preview="' + (previewable ? '1' : '0') + '">'
           + '<div class="file-thumb">' + thumb + '</div>'
           + '<div class="file-name"><span class="file-n">' + esc(baseName) + '</span><span class="file-ext">' + esc(ext) + '</span>'
           + '<div class="file-meta">' + fmtSize(f.size) + ' · ' + fmtTime(f.mtime) + '</div></div>'
           + '<div class="file-ops">'
-          + '<a class="file-get" href="/transfer/file?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(f.name) + '">下载</a>'
-          + '<button class="file-del" data-name="' + encodeURIComponent(f.name) + '">删除</button>'
+          + '<a class="file-get" href="/transfer/file?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(rootRel) + '">下载</a>'
+          + '<button class="file-del" data-name="' + encodeURIComponent(rootRel) + '">删除</button>'
           + '</div></div>';
       }).join('');
     }).catch(function () { toast('刷新失败'); });
@@ -799,6 +817,10 @@ const PAGE_HTML: &str = r#"<!doctype html>
     catch (e) { toast('复制失败，请长按手动复制'); }
     ta.remove();
   };
+  document.getElementById('list').addEventListener('click', function (e) {
+    var folderRow = e.target.closest('.folder-row');
+    if (folderRow) { setDir(decodeURIComponent(folderRow.getAttribute('data-dir'))); }
+  });
   document.getElementById('fab').onclick = function () { document.getElementById('files').click(); };
   document.getElementById('files').onchange = function () { upload(this); };
   document.getElementById('list').addEventListener('click', function (e) {
