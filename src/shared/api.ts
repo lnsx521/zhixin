@@ -29,6 +29,8 @@ export interface NotificationOptions {
   app_rules: AppRule[];
   enabled: boolean;
   filter: FilterOptions;
+  /** 通知历史保留条数（0 = 不保存） */
+  history_limit: number;
   popup: PopupOptions;
 }
 

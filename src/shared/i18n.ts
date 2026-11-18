@@ -145,6 +145,7 @@ const zh = {
     height: "弹窗高度",
     heightHint: "0 = 按内容自动；填了就用固定高度",
     filterTitle: "过滤",
+    historyTitle: "通知历史", historyDesc: "弹过的通知留档回查，0 = 不保存历史。",
     filterDesc:
       "黑名单优先于白名单。App 填 iOS 的 bundle id（如 com.tencent.xin），一行一条。",
     excludeApps: "排除的 App",
@@ -430,6 +431,7 @@ const en: Dict = {
     height: "Toast height",
     heightHint: "0 = fit content; otherwise a fixed height",
     filterTitle: "Filters",
+    historyTitle: "Notification history", historyDesc: "Keep popped notifications for review, 0 = don't save history.",
     filterDesc:
       "Blocklist wins over allowlist. Apps use iOS bundle ids (e.g. com.tencent.xin), one per line.",
     excludeApps: "Blocked apps",

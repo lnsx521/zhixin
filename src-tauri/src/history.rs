@@ -40,7 +40,17 @@ pub struct HistoryEntry {
 }
 
 /// 弹窗时留档（在 popups::show 里调用；全屏暂存的通知在补弹时也会走到这里）。
+/// 保留条数跟随设置（notifications.history_limit，0 = 不保存）。
 pub fn record(app: &AppHandle, notification: &PhoneNotification) {
+    let limit = {
+        use zhixin_core::config::Config;
+        Config::load_or_default(paths::config_path(app))
+            .map(|config| config.notifications.history_limit)
+            .unwrap_or(10)
+    };
+    if limit == 0 {
+        return;
+    }
     let mut entries = load(app);
     entries.push(HistoryEntry {
         received_at: notification
@@ -54,8 +64,9 @@ pub fn record(app: &AppHandle, notification: &PhoneNotification) {
         code: notification.code.clone(),
         category: notification.category,
     });
-    if entries.len() > CAP {
-        let drop_count = entries.len() - CAP;
+    let cap = (limit as usize).min(CAP);
+    if entries.len() > cap {
+        let drop_count = entries.len() - cap;
         entries.drain(0..drop_count);
     }
     let _ = save(app, &entries);
