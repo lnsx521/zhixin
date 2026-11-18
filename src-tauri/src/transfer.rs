@@ -605,6 +605,16 @@ const PAGE_HTML: &str = r#"<!doctype html>
   .row { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid rgba(0,0,0,.06); }
   .row:last-child { border-bottom: 0; }
   .file-name { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 14.5px; }
+  .file-thumb {
+    width: 44px; height: 44px; flex-shrink: 0; border-radius: 9px; overflow: hidden;
+    background: rgba(0,0,0,.05);
+  }
+  .file-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .thumb-icon {
+    display: grid; place-items: center; width: 100%; height: 100%;
+    font-size: 18px; color: #6e6e73;
+  }
+  .thumb-doc { font-size: 10px; font-weight: 700; letter-spacing: .5px; }
   .file-n { font-weight: 500; }
   .file-ext {
     display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 5px;
@@ -663,6 +673,8 @@ const PAGE_HTML: &str = r#"<!doctype html>
     .muted { color: #a6a6ab; }
     .file-meta { color: #a6a6ab; }
     .file-ext { background: rgba(255,255,255,.10); color: #a6a6ab; }
+    .file-thumb { background: rgba(255,255,255,.08); }
+    .thumb-icon { color: #a6a6ab; }
     .empty { color: #a6a6ab; }
     .file-del { background: rgba(192,57,43,.22); color: #ff9c95; }
     .row { border-bottom-color: rgba(255,255,255,.09); }
@@ -726,7 +738,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     } else {
       body.innerHTML = '<img style="max-width:100%;max-height:100%;object-fit:contain" src="' + url + '">';
     }
-    document.getElementById('preview-name').textContent = name;
+    document.getElementById('preview-name').textContent = name.split('/').pop();
     document.getElementById('preview-overlay').style.display = 'flex';
   });
   document.getElementById('preview-close').onclick = function () {
@@ -766,9 +778,19 @@ const PAGE_HTML: &str = r#"<!doctype html>
       box.innerHTML = data.files.map(function (f) {
         var dot = f.name.lastIndexOf('.');
         var baseName = dot > 0 ? f.name.slice(0, dot) : f.name;
-        var ext = dot > 0 ? f.name.slice(dot + 1).toUpperCase() : '文件';
+        var ext = (dot > 0 ? f.name.slice(dot + 1) : 'file').toUpperCase();
         var previewable = /\.(jpe?g|png|gif|webp|bmp|mp4|m4v|mov|webm|pdf)$/i.test(f.name);
+        var fileUrl = '/transfer/file?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(f.name) + '&mode=view';
+        var thumb;
+        if (/\.(jpe?g|png|gif|webp|bmp)$/i.test(f.name)) {
+          thumb = '<img loading="lazy" src="' + fileUrl + '" alt="">';
+        } else if (/\.(mp4|m4v|mov|webm)$/i.test(f.name)) {
+          thumb = '<span class="thumb-icon">▶</span>';
+        } else {
+          thumb = '<span class="thumb-icon thumb-doc">' + esc(ext.slice(0, 4)) + '</span>';
+        }
         return '<div class="row" data-name="' + encodeURIComponent(f.name) + '" data-preview="' + (previewable ? '1' : '0') + '">'
+          + '<div class="file-thumb">' + thumb + '</div>'
           + '<div class="file-name"><span class="file-n">' + esc(baseName) + '</span><span class="file-ext">' + esc(ext) + '</span>'
           + '<div class="file-meta">' + fmtSize(f.size) + ' · ' + fmtTime(f.mtime) + '</div></div>'
           + '<div class="file-ops">'
