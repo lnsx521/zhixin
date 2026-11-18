@@ -123,7 +123,7 @@ impl Default for LinkOptions {
         Self {
             find_device_timeout: Duration::from_secs(60),
             connect_timeout: Duration::from_secs(120),
-            reconnect_delay: Duration::from_secs(2),
+            reconnect_delay: Duration::from_millis(500),
             error_backoff: Duration::from_secs(10),
             adapter_retry_delay: Duration::from_secs(30),
         }
@@ -378,7 +378,7 @@ impl AncsLink {
         let mut last_health_log = std::time::Instant::now();
 
         while !self.stopped() {
-            std::thread::sleep(Duration::from_millis(1000));
+            std::thread::sleep(Duration::from_millis(500));
             let events = session.event_count();
             if events != last_events {
                 last_events = events;
@@ -414,7 +414,7 @@ impl AncsLink {
                     );
                 }
 
-                if misses >= 5 {
+                if misses >= 3 {
                     info!("链路断开，准备重连");
                     break;
                 }
