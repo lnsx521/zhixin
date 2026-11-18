@@ -662,6 +662,11 @@ const PAGE_HTML: &str = r#"<!doctype html>
     display: flex; align-items: center; justify-content: space-between;
     padding: 10px 14px; flex-shrink: 0;
   }
+  .preview-nav {
+    border: 0; border-radius: 999px; width: 34px; height: 34px;
+    background: rgba(255,255,255,.14); color: #fff; font-size: 16px;
+    cursor: pointer; display: grid; place-items: center;
+  }
   #preview-name { color: #f2f2f4; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70vw; }
   #preview-close {
     border: 0; border-radius: 999px; padding: 8px 18px;
@@ -725,7 +730,14 @@ const PAGE_HTML: &str = r#"<!doctype html>
   </div>
   <button id="fab" aria-label="上传">+</button>
   <div id="preview-overlay" style="display:none">
-    <div id="preview-topbar"><span id="preview-name"></span><button id="preview-close">完成</button></div>
+    <div id="preview-topbar">
+      <button class="preview-nav" id="preview-prev" aria-label="上一张">‹</button>
+      <span id="preview-name"></span>
+      <span style="display:flex;align-items:center;gap:8px">
+        <button class="preview-nav" id="preview-next" aria-label="下一张">›</button>
+        <button id="preview-close">完成</button>
+      </span>
+    </div>
     <div id="preview-body"></div>
   </div>
   <div class="toast" id="toast"></div>
@@ -740,7 +752,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     box.style.display = box.style.display === 'none' ? 'block' : 'none';
   };
 
-  var previewableExt = /\.(jpe?g|png|gif|webp|bmp|mp4|m4v|mov|webm)$/i;
+  var previewableExt = /\.(jpe?g|png|gif|webp|bmp|mp4|m4v|mov|webm|pdf)$/i;
   var previewItems = [];
   var previewIndex = 0;
   function openPreviewAt(index) {
@@ -752,6 +764,8 @@ const PAGE_HTML: &str = r#"<!doctype html>
     var lower = item.rootRel.toLowerCase();
     if (/\.(mp4|m4v|mov|webm)$/.test(lower)) {
       body.innerHTML = '<video controls autoplay playsinline style="max-width:100%;max-height:100%" src="' + url + '"></video>';
+    } else if (/\.pdf$/.test(lower)) {
+      body.innerHTML = '<iframe style="width:100%;height:100%;border:0" src="' + url + '"></iframe>';
     } else {
       body.innerHTML = '<img style="max-width:100%;max-height:100%;object-fit:contain" src="' + url + '">';
     }
@@ -772,7 +786,10 @@ const PAGE_HTML: &str = r#"<!doctype html>
     openPreviewAt(index);
   });
   document.getElementById('preview-close').onclick = closePreview;
+  document.getElementById('preview-prev').onclick = function () { openPreviewAt(previewIndex - 1); };
+  document.getElementById('preview-next').onclick = function () { openPreviewAt(previewIndex + 1); };
   var previewTouch = { startX: 0, y: 0 };
+  bindPreviewGestures(document.getElementById('preview-overlay'));
   function bindPreviewGestures(el) {
     el.addEventListener('touchstart', function (e) {
       previewTouch.startX = e.touches[0].clientX;
@@ -896,7 +913,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
         var dot = f.name.lastIndexOf('.');
         var baseName = dot > 0 ? f.name.slice(0, dot) : f.name;
         var ext = (dot > 0 ? f.name.slice(dot + 1) : 'file').toUpperCase();
-        var previewable = /\.(jpe?g|png|gif|webp|bmp|mp4|m4v|mov|webm)$/i.test(f.name);
+        var previewable = /\.(jpe?g|png|gif|webp|bmp|mp4|m4v|mov|webm|pdf)$/i.test(f.name);
         var rootRel = curDir ? curDir + '/' + f.name : f.name;
         if (previewable) previewQueue.push({ rootRel: rootRel });
         var fileUrl = '/transfer/file?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(rootRel) + '&mode=view';
