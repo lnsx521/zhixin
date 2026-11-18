@@ -598,7 +598,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
   .btn:disabled { opacity: .45; }
   .btn.secondary { background: #e9f1fe; color: #3478f6; margin-top: 10px; }
   input[type=file] { display: none; }
-  .row { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid rgba(0,0,0,.06); }
+  .row { display: flex; align-items: stretch; gap: 12px; border-bottom: 1px solid rgba(0,0,0,.06); position: relative; overflow: hidden; }
   .row:last-child { border-bottom: 0; }
   .file-name { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 14.5px; }
   .file-thumb {
@@ -620,7 +620,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
   .row { position: relative; overflow: hidden; }
   .row-swipe {
     position: relative; z-index: 1; display: flex; align-items: center; gap: 12px;
-    flex: 1; min-width: 0; background: inherit;
+    flex: 1; min-width: 0; background: #ffffff; padding: 13px 0;
     transition: transform .2s ease;
   }
   .swipe-del {
@@ -690,6 +690,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     .thumb-icon { color: #a6a6ab; }
     .empty { color: #a6a6ab; }
     .swipe-del { background: #c0392b; }
+    .row-swipe { background: #2a2a2d; padding: 13px 0; }
     .folder-row { border-bottom-color: rgba(255,255,255,.09); color: #8ab4ff; }
     .row { border-bottom-color: rgba(255,255,255,.09); }
     .btn.secondary { background: #2c3d5c; color: #8ab4ff; }
@@ -739,14 +740,15 @@ const PAGE_HTML: &str = r#"<!doctype html>
   };
 
   var previewableExt = /\.(jpe?g|png|gif|webp|bmp|mp4|m4v|mov|webm|pdf)$/i;
-  document.getElementById('list').addEventListener('click', function (e) {
-    if (e.target.closest('.file-del') || e.target.closest('.file-get')) return;
-    var row = e.target.closest('.row[data-preview="1"]');
-    if (!row) return;
-    var name = decodeURIComponent(row.getAttribute('data-name'));
-    var url = '/transfer/file?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(name) + '&mode=view';
+  var previewItems = [];
+  var previewIndex = 0;
+  function openPreviewAt(index) {
+    if (index < 0 || index >= previewItems.length) return;
+    previewIndex = index;
+    var item = previewItems[index];
+    var url = '/transfer/file?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(item.rootRel) + '&mode=view';
     var body = document.getElementById('preview-body');
-    var lower = name.toLowerCase();
+    var lower = item.rootRel.toLowerCase();
     if (/\.(mp4|m4v|mov|webm)$/.test(lower)) {
       body.innerHTML = '<video controls autoplay playsinline style="max-width:100%;max-height:100%" src="' + url + '"></video>';
     } else if (/\.pdf$/.test(lower)) {
@@ -754,13 +756,35 @@ const PAGE_HTML: &str = r#"<!doctype html>
     } else {
       body.innerHTML = '<img style="max-width:100%;max-height:100%;object-fit:contain" src="' + url + '">';
     }
-    document.getElementById('preview-name').textContent = name.split('/').pop();
+    document.getElementById('preview-name').textContent = item.rootRel.split('/').pop() + '（' + (index + 1) + '/' + previewItems.length + '）';
     document.getElementById('preview-overlay').style.display = 'flex';
-  });
-  document.getElementById('preview-close').onclick = function () {
+  }
+  function closePreview() {
     document.getElementById('preview-body').innerHTML = '';
     document.getElementById('preview-overlay').style.display = 'none';
-  };
+  }
+  document.getElementById('list').addEventListener('click', function (e) {
+    if (e.target.closest('.file-del') || e.target.closest('.file-get')) return;
+    var row = e.target.closest('.row[data-preview="1"]');
+    if (!row) return;
+    var name = decodeURIComponent(row.getAttribute('data-name'));
+    var index = previewItems.findIndex(function (item) { return item.rootRel === name; });
+    if (index === -1) return;
+    openPreviewAt(index);
+  });
+  document.getElementById('preview-close').onclick = closePreview;
+  var previewTouch = { startX: 0, y: 0 };
+  document.getElementById('preview-overlay').addEventListener('touchstart', function (e) {
+    previewTouch.startX = e.touches[0].clientX;
+    previewTouch.y = e.touches[0].clientY;
+  }, { passive: true });
+  document.getElementById('preview-overlay').addEventListener('touchend', function (e) {
+    var dx = e.changedTouches[0].clientX - previewTouch.startX;
+    var dy = e.changedTouches[0].clientY - previewTouch.y;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) openPreviewAt(previewIndex + 1);
+    else openPreviewAt(previewIndex - 1);
+  }, { passive: true });
 
   // ── 左滑露出删除（iOS 原生同款手势，长按也可）──
   var swipeState = { row: null, startX: 0, moved: false, timer: null };
@@ -806,16 +830,19 @@ const PAGE_HTML: &str = r#"<!doctype html>
     if (!swipeState.row) return;
     var swipe = swipeState.row.querySelector('.row-swipe');
     swipe.style.transition = 'transform .2s ease';
-    var match = swipe.style.transform.match(/-?(\d+)/);
-    var offset = match ? parseInt(match[1], 10) : 0;
+    var match = swipe.style.transform.match(/-?\d+/);
+    var offset = match ? parseInt(match[0], 10) : 0;
     if (offset < -36) { swipe.style.transform = 'translateX(-72px)'; swipeState.row = swipeState.row; }
     else { swipe.style.transform = ''; swipeState.row = null; }
   });
+  var ignoreListClickUntil = 0;
   document.getElementById('list').addEventListener('click', function (e) {
+    if (Date.now() < ignoreListClickUntil) return;
     var del = e.target.closest('.swipe-del');
     if (del) {
       var name = decodeURIComponent(del.getAttribute('data-name'));
-      if (!confirm('删除「' + name.split('/').pop() + '」？\n将同时删除电脑上的这个文件。')) return;
+      if (!confirm('删除「' + name.split('/').pop() + '」？\n将同时删除电脑上的这个文件。')) { ignoreListClickUntil = Date.now() + 600; return; }
+      ignoreListClickUntil = Date.now() + 600;
       fetch('/transfer/delete?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(name), { method: 'POST' })
         .then(function (r) { if (r.ok) { toast('已删除'); refresh(); } else toast('删除失败'); })
         .catch(function () { toast('删除失败，检查网络'); });
@@ -866,12 +893,14 @@ const PAGE_HTML: &str = r#"<!doctype html>
         box.innerHTML = html + '<div class="empty">还没有文件</div>';
         return;
       }
+      var previewQueue = [];
       box.innerHTML = data.files.map(function (f) {
         var dot = f.name.lastIndexOf('.');
         var baseName = dot > 0 ? f.name.slice(0, dot) : f.name;
         var ext = (dot > 0 ? f.name.slice(dot + 1) : 'file').toUpperCase();
         var previewable = /\.(jpe?g|png|gif|webp|bmp|mp4|m4v|mov|webm|pdf)$/i.test(f.name);
         var rootRel = curDir ? curDir + '/' + f.name : f.name;
+        if (previewable) previewQueue.push({ rootRel: rootRel });
         var fileUrl = '/transfer/file?t=' + encodeURIComponent(TOKEN) + '&name=' + encodeURIComponent(rootRel) + '&mode=view';
         var thumb;
         if (/\.(jpe?g|png|gif|webp|bmp)$/i.test(f.name)) {
@@ -894,6 +923,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
           + '</div>'
           + '</div>';
       }).join('');
+      previewItems = previewQueue;
     }).catch(function () { toast('刷新失败'); });
   }
   function upload(input) {
