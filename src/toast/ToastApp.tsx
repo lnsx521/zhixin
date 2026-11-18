@@ -100,7 +100,7 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
 
   const t = dict(lang);
   const isCall = payload.category === 1;
-  const asset = isCall ? null : (cachedIcon ?? brandAsset(payload.app_id));
+  const asset = isCall ? "/brands/phone.png" : (cachedIcon ?? brandAsset(payload.app_id));
 
   const onCopy = async () => {
     if (copied) return;
@@ -129,9 +129,7 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
   return (
     <div className={`toast ${expanded ? "toast-expanded" : ""} ${isCall ? "toast-call" : ""}`} onClick={onCardClick}>
       <div className={`toast-icon ${asset ? "brand-official" : ""}`}>
-        {isCall ? (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M6.6 2.7c.5-.5 1.3-.5 1.8 0l2.6 2.6c.5.5.5 1.3 0 1.8L9.7 8.4c.8 1.7 2.2 3.1 3.9 3.9l1.3-1.3c.5-.5 1.3-.5 1.8 0l2.6 2.6c.5.5.5 1.3 0 1.8l-1.5 1.5c-1 1-2.6 1.4-4 .9-2.5-1-4.9-2.6-7-4.7-2.1-2.1-3.7-4.5-4.7-7-.5-1.4-.1-3 .9-4l1.6-1.4z"/></svg>
-        ) : asset ? (
+        {asset ? (
           <img className="toast-icon-img" src={asset} alt="" />
         ) : (
           <Icon name={payload.code ? "code" : "message"} size={20} />
