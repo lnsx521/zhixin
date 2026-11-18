@@ -39,13 +39,13 @@ export function About({ updater }: { updater: Updater }) {
           </div>
         </div>
       </div>
-      <div style={{ borderTop: "0.5px solid rgba(128,128,128,0.3)", margin: "12px 0 0", paddingTop: "12px" }}>
-        <p className="about-maintainer-line" style={{ margin: 0, fontSize: 13, cursor: "pointer" }} onClick={() => void open("maintainer")} role="link" tabIndex={0}>
+      <div style={{ borderTop: "0.5px solid rgba(128,128,128,0.3)", margin: "12px 0 0", paddingTop: "12px", display: "flex", alignItems: "center", gap: 8 }}>
+        <p className="about-maintainer-line" style={{ margin: 0, fontSize: 12, cursor: "pointer" }} onClick={() => void open("maintainer")} role="link" tabIndex={0}>
           {t.about.maintainer}：<b style={{ color: "#1D9E75" }}>lnsx521</b>
         </p>
-      </div>
-      <div className="about-support" style={{ borderTop: "none", marginTop: 8 }}><p className="about-community-note"><Icon name="star" size={14} />{t.about.starHint}</p>
-        <button className="about-stars" aria-label={t.about.starAction} onClick={() => void open("repository")}>
+        <span style={{ color: "rgba(128,128,128,0.5)", margin: "0 2px" }}>·</span>
+        <p className="about-community-note" style={{ margin: 0, display: "flex", alignItems: "center", gap: 6 }}><Icon name="star" size={14} />{t.about.starHint}</p>
+        <button className="about-stars" style={{ marginLeft: "auto" }} aria-label={t.about.starAction} onClick={() => void open("repository")}>
           <Badge src="https://img.shields.io/github/stars/lnsx521/zhixin?style=flat-square&label=Stars&color=737373" label={t.about.starsBadge} />
         </button>
       </div>

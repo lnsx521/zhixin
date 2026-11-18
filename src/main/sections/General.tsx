@@ -10,7 +10,7 @@ import {
   type ThemeSetting,
 } from "../../shared/api";
 import { useT } from "../../shared/i18n";
-import { clearIconCache, listIconCache, openIconsDir, resetAppIcon, type IconCacheEntry } from "../../shared/api";
+import { clearIconCache, listIconCache, openIconsDir, resetAppIcon, setAppIcon, type IconCacheEntry } from "../../shared/api";
 import { NumberField, Row, Section, Toggle } from "../components";
 
 interface Props {
@@ -26,6 +26,25 @@ export function General({ config, update }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [iconCache, setIconCache] = useState<IconCacheEntry[]>([]);
   const bgFileRef = useRef<HTMLInputElement>(null);
+  const replaceTarget = useRef<IconCacheEntry | null>(null);
+  const replaceInput = useRef<HTMLInputElement>(null);
+
+  const onReplaceFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    const target = replaceTarget.current;
+    if (!file || !target) return;
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      await setAppIcon(target.app_id, target.name, dataUrl);
+      await refreshIcons();
+    } catch (err) { setError(String(err)); }
+    event.target.value = "";
+  };
 
   const refreshIcons = async () => {
     try { setIconCache(await listIconCache()); } catch { /* 忽略 */ }
@@ -48,6 +67,7 @@ export function General({ config, update }: Props) {
 
   return (
     <>
+      <input ref={replaceInput} type="file" accept="image/png" style={{ display: "none" }} onChange={(event) => { void onReplaceFile(event); }} />
       <Section narrow title={t.general.appearanceTitle}>
         <Row label={t.general.theme} hint={t.general.themeHint}>
           <select className="select" aria-label={t.general.theme}
@@ -97,13 +117,20 @@ export function General({ config, update }: Props) {
           </div>
         </Row>
       </Section>
-      <Section narrow title={t.general.iconsTitle} description={t.general.iconsDesc} action={
-          <Toggle
-            checked={config.general.icon_fetch}
-            onChange={(value) => update((d) => void (d.general.icon_fetch = value))}
-          />
-        }>
-        <Row label={t.general.iconsFetch} hint={t.general.iconsFetchHint}><span /></Row>
+      <details className="icons-fold" style={{ borderTop: "0.5px solid var(--border)", marginTop: 12, paddingTop: 10 }}>
+        <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text)" }}>
+            {t.general.iconsTitle}
+            <span style={{ fontSize: 12, color: "var(--text-faint)", marginLeft: 8, fontWeight: 400 }}>{t.general.iconsDesc}</span>
+          </span>
+          <span onClick={(event) => event.stopPropagation()}>
+            <Toggle
+              checked={config.general.icon_fetch}
+              onChange={(value) => update((d) => void (d.general.icon_fetch = value))}
+            />
+          </span>
+        </summary>
+        <div style={{ marginTop: 10 }}>
         <Row label={t.general.iconsOpenDir}>
           <button className="btn" onClick={() => { void openIconsDir().catch((err) => setError(String(err))); }}>{t.general.iconsOpenDir}</button>
         </Row>
@@ -115,12 +142,14 @@ export function General({ config, update }: Props) {
         {iconCache.length === 0 && <Row label={t.general.iconsEmpty}><span /></Row>}
         {iconCache.map((entry) => (
           <Row key={entry.app_id} label={`${entry.name || entry.app_id}${entry.manual ? `（${t.general.iconsManual}）` : ""}`} hint={entry.app_id}>
+            <button className="btn" onClick={() => { replaceTarget.current = entry; replaceInput.current?.click(); }}>{t.general.iconsReplace}</button>
             <button className="btn" onClick={async () => {
               try { await resetAppIcon(entry.app_id); await refreshIcons(); } catch (err) { setError(String(err)); }
             }}>{t.general.iconsReset}</button>
           </Row>
         ))}
-      </Section>
+        </div>
+      </details>
       <Section narrow title={t.general.startupTitle}>
         <Row label={t.general.autostart} hint={t.general.autostartHint}>
           <Toggle checked={meta?.autostart_enabled ?? false} disabled={!meta || busy} onChange={async (value) => {

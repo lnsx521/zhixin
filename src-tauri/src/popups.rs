@@ -218,6 +218,14 @@ pub fn toast_expand(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), 
         return Err("payload gone".into());
     };
 
+    // 同一时刻只允许一个大窗：已存在则关闭旧的再开新的
+    {
+        let open = state.toasts.lock().unwrap().clone();
+        for label in open.iter().filter(|l| l.starts_with("expanded-")) {
+            close_toast(app, l);
+        }
+    }
+
     let id = state.toast_seq.fetch_add(1, Ordering::Relaxed);
     let label = format!("expanded-{id}");
     state

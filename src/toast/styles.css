@@ -155,6 +155,16 @@ body {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 9px;
+  /* macOS：操作按钮默认隐藏，悬停卡片才浮现 */
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.toast:hover .toast-actions,
+.toast:focus-within .toast-actions {
+  opacity: 1;
+  transform: none;
 }
 
 /* 按钮：macOS 胶囊 */
