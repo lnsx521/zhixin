@@ -13,6 +13,7 @@ import {
 import { dict, resolveLang, type Lang } from "../shared/i18n";
 import { Icon } from "../shared/Icon";
 import { useSavedTheme } from "../shared/theme";
+import { brandAsset } from "../shared/brandIcons";
 
 /**
  * 通知弹窗（小窗与 Mac 风格大窗共用）。
@@ -21,24 +22,6 @@ import { useSavedTheme } from "../shared/theme";
  * 小窗：内容最多 3 行，超出显示「查看全文」；点卡片任意处（除按钮）→ 展开成大窗。
  * 大窗（mode=expanded）：全文展示、无倒计时；✕ 关闭。
  */
-
-/** 常见 App → 内置官方图标资源（bundle id → 资源路径）。
- * 图标来自 macosicons.com，256px PNG，整图直显；打包时随 dist 一起出。 */
-const BRAND_ASSETS: Record<string, string> = {
-  "com.apple.mobilesms": "/brands/messages.png",
-  "com.tencent.xin": "/brands/wechat.png",
-  "com.tencent.wework": "/brands/wecom.png",
-  "com.apple.mail": "/brands/mail.png",
-  "com.apple.mobilemail": "/brands/mail.png",
-};
-
-function brandAsset(appId: string | null): string | null {
-  const key = (appId ?? "").toLowerCase();
-  for (const [id, asset] of Object.entries(BRAND_ASSETS)) {
-    if (key === id || key.endsWith(id)) return asset;
-  }
-  return null;
-}
 
 export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
   const expanded = mode === "expanded";
