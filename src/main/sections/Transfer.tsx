@@ -4,7 +4,7 @@ import { renderSVG } from "uqr";
 import { getTransferInfo, getMdnsHostname, listHttpAddresses, setTransferFolder, type LocalAddress, type TransferInfo } from "../../shared/api";
 import { LangContext } from "../../shared/i18n";
 import { Icon } from "../../shared/Icon";
-import { Row, Section } from "../components";
+import { Disclosure, Row, Section } from "../components";
 
 /** 「文件互传」页：手机浏览器扫码打开电脑上的页面，双向传文件。 */
 export function Transfer() {
