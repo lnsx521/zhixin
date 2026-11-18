@@ -44,7 +44,7 @@ const zh = {
     proximity: "手机离开身边时自动锁定电脑。",
     general: "启动偏好、界面语言与文件位置。",
     about: "版本更新与开源项目。",
-    history: "历史",
+    history: "历史消息",
   },
   nav: {
     connection: "蓝牙接入",
@@ -246,7 +246,7 @@ const zh = {
     promiseText: "默认手动填入；自动填入需显式开启，每条验证码最多尝试一次。通知内容不上传。",
   },
   history: {
-    title: "通知历史", desc: "所有弹过的通知都在这里，最多保留 500 条。内容仅存储在本机。",
+    title: "历史消息", desc: "所有弹过的通知都在这里，最多保留 500 条。内容仅存储在本机。",
     searchPlaceholder: "搜索发件人或内容",
     noResults: "没有匹配的通知",
     empty: "还没有通知记录",
@@ -531,7 +531,7 @@ const en: Dict = {
     promiseText: "Manual by default. Automatic filling requires explicit opt-in and attempts at most once per code. Notification content is not uploaded.",
   },
   history: {
-    title: "Notification history", desc: "Every notification that popped up, up to 500 entries. Stored locally only.",
+    title: "History", desc: "Every notification that popped up, up to 500 entries. Stored locally only.",
     searchPlaceholder: "Search sender or content",
     noResults: "No matching notifications",
     empty: "No notifications recorded yet",

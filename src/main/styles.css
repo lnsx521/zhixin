@@ -836,4 +836,4 @@ body::before {
 }
 .history-head strong { font-size: 13px; color: var(--text); }
 .history-time { font-size: 11px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.history-body { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; margin: 4px 0 6px; overflow-wrap: anywhere; }
+.history-body { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; margin: 4px 0 6px; overflow-wrap: anywhere; white-space: pre-wrap; }
