@@ -1127,13 +1127,34 @@ const PAGE_HTML: &str = r#"<!doctype html>
   }
   document.getElementById('copyurl').onclick = function () {
     var url = location.origin + '/transfer/upload?t=' + encodeURIComponent(TOKEN);
-    var ta = document.createElement('textarea');
-    ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
-    document.body.appendChild(ta); ta.focus(); ta.select();
-    try { document.execCommand('copy'); toast('上传地址已复制'); }
-    catch (e) { toast('复制失败，请长按手动复制'); }
-    ta.remove();
+    // https（安全上下文）→ 直接写剪贴板；http 局域网 → 展示并全选，引导长按拷贝
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url)
+        .then(function () { toast('上传地址已复制'); })
+        .catch(function () { showCopyPrompt(url); });
+    } else {
+      showCopyPrompt(url);
+    }
   };
+  function showCopyPrompt(url) {
+    var old = document.getElementById('copy-prompt');
+    if (old) old.remove();
+    var box = document.createElement('div');
+    box.id = 'copy-prompt';
+    box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:120;display:flex;align-items:center;justify-content:center';
+    box.innerHTML = '<div style="background:#fff;border-radius:14px;padding:16px;max-width:86vw;width:340px">'
+      + '<p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#1d1d1f">上传地址（已全选）</p>'
+      + '<input readonly id="copy-prompt-input" style="width:100%;box-sizing:border-box;font-size:13px;padding:10px;border-radius:8px;border:1px solid #ddd;color:#1d1d1f">'
+      + '<p style="margin:8px 0 0;font-size:12px;color:#6e6e73">iOS 请长按输入框 → 拷贝</p>'
+      + '<button id="copy-prompt-close" style="margin-top:12px;width:100%;border:0;border-radius:10px;padding:10px 0;background:#3478f6;color:#fff;font-size:14px;font-weight:600">关闭</button>'
+      + '</div>';
+    document.body.appendChild(box);
+    var input = box.querySelector('input');
+    input.value = url;
+    input.focus(); input.select(); input.setSelectionRange(0, url.length);
+    box.querySelector('#copy-prompt-close').onclick = function () { box.remove(); };
+    box.addEventListener('click', function (e) { if (e.target === box) box.remove(); });
+  }
   document.getElementById('list').addEventListener('click', function (e) {
     var folderRow = e.target.closest('.folder-row');
     if (folderRow) { setDir(decodeURIComponent(folderRow.getAttribute('data-dir'))); }
