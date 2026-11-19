@@ -191,6 +191,16 @@ body {
 .toast-actions button:hover,
 .toast-open:hover { background: color-mix(in srgb, var(--text) 12%, transparent); }
 
+/* 验证码复制按钮：圆角长方形（覆盖胶囊默认），宽度适中 */
+.toast-actions button.toast-code {
+  padding: 5px 22px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.toast-actions button.toast-code:hover { background: var(--accent); }
+
 .toast-error {
   font-size: 12px;
   color: var(--danger);
@@ -251,13 +261,3 @@ body {
 }
 
 
-
-/* 来电拒接按钮 */
-.toast-reject {
-  margin-top: 8px; width: 100%;
-  border: 0; border-radius: 8px; padding: 5px 0;
-  line-height: 1.6;
-  background: rgba(192, 57, 43, 0.18); color: #ff8a80;
-  font-size: 13px; font-weight: 600; cursor: pointer;
-}
-.toast-reject:active { transform: scale(0.97); }
