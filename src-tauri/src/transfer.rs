@@ -843,9 +843,6 @@ const PAGE_HTML: &str = r#"<!doctype html>
     var swipe = row.querySelector('.row-swipe');
     swipe.style.transition = 'none';
     row.closest('.card').classList.add('swiping');
-    swipeState.timer = setTimeout(function () {
-      if (swipeState.row === row && !swipeState.moved) openSwipe(row);
-    }, 600);
   }, { passive: true });
   document.getElementById('list').addEventListener('touchmove', function (e) {
     if (!swipeState.row || e.touches.length !== 1) return;
