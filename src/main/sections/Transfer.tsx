@@ -80,20 +80,6 @@ export function Transfer() {
             <p>{text("文件互传与短信接收共用同一个端口与令牌。到「网络接入」页打开接收器，回到这里就能看到二维码。", "File transfer shares the port and token with SMS receiving. Turn on the receiver on the Network page, then come back for the QR code.")}</p>
           </div>
         </div>
-        <Section narrow title={text("安全", "Security")} description={text("令牌是访问电脑的唯一凭证，泄露后应立即重置。", "The token is the sole credential - reset it immediately if leaked.")}>
-        <Row label={text("重置令牌", "Reset token")} hint={text("重置后旧地址立即失效：手机互传页面需重新扫码打开；已配对的通知设备不受影响。", "Old link dies instantly; re-scan on the phone. Paired notification devices are unaffected.")}>
-          <button className="network-quiet-action" disabled={!info || busy} onClick={() => {
-            if (!confirm(text(
-              "重置令牌？重置后旧地址立即失效，手机互传页面需要重新扫码打开。已配对的通知设备不受影响。",
-              "Reset token? The old link dies instantly - re-scan on the phone. Paired notification devices are unaffected."
-            ))) return;
-            resetIngressToken().then(() => { window.alert(text("令牌已重置。请重新扫码打开手机互传页面。", "Token reset. Re-scan to reopen the transfer page on the phone.")); window.location.reload(); })
-              .catch((e) => setError(String(e)));
-          }}>{text("重置", "Reset")}</button>
-        </Row>
-      </Section>
-
-      {error && <p className="bad-text" role="alert">{error}</p>}
       </>
     );
   }
@@ -173,6 +159,19 @@ export function Transfer() {
           <p style={{ margin: 0 }}>{text("之后在相册/文件里分享用快捷指令一，在 Safari 分享网页时用快捷指令二。电脑会自动抓网页标题生成快捷方式文件。", "Share files with #1; share web pages with #2. The PC fetches the page title and creates a .url shortcut file.")}</p>
         </p>
       </Disclosure>
+
+      <Section narrow title={text("安全", "Security")} description={text("令牌是访问电脑的唯一凭证，泄露后应立即重置。", "The token is the sole credential - reset it immediately if leaked.")}>
+        <Row label={text("重置令牌", "Reset token")} hint={text("重置后旧地址立即失效：手机互传页面需重新扫码打开；已配对的通知设备不受影响。", "Old link dies instantly; re-scan on the phone. Paired notification devices are unaffected.")}>
+          <button className="network-quiet-action" disabled={!info || busy} onClick={() => {
+            if (!confirm(text(
+              "重置令牌？重置后旧地址立即失效，手机互传页面需要重新扫码打开。已配对的通知设备不受影响。",
+              "Reset token? The old link dies instantly - re-scan on the phone. Paired notification devices are unaffected."
+            ))) return;
+            resetIngressToken().then(() => { window.alert(text("令牌已重置。请重新扫码打开手机互传页面。", "Token reset. Re-scan to reopen the transfer page on the phone.")); window.location.reload(); })
+              .catch((e) => setError(String(e)));
+          }}>{text("重置", "Reset")}</button>
+        </Row>
+      </Section>
 
       {error && <p className="bad-text" role="alert">{error}</p>}
     </>
