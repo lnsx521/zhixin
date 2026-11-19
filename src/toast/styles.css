@@ -196,10 +196,14 @@ body {
   padding: 5px 22px;
   border-radius: 8px;
   font-size: 12.5px;
-  background: var(--accent);
-  color: var(--on-accent);
+  background: rgba(52, 199, 89, 0.18);
+  color: #4cd964;
 }
-.toast-actions button.toast-code:hover { background: var(--accent); }
+.toast-actions button.toast-code:hover { background: rgba(52, 199, 89, 0.28); }
+.toast-code.copied {
+  background: rgba(52, 199, 89, 0.32);
+  color: #4cd964;
+}
 
 .toast-error {
   font-size: 12px;
@@ -208,10 +212,7 @@ body {
   overflow-wrap: anywhere;
 }
 
-.toast-code.copied {
-  background: color-mix(in srgb, var(--success) 16%, transparent);
-  color: var(--success);
-}
+
 
 /* 悬停才出现的关闭按钮（macOS：左上角圆形 ×） */
 .toast-dismiss {
