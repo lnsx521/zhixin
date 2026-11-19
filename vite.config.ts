@@ -9,6 +9,7 @@ export default defineConfig({
   clearScreen: false,
   server: {
     port: 1420,
+    host: "127.0.0.1",
     strictPort: true,
     watch: {
       // Cargo 在工作区根目录生成 DLL，避免监听编译产物触发 Windows 文件锁错误。
