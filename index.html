@@ -3,6 +3,27 @@
   <head>
     <script>
       // 临时诊断：白屏时把前端错误直接画出来
+      (function () {
+        var orig = console.error;
+        var shown = false;
+        console.error = function () {
+          orig.apply(console, arguments);
+          if (!shown) {
+            shown = true;
+            var msg = '';
+            for (var i = 0; i < arguments.length; i++) msg += String(arguments[i]) + '\n';
+            document.documentElement.innerHTML = '<pre style="color:#f66;padding:24px;white-space:pre-wrap;font-size:13px;background:#111;min-height:100vh">console.error 捕获:\n' + msg + '</pre>';
+          }
+        };
+      })();
+      window.addEventListener('load', function () {
+        setTimeout(function () {
+          var root = document.getElementById('root');
+          if (root && root.childElementCount === 0) {
+            document.documentElement.innerHTML = '<pre style="color:#fa0;padding:24px;font-size:14px;background:#111;min-height:100vh">诊断: React 已加载但 #root 为空 —— 应用初始化在无报错情况下中断</pre>';
+          }
+        }, 4000);
+      });
       window.addEventListener('error', function (e) {
         document.documentElement.innerHTML = '<pre style="color:#f66;padding:24px;white-space:pre-wrap;font-size:14px;background:#111;min-height:100vh">前端错误: ' + (e.message || '未知') + '\n文件: ' + (e.filename || '') + ':' + (e.lineno || '') + ':' + (e.colno || '') + '</pre>';
       });
