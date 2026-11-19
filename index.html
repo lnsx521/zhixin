@@ -1,6 +1,15 @@
 <!doctype html>
 <html lang="zh-CN">
   <head>
+    <script>
+      // 临时诊断：白屏时把前端错误直接画出来
+      window.addEventListener('error', function (e) {
+        document.documentElement.innerHTML = '<pre style="color:#f66;padding:24px;white-space:pre-wrap;font-size:14px;background:#111;min-height:100vh">前端错误: ' + (e.message || '未知') + '\n文件: ' + (e.filename || '') + ':' + (e.lineno || '') + ':' + (e.colno || '') + '</pre>';
+      });
+      window.addEventListener('unhandledrejection', function (e) {
+        document.documentElement.innerHTML = '<pre style="color:#f66;padding:24px;white-space:pre-wrap;font-size:14px;background:#111;min-height:100vh">Promise 错误: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason) + '</pre>';
+      });
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>知信</title>
