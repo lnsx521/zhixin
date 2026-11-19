@@ -861,8 +861,9 @@ const PAGE_HTML: &str = r#"<!doctype html>
       <p class="muted" style="margin:10px 0 6px">配到 iPhone「分享」菜单（可选）</p>
       <p style="font-size:13px;line-height:1.7;margin:0 0 8px">在快捷指令 App 新建指令：</p>
       <p style="font-size:13px;line-height:1.7;margin:0 0 8px"><b>①</b> 添加「从共享表单接收」，类型勾选「图像」「文件」和「文本」；</p>
-      <p style="font-size:13px;line-height:1.7;margin:0 0 8px"><b>②</b> 添加「获取 URL 内容」：方法选 POST，URL 填下面这条，请求体选「表单」，添加字段 file，值选「快捷指令输入」；</p>
+      <p style="font-size:13px;line-height:1.7;margin:0 0 8px"><b>②</b> 添加「获取 URL 内容」：方法选 POST，URL 填**下方输入框里的地址**（也可点下方按钮一键复制），请求体选「表单」，添加字段 file，值选「快捷指令输入」；</p>
       <p style="font-size:13px;line-height:1.7;margin:0 0 10px"><b>③</b> 命名保存。以后任何内容点「分享」→ 选它，直接传到这台电脑。</p>
+      <input readonly id="help-url" style="width:100%;box-sizing:border-box;font-size:12.5px;padding:10px;border-radius:8px;border:1px solid #ddd;color:#1d1d1f;background:#f6f6f8;word-break:break-all" onclick="this.select()">
       <button class="btn secondary" id="copyurl">复制上传地址</button>
     </div>
     <p class="muted" style="margin:12px 0 4px">电脑上的文件</p>
@@ -896,7 +897,12 @@ const PAGE_HTML: &str = r#"<!doctype html>
   var toastTimer = null;
   document.getElementById('help-toggle').onclick = function () {
     var box = document.getElementById('help-box');
-    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    var showing = box.style.display === 'none';
+    box.style.display = showing ? 'block' : 'none';
+    if (showing) {
+      document.getElementById('help-url').value =
+        location.origin + '/transfer/upload?t=' + encodeURIComponent(TOKEN);
+    }
   };
 
   var previewableExt = /\.(jpe?g|png|gif|webp|bmp|mp4|m4v|mov|webm|pdf)$/i;
