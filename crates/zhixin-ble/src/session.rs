@@ -36,8 +36,10 @@ use crate::{BleError, Result};
 /// 收到一条通知时调用。注意这是**回调线程**，调用方自己负责切线程。
 pub type NotificationSink = Arc<dyn Fn(PhoneNotification) + Send + Sync>;
 
-enum WriterCommand {
+pub(crate) enum WriterCommand {
     Fetch([u8; 4]),
+    /// 执行通知动作（如 ANCS 负面动作 = 拒接来电）。
+    PerformAction([u8; 4], u8),
     Stop,
 }
 
@@ -140,6 +142,9 @@ impl Drop for ConnectionWatch {
 }
 
 /// 一个活着的 ANCS 会话。drop 或 [`AncsSession::close`] 会退订并停掉写入线程。
+/// Control Point 写入通道的句柄（链路层用它转发拒接指令）。
+pub type WriterCommandSender = Sender<WriterCommand>;
+
 pub struct AncsSession {
     connection_watch: Option<ConnectionWatch>,
     shared: Arc<Shared>,
@@ -421,6 +426,23 @@ impl AncsSession {
     }
 
     /// Reassert CCCDs without disconnecting a quiet, otherwise healthy phone.
+    /// 对指定 ANCS 通知执行负面动作（来电弹窗的"拒接"）。
+    pub fn perform_negative_action(&self, uid: u32) -> Result<()> {
+        let Some(tx) = &self.writer_tx else {
+            return Err(crate::BleError::Message("writer 线程已退出".into()));
+        };
+        tx.send(WriterCommand::PerformAction(
+            uid.to_le_bytes(),
+            zhixin_core::ancs::ACTION_NEGATIVE,
+        ))
+        .map_err(|_| crate::BleError::Message("writer 通道已关闭".into()))
+    }
+
+    /// 当前活跃会话的 Control Point 写入通道（供链路层转发拒接指令）。
+    pub fn writer_sender(&self) -> Option<Sender<WriterCommand>> {
+        self.writer_tx.clone()
+    }
+
     pub fn refresh_subscriptions(&self) -> Result<()> {
         for characteristic in [&self.data_source, &self.notification_source] {
             if subscribe(characteristic)? != GattCommunicationStatus::Success {
@@ -567,7 +589,40 @@ fn control_point_writer(
             break;
         }
         let WriterCommand::Fetch(raw_uid) = command else {
-            break;
+            match command {
+                WriterCommand::Stop => break,
+                WriterCommand::PerformAction(raw_uid, action) => {
+                    let request = zhixin_core::ancs::build_perform_action_request(raw_uid, action);
+                    let buffer = match to_buffer(&request) {
+                        Ok(buffer) => buffer,
+                        Err(error) => {
+                            warn!("构造动作请求失败：{error}");
+                            continue;
+                        }
+                    };
+                    let result = block_on_timeout(
+                        async {
+                            control_point
+                                .WriteValueWithResultAndOptionAsync(
+                                    &buffer,
+                                    GattWriteOption::WriteWithResponse,
+                                )?
+                                .await
+                        },
+                        Duration::from_secs(5),
+                    );
+                    match result {
+                        Ok(Ok(write_result)) if write_result.Status() == Ok(GattCommunicationStatus::Success) => {
+                            debug!("动作指令写入成功（uid {raw_uid:?} action {action}）");
+                        }
+                        Ok(Ok(write_result)) => warn!("动作指令未成功：{:?}", write_result.Status()),
+                        Ok(Err(error)) => warn!("动作指令写入异常：{error}"),
+                        Err(error) => warn!("动作指令写入超时：{error}"),
+                    }
+                    continue;
+                }
+                WriterCommand::Fetch(_) => break,
+            }
         };
         let mut succeeded = false;
         *state.pending_uid.lock().unwrap() = Some(u32::from_le_bytes(raw_uid));

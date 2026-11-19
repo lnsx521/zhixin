@@ -56,6 +56,10 @@ pub struct ToastPayload {
     pub duration_secs: u32,
     /// iOS 通知分类：1 = 来电。其余场景 None。
     pub category: Option<u8>,
+    /// ANCS 通知 UID（拒接动作要用）
+    pub uid: u32,
+    /// 陌生号码的运营商描述（"中国移动 · 手机号"）；已存联系人/非来电为 None
+    pub carrier: Option<String>,
 }
 
 /// 当前生效的候选条提议。

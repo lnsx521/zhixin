@@ -12,6 +12,8 @@ import {
 } from "../shared/api";
 import { dict, resolveLang, type Lang } from "../shared/i18n";
 import { Icon } from "../shared/Icon";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 import { useSavedTheme } from "../shared/theme";
 import { brandAsset } from "../shared/brandIcons";
 
@@ -123,10 +125,30 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
           <span className="toast-origin-title">{payload.origin}</span>
           <span className="toast-time">{new Date().toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { hour: "2-digit", minute: "2-digit" })}</span>
         </div>
-        <p ref={bodyRef} className={`toast-body ${truncated ? "truncated" : ""}`}>
-          {payload.body}
-          {truncated && <span className="toast-more"> 查看全文</span>}
-        </p>
+        {isCall && payload.carrier ? (
+          <p className="toast-body">{payload.carrier}</p>
+        ) : (
+          <p ref={bodyRef} className={`toast-body ${truncated ? "truncated" : ""}`}>
+            {payload.body}
+            {truncated && <span className="toast-more"> 查看全文</span>}
+          </p>
+        )}
+        {isCall && (
+          <button
+            className="toast-reject"
+            onClick={async (event) => {
+              event.stopPropagation();
+              try {
+                await invoke("reject_call", { uid: payload.uid });
+              } catch {
+                /* 拒接失败保持弹窗，不打断 */
+              }
+              getCurrentWindow().destroy();
+            }}
+          >
+            ✕ 拒接
+          </button>
+        )}
         {(payload.open_app_name || payload.code) && <div className="toast-actions">
           {payload.code && (
             <button className={`toast-code ${copied ? "copied" : ""}`} onClick={(event) => { event.stopPropagation(); void onCopy(); }}>

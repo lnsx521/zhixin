@@ -223,6 +223,10 @@ export interface ToastPayload {
   duration_secs: number;
   /** iOS 通知分类：1 = 来电 */
   category: number | null;
+  /** ANCS 通知 UID（来电拒接动作要用） */
+  uid: number;
+  /** 陌生号码的运营商描述（"中国移动 · 手机号"）；已存联系人为 null */
+  carrier: string | null;
 }
 
 export const getToastPayload = () => invoke<ToastPayload | null>("get_toast_payload");

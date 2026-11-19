@@ -570,6 +570,7 @@ mod tests {
                 message: Some("你好".to_string()),
                 ..Default::default()
             },
+            None,
         );
         notification.code = code.map(str::to_string);
         notification

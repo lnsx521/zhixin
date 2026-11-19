@@ -102,6 +102,7 @@ mod tests {
                 message: Some(message.to_string()),
                 ..Default::default()
             },
+            None,
         )
     }
 

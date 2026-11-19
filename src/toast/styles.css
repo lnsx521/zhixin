@@ -245,3 +245,12 @@ body {
 }
 
 
+
+/* 来电拒接按钮 */
+.toast-reject {
+  margin-top: 10px; width: 100%;
+  border: 0; border-radius: 10px; padding: 9px 0;
+  background: rgba(192, 57, 43, 0.18); color: #ff8a80;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.toast-reject:active { transform: scale(0.97); }

@@ -9,6 +9,7 @@ mod devices;
 mod history;
 mod http_ingress;
 mod icon_store;
+mod link_handle;
 mod link_worker;
 mod mdns;
 mod paths;
@@ -152,6 +153,7 @@ pub fn run() {
             transfer::get_transfer_info,
             transfer::set_transfer_folder,
             transfer::open_transfer_folder,
+            link_handle::reject_call,
             http_ingress::reset_token,
             popups::pick_sound_file,
             mdns::get_mdns_hostname,

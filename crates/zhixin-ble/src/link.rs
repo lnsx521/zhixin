@@ -144,6 +144,8 @@ pub struct AncsLink {
     sink: Arc<dyn Fn(LinkEvent) + Send + Sync>,
     stop: Arc<AtomicBool>,
     selector: DeviceSelector,
+    /// 当前活跃会话的 Control Point 写入通道（来电拒接指令走这里）。
+    active_writer: std::sync::Mutex<Option<session::WriterCommandSender>>,
 }
 
 impl AncsLink {
@@ -153,7 +155,20 @@ impl AncsLink {
             sink,
             stop,
             selector: Arc::new(|devices| devices.iter().map(|device| device.id.clone()).collect()),
+            active_writer: std::sync::Mutex::new(None),
         }
+    }
+
+    /// 对当前会话的指定 ANCS 通知执行负面动作（来电弹窗的"拒接"）。
+    pub fn perform_negative_action(&self, uid: u32) -> Result<()> {
+        let Some(sender) = self.active_writer.lock().unwrap().clone() else {
+            return Err(crate::BleError::Message("当前没有活跃的 ANCS 会话".into()));
+        };
+        sender.send(session::WriterCommand::PerformAction(
+            uid.to_le_bytes(),
+            zhixin_core::ancs::ACTION_NEGATIVE,
+        ))
+        .map_err(|_| crate::BleError::Message("writer 通道已关闭".into()))
     }
 
     pub fn with_options(mut self, options: LinkOptions) -> Self {
@@ -349,6 +364,9 @@ impl AncsLink {
 
         let session =
             session::AncsSession::open(&device, &device_id, &device_name, notification_sink)?;
+        if let Some(sender) = session.writer_sender() {
+            *self.active_writer.lock().unwrap() = Some(sender);
+        }
 
         (self.sink)(LinkEvent::ActiveDevice(Some(DeviceInfo {
             id: device_id.clone(),
@@ -429,6 +447,7 @@ impl AncsLink {
             );
         }
         (self.sink)(LinkEvent::ActiveDevice(None));
+        *self.active_writer.lock().unwrap() = None;
         session.close();
 
         Ok(if self.stopped() {

@@ -103,6 +103,7 @@ mod tests {
                 uid,
                 ..Default::default()
             },
+            None,
         )
     }
 

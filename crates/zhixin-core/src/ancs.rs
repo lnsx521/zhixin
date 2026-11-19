@@ -107,6 +107,9 @@ pub fn parse_notification_source(bytes: &[u8]) -> Option<NotificationEvent> {
 // ---------------------------------------------------------------------------
 
 pub const CMD_GET_NOTIFICATION_ATTRIBUTES: u8 = 0x00;
+pub const CMD_PERFORM_NOTIFICATION_ACTION: u8 = 0x02;
+pub const ACTION_POSITIVE: u8 = 0x00;
+pub const ACTION_NEGATIVE: u8 = 0x01;
 
 pub const ATTR_APP_IDENTIFIER: u8 = 0x00;
 pub const ATTR_TITLE: u8 = 0x01;
@@ -143,6 +146,15 @@ pub fn build_get_attributes_request(raw_uid: [u8; 4]) -> Vec<u8> {
         }
     }
 
+    pdu
+}
+
+/// 构造 `PerformNotificationAction` 请求（如来电的"拒接" = 负面动作）。
+pub fn build_perform_action_request(raw_uid: [u8; 4], action: u8) -> Vec<u8> {
+    let mut pdu = Vec::with_capacity(6);
+    pdu.push(CMD_PERFORM_NOTIFICATION_ACTION);
+    pdu.extend_from_slice(&raw_uid);
+    pdu.push(action);
     pdu
 }
 

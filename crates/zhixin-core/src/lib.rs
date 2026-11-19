@@ -11,6 +11,7 @@
 //! * [`config`] —— 配置模型
 
 pub mod ancs;
+pub mod carrier;
 pub mod app_rules;
 pub mod caret;
 pub mod config;

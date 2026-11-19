@@ -33,9 +33,13 @@ pub fn spawn(app: AppHandle) {
                     .unwrap_or_else(|poisoned| poisoned.into_inner())
                     .discover(devices)
             });
-            AncsLink::new(sink, stop)
-                .with_device_selector(selector)
-                .run();
+            let link = std::sync::Arc::new(
+                AncsLink::new(sink, stop).with_device_selector(selector),
+            );
+            app.manage(crate::link_handle::LinkHandle {
+                link: link.clone(),
+            });
+            link.run();
         });
 
     if let Err(error) = result {

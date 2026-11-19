@@ -126,6 +126,12 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
         code: notification.code.clone(),
         duration_secs: popup.duration_seconds,
         category: notification.category,
+        uid: notification.uid,
+        carrier: if notification.category == Some(1) {
+            zhixin_core::carrier::describe(&origin_digits(&notification.origin()))
+        } else {
+            None
+        },
     };
 
     info!("弹窗：{} — {}", payload.origin, payload.body);
@@ -300,6 +306,26 @@ pub async fn pick_sound_file(window: tauri::WebviewWindow) -> Result<Option<Stri
             let _ = tx.send(path.map(|p| p.to_string()));
         });
     Ok(rx.await.map_err(|e| e.to_string())?)
+}
+
+/// 从文本里提取最长连续数字串（号码识别用）。
+fn origin_digits(text: &str) -> String {
+    let mut best = String::new();
+    let mut current = String::new();
+    for c in text.chars() {
+        if c.is_ascii_digit() {
+            current.push(c);
+        } else {
+            if current.chars().count() > best.chars().count() {
+                best = current.clone();
+            }
+            current.clear();
+        }
+    }
+    if current.chars().count() > best.chars().count() {
+        best = current;
+    }
+    best
 }
 
 /// 前端量出了真实高度 → 记高度、改尺寸、重排、显示。

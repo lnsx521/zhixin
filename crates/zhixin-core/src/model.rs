@@ -170,6 +170,7 @@ mod tests {
                 message: Some("【网易】验证码123456".into()),
                 ..Default::default()
             },
+            None,
         );
         assert_eq!(notification.otp_source_hint(), Some("网易".into()));
         notification.app_identifier = Some("com.tencent.xin".into());
@@ -211,6 +212,7 @@ mod tests {
                     (ATTR_MESSAGE, "【网易】验证码：123456，请勿泄露"),
                 ],
             ),
+            None,
         );
 
         assert_eq!(notification.uid, 39);
@@ -225,6 +227,7 @@ mod tests {
             "device",
             None,
             attributes(1, &[(ATTR_MESSAGE, "今天天气不错")]),
+            None,
         );
 
         assert!(!notification.has_code());
@@ -244,6 +247,7 @@ mod tests {
                     (ATTR_MESSAGE, "正文"),
                 ],
             ),
+            None,
         );
 
         assert_eq!(notification.full_text(), "标题\n正文");
@@ -255,11 +259,16 @@ mod tests {
             "d",
             None,
             attributes(1, &[(ATTR_TITLE, "标题"), (ATTR_MESSAGE, "正文")]),
+            None,
         );
         assert_eq!(with_message.summary(), "正文");
 
-        let without_message =
-            PhoneNotification::from_ancs("d", None, attributes(1, &[(ATTR_TITLE, "标题")]));
+        let without_message = PhoneNotification::from_ancs(
+            "d",
+            None,
+            attributes(1, &[(ATTR_TITLE, "标题")]),
+            None,
+        );
         assert_eq!(without_message.summary(), "标题");
     }
 
@@ -269,6 +278,7 @@ mod tests {
             "d",
             Some("iPhone".into()),
             attributes(1, &[(ATTR_APP_IDENTIFIER, "com.apple.MobileSMS")]),
+            None,
         );
 
         // 没有标题时用 App 标识，并且映射成中文
@@ -287,7 +297,12 @@ mod tests {
     #[test]
     fn origin_最后兜底到设备名() {
         let notification =
-            PhoneNotification::from_ancs("d", Some("我的 iPhone".into()), attributes(1, &[]));
+            PhoneNotification::from_ancs(
+                "d",
+                Some("我的 iPhone".into()),
+                attributes(1, &[]),
+                None,
+            );
 
         assert_eq!(notification.origin(), "我的 iPhone");
     }
