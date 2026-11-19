@@ -129,8 +129,10 @@ body {
 .toast-call {
   border: 1.5px solid #34C759;
 }
+.toast-call .toast-body { font-size: 12.5px; }
 .toast-call .toast-reject {
   margin-top: 8px;
+  padding: 3px 0;
 }
 
 /* 验证码：品牌蓝胶囊，点一下即复制 */
@@ -251,8 +253,9 @@ body {
 
 /* 来电拒接按钮 */
 .toast-reject {
-  margin-top: 10px; width: 100%;
-  border: 0; border-radius: 10px; padding: 9px 0;
+  margin-top: 8px; width: 100%;
+  border: 0; border-radius: 8px; padding: 5px 0;
+  line-height: 1.6;
   background: rgba(192, 57, 43, 0.18); color: #ff8a80;
   font-size: 13px; font-weight: 600; cursor: pointer;
 }

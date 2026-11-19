@@ -117,7 +117,19 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
         {asset ? (
           <img className="toast-icon-img" src={asset} alt="" />
         ) : (
-          <Icon name={payload.code ? "code" : "message"} size={20} />
+          <svg viewBox="0 0 64 64" style={{ width: "100%", height: "100%", display: "block" }}>
+            <defs>
+              <linearGradient id="zhixin-generic-app" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="rgb(142,154,166)" />
+                <stop offset="1" stop-color="rgb(92,107,122)" />
+              </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#zhixin-generic-app)" />
+            <path
+              d="M32 15c-10.5 0-19 6.7-19 15 0 4.7 2.9 8.9 7.4 11.6L18.6 49l8.1-3.3c1.8.5 3.7.7 5.3.7 10.5 0 19-6.7 19-15S42.5 15 32 15z"
+              fill="#ffffff"
+            />
+          </svg>
         )}
       </div>
       <div className="toast-text">
