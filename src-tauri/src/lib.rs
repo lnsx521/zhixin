@@ -135,7 +135,6 @@ pub fn run() {
             commands::set_device_enabled,
             commands::forget_device,
             commands::send_test_notification,
-            commands::send_test_notification_kind,
             commands::get_toast_payload,
             commands::toast_click,
             commands::toast_open_app,

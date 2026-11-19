@@ -213,13 +213,9 @@ pub fn forget_device(app: AppHandle, id: String) -> Result<(), String> {
 ///
 /// 点击立即发送，无延迟。
 #[tauri::command]
-pub fn send_test_notification(app: AppHandle) {
-    send_test_notification_from(app);
-}
-
 #[tauri::command]
-pub fn send_test_notification_kind(app: AppHandle, kind: String) {
-    send_test_kind(app, &kind);
+pub fn send_test_notification(app: AppHandle, kind: Option<String>) {
+    send_test_kind(app, kind.as_deref().unwrap_or("sms"));
 }
 
 /// 托盘菜单也用同一个入口（托盘回调拿不到 `State`，只能拿 `AppHandle`）。
