@@ -246,8 +246,18 @@ async fn upload(
         return reply(StatusCode::NOT_FOUND, "dir_not_found");
     }
     let mut saved: Vec<String> = Vec::new();
+    let mut shared_text: Option<String> = None;
     while let Ok(Some(mut field)) = multipart.next_field().await {
         let Some(raw_name) = field.file_name().map(str::to_string) else {
+            // 无文件名的字段 = 快捷指令传来的共享文本（字段名 text）
+            if field.name() == Some("text") {
+                if let Ok(text) = field.text().await {
+                    let trimmed = text.trim().to_string();
+                    if !trimmed.is_empty() {
+                        shared_text = Some(trimmed);
+                    }
+                }
+            }
             continue;
         };
         let Some(name) = sanitize_name(&raw_name) else {
@@ -295,6 +305,40 @@ async fn upload(
                 .unwrap_or(&name)
                 .to_string(),
         );
+    }
+    if saved.is_empty() {
+        if let Some(text) = shared_text.filter(|t| !t.trim().is_empty()) {
+            let trimmed = text.trim();
+            let stamp = share_stamp();
+            let is_url = trimmed.starts_with("http://") || trimmed.starts_with("https://");
+            let (prefix, ext, content) = if is_url {
+                // Windows 快捷方式：双击直接用浏览器打开网页
+                (
+                    "链接",
+                    "url",
+                    format!("[InternetShortcut]\r\nURL={}", trimmed),
+                )
+            } else {
+                ("文本", "txt", trimmed.to_string())
+            };
+            let target = unique_path(&dir, &format!("{prefix}-{stamp}.{ext}"));
+            match std::fs::write(&target, content) {
+                Ok(()) => {
+                    log::info!("文件互传：收到共享文本 → {target:?}");
+                    saved.push(
+                        target
+                            .file_name()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("share")
+                            .to_string(),
+                    );
+                }
+                Err(e) => {
+                    log::warn!("文件互传：写入共享文本失败：{e}");
+                    return reply(StatusCode::INTERNAL_SERVER_ERROR, "write_failed");
+                }
+            }
+        }
     }
     Json(serde_json::json!({ "ok": true, "saved": saved })).into_response()
 }
@@ -355,6 +399,31 @@ fn sanitize_rel(rel: &str) -> Option<String> {
 }
 
 /// 手机端删除电脑文件（带令牌校验 + 路径防穿越）。
+/// 共享文本落盘文件名时间戳（东八区，YYYYMMDD-HHMMSS）。
+fn share_stamp() -> String {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64
+        + 8 * 3600;
+    let days = secs / 86400;
+    let rem = secs % 86400;
+    let z = days + 719_468;
+    let era = z / 146_097;
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if m <= 2 { y + 1 } else { y };
+    let h = rem / 3600;
+    let mi = (rem % 3600) / 60;
+    let sec = rem % 60;
+    format!("{y:04}{m:02}{d:02}-{h:02}{mi:02}{sec:02}")
+}
+
 async fn delete_file(
     State(app): State<AppHandle>,
     headers: HeaderMap,
@@ -720,7 +789,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     <input type="file" id="files" multiple>
     <div id="help-box" style="display:none">
       <p class="muted" style="margin:10px 0 6px">配到 iPhone「分享」菜单（可选）</p>
-      <p style="font-size:13px;line-height:1.7;margin:0 0 10px">在快捷指令 App 新建指令：<br>① 添加「从共享表单接收」，类型选「图像」或「文件」；<br>② 添加「获取 URL 内容」：方法选 POST，URL 填下面这条，请求体选「表单」，添加字段 file，值选「快捷指令输入」；<br>③ 命名保存。以后在照片里点「分享」→ 选它，照片直接传到这台电脑。</p>
+      <p style="font-size:13px;line-height:1.7;margin:0 0 10px">在快捷指令 App 新建指令：<br>① 添加「从共享表单接收」，类型选「图像」「文件」或「文本」；<br>② 添加「获取 URL 内容」：方法选 POST，URL 填下面这条，请求体选「表单」，添加字段 file，值选「快捷指令输入」；<br>③ 命名保存。以后在照片里点「分享」→ 选它，照片直接传到这台电脑。</p>
       <button class="btn secondary" id="copyurl">复制上传地址</button>
     </div>
     <p class="muted" style="margin:12px 0 4px">电脑上的文件</p>
