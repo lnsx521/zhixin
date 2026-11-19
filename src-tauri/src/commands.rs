@@ -217,28 +217,74 @@ pub fn send_test_notification(app: AppHandle) {
     send_test_notification_from(app);
 }
 
+#[tauri::command]
+pub fn send_test_notification_kind(app: AppHandle, kind: String) {
+    send_test_kind(app, &kind);
+}
+
 /// 托盘菜单也用同一个入口（托盘回调拿不到 `State`，只能拿 `AppHandle`）。
 pub fn send_test_notification_from(app: AppHandle) {
+    send_test_kind(app, "sms");
+}
+
+/// 按 kind 构造不同样式的测试通知（sms/call/wechat/mail/generic）。
+pub fn send_test_kind(app: AppHandle, kind: &str) {
+    let kind = kind.to_string();
     std::thread::spawn(move || {
         let uid = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|duration| duration.subsec_nanos())
             .unwrap_or(1);
 
+        let kind = kind.as_str();
+        let (app_id, title, message, category) = match kind {
+            "call" => (
+                "com.apple.facetime",
+                "13856781234",
+                "来电",
+                Some(1u8),
+            ),
+            "wechat" => (
+                "com.tencent.xin",
+                "李工（设计部）",
+                "装配图纸我发你邮箱了，注意查收",
+                Some(4u8),
+            ),
+            "mail" => (
+                "com.apple.mail",
+                "供应商 A",
+                "报价单已更新，请查阅附件",
+                Some(6u8),
+            ),
+            "generic" => (
+                "com.some.unknown.app",
+                "某应用",
+                "您有一条新消息提醒",
+                None,
+            ),
+            // 默认：短信 · 验证码
+            _ => (
+                "com.apple.MobileSMS",
+                "106835812921010",
+                "这是一条测试通知，验证码：123456。",
+                None,
+            ),
+        };
+
         let notification = PhoneNotification::from_ancs(
             "test-device",
             Some("测试".to_string()),
             Attributes {
                 uid,
-                app_identifier: Some("com.apple.MobileSMS".to_string()),
-                title: Some("知信".to_string()),
-                message: Some("这是一条测试通知，验证码：123456。".to_string()),
+                app_identifier: Some(app_id.to_string()),
+                title: Some(title.to_string()),
+                message: Some(message.to_string()),
                 ..Default::default()
             },
-            None,
+            category,
         );
 
-        info!("发送测试通知");
+        info!("发送测试通知（{kind}）");
         link_worker::dispatch_notification(&app, notification);
     });
 }

@@ -15,6 +15,7 @@ interface Props {
 export function Notifications({ config, update }: Props) {
   const t = useT();
   const notifications = config.notifications;
+  const [testKind, setTestKind] = useState("sms");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +107,14 @@ export function Notifications({ config, update }: Props) {
         </Row>
       <div className="local-test">
         <div><strong>{t.connection.testTitle}</strong><p>{t.connection.testDesc}</p>{error && <p className="bad-text" role="alert">{error}</p>}</div>
-        <button className="btn" disabled={sending} onClick={async () => { setError(null); setSending(true); setSent(false); try { await sendTestNotification(); setSending(false); setSent(true); setTimeout(() => setSent(false), 1500); } catch (err) { setError(String(err)); setSending(false); } }}>{sending ? t.connection.sending : sent ? t.connection.sent : t.connection.sendTest}</button>
+        <select className="select" value={testKind} onChange={(e) => setTestKind(e.target.value)} style={{ maxWidth: 180 }}>
+          <option value="sms">短信 · 验证码</option>
+          <option value="call">来电</option>
+          <option value="wechat">微信</option>
+          <option value="mail">邮件</option>
+          <option value="generic">通用</option>
+        </select>
+        <button className="btn" disabled={sending} onClick={async () => { setError(null); setSending(true); setSent(false); try { await sendTestNotification(testKind); setSending(false); setSent(true); setTimeout(() => setSent(false), 1500); } catch (err) { setError(String(err)); setSending(false); } }}>{sending ? t.connection.sending : sent ? t.connection.sent : t.connection.sendTest}</button>
       </div>
       </Section>
 
