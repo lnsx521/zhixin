@@ -64,8 +64,9 @@ body {
 /* 品牌图标：内置官方图标（macosicons.com 256px PNG），整图直显 */
 .toast-icon-img {
   display: block;
-  width: 38px;
-  height: 38px;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   border-radius: 10px;
 }
 .toast-icon.brand-official {
