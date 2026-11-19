@@ -311,31 +311,49 @@ async fn upload(
             let trimmed = text.trim();
             let stamp = share_stamp();
             let is_url = trimmed.starts_with("http://") || trimmed.starts_with("https://");
-            let (prefix, ext, content) = if is_url {
-                // Windows 快捷方式：双击直接用浏览器打开网页
-                (
-                    "链接",
-                    "url",
-                    format!("[InternetShortcut]\r\nURL={}", trimmed),
-                )
-            } else {
-                ("文本", "txt", trimmed.to_string())
-            };
-            let target = unique_path(&dir, &format!("{prefix}-{stamp}.{ext}"));
-            match std::fs::write(&target, content) {
-                Ok(()) => {
-                    log::info!("文件互传：收到共享文本 → {target:?}");
-                    saved.push(
-                        target
-                            .file_name()
-                            .and_then(|s| s.to_str())
-                            .unwrap_or("share")
-                            .to_string(),
-                    );
+            if is_url {
+                // 网页/链接：抓网页标题命名，生成 Windows 快捷方式（双击直接打开网页）
+                let base = match fetch_page_title(trimmed).await {
+                    Some(title) if !title.trim().is_empty() => sanitize_title(&title),
+                    _ => sanitize_title(&domain_of(trimmed)),
+                };
+                let fallback = sanitize_title(&domain_of(trimmed));
+                let name = if base.is_empty() { fallback } else { base };
+                let target = unique_path(&dir, &format!("{name}-{stamp}.url"));
+                match std::fs::write(&target, format!("[InternetShortcut]\r\nURL={}", trimmed)) {
+                    Ok(()) => {
+                        log::info!("文件互传：收到网页链接 → {target:?}");
+                        saved.push(
+                            target
+                                .file_name()
+                                .and_then(|s| s.to_str())
+                                .unwrap_or("link")
+                                .to_string(),
+                        );
+                    }
+                    Err(e) => {
+                        log::warn!("文件互传：写入链接快捷方式失败：{e}");
+                        return reply(StatusCode::INTERNAL_SERVER_ERROR, "write_failed");
+                    }
                 }
-                Err(e) => {
-                    log::warn!("文件互传：写入共享文本失败：{e}");
-                    return reply(StatusCode::INTERNAL_SERVER_ERROR, "write_failed");
+            } else {
+                // 纯文本：存 txt
+                let target = unique_path(&dir, &format!("文本-{stamp}.txt"));
+                match std::fs::write(&target, trimmed) {
+                    Ok(()) => {
+                        log::info!("文件互传：收到共享文本 → {target:?}");
+                        saved.push(
+                            target
+                                .file_name()
+                                .and_then(|s| s.to_str())
+                                .unwrap_or("text")
+                                .to_string(),
+                        );
+                    }
+                    Err(e) => {
+                        log::warn!("文件互传：写入共享文本失败：{e}");
+                        return reply(StatusCode::INTERNAL_SERVER_ERROR, "write_failed");
+                    }
                 }
             }
         }
@@ -399,6 +417,60 @@ fn sanitize_rel(rel: &str) -> Option<String> {
 }
 
 /// 手机端删除电脑文件（带令牌校验 + 路径防穿越）。
+/// 抓取网页标题（3 秒超时；失败返回 None——外网/被墙站点走域名兜底）。
+async fn fetch_page_title(url: &str) -> Option<String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .ok()?;
+    let body = client.get(url).send().await.ok()?.text().await.ok()?;
+    let lower = body.to_lowercase();
+    let start = lower.find("<title")?;
+    let after_gt = body[start..].find('>')? + start + 1;
+    let rest = &body[after_gt..];
+    let end = rest.to_lowercase().find("</title")?;
+    let raw = rest[..end].trim();
+    if raw.is_empty() {
+        return None;
+    }
+    Some(decode_entities(raw))
+}
+
+/// 基础 HTML 实体还原。
+fn decode_entities(raw: &str) -> String {
+    raw.replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&nbsp;", " ")
+}
+
+/// 文件名清洗：去非法字符、压空格、限长（按字符数）。
+fn sanitize_title(raw: &str) -> String {
+    let cleaned: String = raw
+        .chars()
+        .filter(|c| !matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' | '\n' | '\r'))
+        .collect();
+    let collapsed = cleaned.split_whitespace().collect::<Vec<_>>().join(" ");
+    let chars: Vec<char> = collapsed.chars().collect();
+    if chars.len() > 40 {
+        String::from_iter(&chars[..40])
+    } else {
+        collapsed
+    }
+}
+
+/// 从 URL 提取域名（去 www 前缀）。
+fn domain_of(url: &str) -> String {
+    let after = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))
+        .unwrap_or(url);
+    let host = after.split('/').next().unwrap_or("");
+    host.trim_start_matches("www.").split(':').next().unwrap_or(host).to_string()
+}
+
 /// 共享文本落盘文件名时间戳（东八区，YYYYMMDD-HHMMSS）。
 fn share_stamp() -> String {
     let secs = std::time::SystemTime::now()
