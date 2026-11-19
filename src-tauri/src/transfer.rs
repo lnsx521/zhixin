@@ -1105,8 +1105,8 @@ const PAGE_HTML: &str = r#"<!doctype html>
         html += '<div class="folder-row" data-dir="' + esc(parent.join('/')) + '">📁 返回上级</div>';
       }
       var folderSvg = '<svg viewBox="0 0 64 52" style="width:100%;height:100%;display:block">'
-        + '<path d="M2 10 a7 7 0 0 1 7-7 h15 l7 7 h24 a7 7 0 0 1 7 7 v8 H2 z" fill="#3E9DF7"/>'
-        + '<path d="M2 17 h60 v25 a7 7 0 0 1 -7 7 H9 a7 7 0 0 1 -7-7 z" fill="#63B0FF"/>'
+        + '<path d="M2 10 a7 7 0 0 1 7-7 h15 l7 7 h24 a7 7 0 0 1 7 7 v8 H2 z" fill='rgb(62,157,247)'/>'
+        + '<path d="M2 17 h60 v25 a7 7 0 0 1 -7 7 H9 a7 7 0 0 1 -7-7 z" fill='rgb(99,176,255)'/>'
         + '</svg>';
       html += (data.folders || []).map(function (d) {
         return '<div class="folder-row" data-dir="' + esc(curDir ? curDir + '/' + d.name : d.name) + '">'
