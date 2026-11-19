@@ -132,7 +132,7 @@ body {
 }
 .toast-call .toast-body { font-size: 12.5px; margin-top: 2px; }
 .toast-call .toast-reject {
-  margin-top: 5px;
+  margin-top: 2px;
   padding: 5px 0;
 }
 
