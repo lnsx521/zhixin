@@ -2,6 +2,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { renderSVG } from "uqr";
 import { getTransferInfo, getMdnsHostname, listHttpAddresses, setTransferFolder, resetIngressToken, type LocalAddress, type TransferInfo } from "../../shared/api";
+import { ReceiverControls } from "./Network";
 import { LangContext } from "../../shared/i18n";
 import { Icon } from "../../shared/Icon";
 import { Disclosure, Row, Section } from "../components";
@@ -159,6 +160,8 @@ export function Transfer() {
           <p style={{ margin: 0 }}>{text("之后在相册/文件里分享用快捷指令一，在 Safari 分享网页时用快捷指令二。电脑会自动抓网页标题生成快捷方式文件。", "Share files with #1; share web pages with #2. The PC fetches the page title and creates a .url shortcut file.")}</p>
         </p>
       </Disclosure>
+
+      <ReceiverControls />
 
       <Section narrow title={text("安全", "Security")} description={text("令牌是访问电脑的唯一凭证，泄露后应立即重置。", "The token is the sole credential - reset it immediately if leaked.")}>
         <Row label={text("重置令牌", "Reset token")} hint={text("重置后旧地址立即失效：手机互传页面需重新扫码打开；已配对的通知设备不受影响。", "Old link dies instantly; re-scan on the phone. Paired notification devices are unaffected.")}>

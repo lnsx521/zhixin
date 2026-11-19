@@ -130,13 +130,6 @@ body {
   border: 1.5px solid #34C759;
 }
 
-/* 来电卡：归属地行（城市 · 运营商） */
-.toast-call-location {
-  font-size: 12.5px;
-  color: var(--text-secondary);
-  margin: -2px 0 0;
-}
-
 /* 验证码：品牌蓝胶囊，点一下即复制 */
 .toast-code {
   border: 0;

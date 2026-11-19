@@ -8,7 +8,6 @@ import { General } from "./sections/General";
 import { History } from "./sections/History";
 import { Proximity } from "./sections/Proximity";
 import { About } from "./sections/About";
-import { Network } from "./sections/Network";
 import { Transfer } from "./sections/Transfer";
 import { Icon, type IconName } from "../shared/Icon";
 import { applyTheme } from "../shared/theme";
@@ -17,13 +16,12 @@ import { Titlebar } from "./Titlebar";
 import { useUpdater } from "./useUpdater";
 import { UpdateNotice, UpdateDialog } from "./sections/SoftwareUpdate";
 
-type Page = "connection" | "notifications" | "proximity" | "network" | "transfer" | "history" | "general" | "about";
+type Page = "connection" | "notifications" | "proximity" | "transfer" | "history" | "general" | "about";
 
 const NAV_ICONS: Record<Page, IconName> = {
   connection: "phone",
   notifications: "bell",
   proximity: "lock",
-  network: "external",
   transfer: "folder", history: "message",
   general: "settings",
   about: "info",
@@ -149,7 +147,6 @@ function Shell(props: {
 
   const nav: { key: Page; label: string }[] = [
     { key: "connection", label: t.nav.connection },
-    { key: "network", label: t.nav.network },
     { key: "transfer", label: t.nav.transfer },
     { key: "history", label: t.nav.history },
     { key: "notifications", label: t.nav.notifications },
@@ -229,7 +226,6 @@ function Shell(props: {
               {page === "history" && <History query={historyQuery} />}
               {page === "notifications" && <Notifications config={config} update={update} />}
               {page === "proximity" && <Proximity config={config} update={update} />}
-              {page === "network" && <Network />}
               {page === "transfer" && <Transfer />}
               {page === "general" && <General config={config} update={update} />}
               {page === "about" && <About updater={updater} />}

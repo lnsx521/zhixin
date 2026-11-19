@@ -5,7 +5,7 @@ import { LangContext } from "../../shared/i18n";
 import { networkDict } from "../../shared/network-i18n";
 import { Disclosure, Modal, NumberField, Row, Section, Toggle } from "../components";
 
-export function Network() {
+export function ReceiverControls() {
   const lang=useContext(LangContext), t=networkDict[lang];
   const text=(zh:string,en:string)=>lang==="zh"?zh:en;
   const [status,setStatus]=useState<HttpStatus|null>(null),[bind,setBind]=useState("0.0.0.0"),[port,setPort]=useState(24836);
@@ -27,8 +27,8 @@ export function Network() {
   const displayedParams=[["device_name",testName],["body",testBody],["from",testSender],["token",status?.token??"…"]];
   const copy=async(value:string,key:string)=>{try{await writeText(value);clearTimeout(copyTimer.current);setCopied(key);copyTimer.current=setTimeout(()=>setCopied(null),2000);}catch{setError(t.clipboardError);}};
   const dirty=status&&(bind!==status.settings.bind||port!==status.settings.port);
-  const curl=`curl.exe -G "${endpoint}" \`\n  --data-urlencode "token=YOUR_TOKEN" \`\n  --data-urlencode "device_name=Android" \`\n  --data-urlencode "body=Verification code: 123456"`;
-  const python=`import getpass, json, urllib.request\nfrom urllib.parse import urlencode\n\nurl = "${endpoint}?" + urlencode({"token": getpass.getpass("Token: ")})\ndata = json.dumps({"device_name": "Android", "body": "验证码 123456"}).encode("utf-8")\nrequest = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")\nwith urllib.request.urlopen(request, timeout=10) as response:\n    print(response.status, response.read().decode("utf-8"))`;
+  const curl=`curl.exe -G "${endpoint}" \`\n  --data-urlencode "token=YOUR_TOKEN" \`\n  --data-urlencode "device_name=Phone" \`\n  --data-urlencode "body=Verification code: 123456"`;
+  const python=`import getpass, json, urllib.request\nfrom urllib.parse import urlencode\n\nurl = "${endpoint}?" + urlencode({"token": getpass.getpass("Token: ")})\ndata = json.dumps({"device_name": "Phone", "body": "验证码 123456"}).encode("utf-8")\nrequest = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")\nwith urllib.request.urlopen(request, timeout=10) as response:\n    print(response.status, response.read().decode("utf-8"))`;
   return <>
     <Section wide title={t.receiver} action={<span className="network-status" role="status">{status?.running?t.running:status?.settings.enabled?t.failed:t.stopped}</span>}>
       <Row label={t.enable}><Toggle checked={status?.settings.enabled??false} disabled={busy||!status} onChange={v=>void run(()=>configureHttp(v,status!.settings.bind,status!.settings.port))}/></Row>
@@ -47,28 +47,10 @@ export function Network() {
         </div>
       </div>
     </Section>
-    <Section wide title={text("安卓推送接入","Android push setup")} action={
-      <button className="network-interface" disabled={!status||!status.token} onClick={async () => {
-        if (!status?.token) return;
-        const config = [
-          "知信 · 安卓推送接入配置（SmsForwarder / MacroDroid）",
-          `服务地址: http://${host}:${port}/api/v1/notifications?t=${status.token}&text=[短信内容]`,
-          `服务器: http://${host}:${port}`,
-          `令牌: ${status.token}`,
-          "",
-          "SmsForwarder 步骤：主动上报 → 短信 → Webhook，请求方式 POST，URL 填上面第一条。",
-          "MacroDroid 步骤：触发器=收到短信 → 动作=HTTP POST → URL 同上。",
-        ].join("\n");
-        await writeText(config);
-        window.alert(text("安卓配置已复制到剪贴板","Android setup copied to clipboard"));
-      }}>复制安卓接入配置</button>
-    }>
-      <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0 }}>{text("安卓手机不用装本软件：用自动化工具（SmsForwarder / MacroDroid）把短信 POST 到知信即可。点右上角按钮复制完整配置。","Android phones don't need this app: use automation tools to POST SMS to zhixin. Copy the full config from the button.")}</p>
-    </Section>
     <Disclosure title={t.guide} hint={t.guideHint}>
       <p className="hint-text">{text("若无法访问，请检查本机防火墙配置。","If unreachable, check your local firewall configuration.")}</p>
       <Disclosure title={t.generic}>
-        <code className="network-code">GET /api/v1/notifications?token=YOUR_TOKEN&amp;device_name=Android&amp;body=URL_ENCODED_MESSAGE<br/>POST /api/v1/notifications?token=YOUR_TOKEN</code>
+        <code className="network-code">GET /api/v1/notifications?token=YOUR_TOKEN&amp;device_name=Phone&amp;body=URL_ENCODED_MESSAGE<br/>POST /api/v1/notifications?token=YOUR_TOKEN</code>
         <p>{text("GET 参数须 URL 编码；POST 支持 JSON 或表单。令牌也可通过 Authorization: Bearer 或请求体 token 传入，只能选择一种位置。URL 包含凭据，请勿分享。","URL-encode GET parameters. POST accepts JSON or form bodies. Authorization: Bearer and body token are also supported; use exactly one location. URLs contain credentials: do not share.")}</p>
         <div className="network-table-wrap"><table className="network-table"><thead><tr><th>{t.field}</th><th>{t.requirement}</th><th>{t.meaning}</th></tr></thead><tbody>{[["token",t.required,text("统一接入令牌","Shared receiver token")],["body / content",t.required,t.bodyField],["device_name",t.optional,text("展示名称，最多 256 字节；不是可信身份","Display name, up to 256 bytes; not an authenticated identity")],["kind",t.optional,t.kindField],["sender / from",t.optional,t.senderField],["title",t.optional,t.titleField],["app_identifier",t.optional,t.appField],["message_id",t.optional,t.idField]].map(([f,r,d])=><tr key={f}><th>{f}</th><td>{r}</td><td>{d}</td></tr>)}</tbody></table></div>
         <p>{t.responseHint}</p><p className="hint-text">{t.limits}</p>
@@ -76,7 +58,6 @@ export function Network() {
         <Disclosure title="curl · PowerShell"><pre className="network-code">{curl}</pre><button className="btn" onClick={()=>void copy(curl,"curl")}>{copied==="curl"?t.copied:t.copy}</button></Disclosure>
         <Disclosure title="Python · urllib"><p>{t.pythonHint}</p><pre className="network-code">{python}</pre><button className="btn" onClick={()=>void copy(python,"python")}>{copied==="python"?t.copied:t.copy}</button></Disclosure>
       </Disclosure>
-      <Disclosure title={t.android}><p>{text("Webhook 填入复制的接收链接。选择 POST 表单，参数为 device_name=Android&from=[from]&content=[content]；也可使用 GET，将同样参数追加到链接并由发送器编码。","Use the copied URL. POST form: device_name=Android&from=[from]&content=[content]. GET is also supported; URL-encode the message parameters.")}</p></Disclosure>
       <Disclosure title={t.ios}><p>{text("信息自动化 → 获取 URL 内容 → POST JSON。URL 填入接收链接，字典填写 body、sender、device_name，无需额外鉴权头。立即运行、锁屏和网络权限需按 iOS 版本验证。","Message automation → Get Contents of URL → POST JSON. Use the receiver URL and dictionary fields body, sender and device_name; no extra auth header is needed. Test lock-screen behavior and permissions on your iOS version.")}</p></Disclosure><p className="hint-text">{t.publicHint}</p>
     </Disclosure>
     {(error||status?.error)&&<p className="bad-text" role="alert">{error||status?.error}</p>}

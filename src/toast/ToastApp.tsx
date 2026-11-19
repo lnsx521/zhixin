@@ -123,7 +123,6 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
           <span className="toast-origin-title">{payload.origin}</span>
           <span className="toast-time">{new Date().toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { hour: "2-digit", minute: "2-digit" })}</span>
         </div>
-        {isCall && payload.location && <p className="toast-call-location">{payload.location}</p>}
         <p ref={bodyRef} className={`toast-body ${truncated ? "truncated" : ""}`}>
           {payload.body}
           {truncated && <span className="toast-more"> 查看全文</span>}

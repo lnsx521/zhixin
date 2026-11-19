@@ -56,8 +56,6 @@ pub struct ToastPayload {
     pub duration_secs: u32,
     /// iOS 通知分类：1 = 来电。其余场景 None。
     pub category: Option<u8>,
-    /// 来电归属地（"城市 · 运营商"）。仅来电且有号段数据时提供。
-    pub location: Option<String>,
 }
 
 /// 当前生效的候选条提议。

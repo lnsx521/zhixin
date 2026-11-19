@@ -87,26 +87,6 @@ pub fn start_fullscreen_watch(app: &AppHandle) {
     });
 }
 
-/// 从文本里提取最长连续数字串（来电号码归属地查询用）。
-fn payload_origin_digits(text: &str) -> String {
-    let mut best = String::new();
-    let mut current = String::new();
-    for c in text.chars() {
-        if c.is_ascii_digit() {
-            current.push(c);
-        } else {
-            if current.chars().count() > best.chars().count() {
-                best = current.clone();
-            }
-            current.clear();
-        }
-    }
-    if current.chars().count() > best.chars().count() {
-        best = current;
-    }
-    best
-}
-
 /// 弹一条通知。
 pub fn show(app: &AppHandle, notification: &PhoneNotification) {
     if is_fullscreen() {
@@ -134,13 +114,6 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
     let id = state.toast_seq.fetch_add(1, Ordering::Relaxed);
     let label = format!("toast-{id}");
 
-    // 来电：查归属地（本地号段库，不联网）
-    let location = if notification.category == Some(1) {
-        crate::phone_location::lookup(&payload_origin_digits(&notification.origin()))
-    } else {
-        None
-    };
-
     let payload = ToastPayload {
         app_id: notification.app_identifier.clone(),
         open_app_name: zhixin_core::app_rules::matching_rule(
@@ -153,7 +126,6 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
         code: notification.code.clone(),
         duration_secs: popup.duration_seconds,
         category: notification.category,
-        location,
     };
 
     info!("弹窗：{} — {}", payload.origin, payload.body);
