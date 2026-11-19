@@ -786,10 +786,19 @@ const PAGE_HTML: &str = r#"<!doctype html>
     openPreviewAt(index);
   });
   document.getElementById('preview-close').onclick = closePreview;
-  document.getElementById('preview-prev').onclick = function () { openPreviewAt(previewIndex - 1); };
-  document.getElementById('preview-next').onclick = function () { openPreviewAt(previewIndex + 1); };
+  document.getElementById('preview-prev').onclick = function () { var next = neighborPreview(previewIndex, -1); if (next !== -1) openPreviewAt(next); };
+  document.getElementById('preview-next').onclick = function () { var next = neighborPreview(previewIndex, 1); if (next !== -1) openPreviewAt(next); };
   var previewTouch = { startX: 0, y: 0 };
   bindPreviewGestures(document.getElementById('preview-overlay'));
+  function neighborPreview(from, direction) {
+    var step = direction < 0 ? -1 : 1;
+    var idx = from + step;
+    while (idx >= 0 && idx < previewItems.length) {
+      if (!/\.pdf$/i.test(previewItems[idx].rootRel)) return idx;
+      idx += step;
+    }
+    return -1;
+  }
   function bindPreviewGestures(el) {
     el.addEventListener('touchstart', function (e) {
       previewTouch.startX = e.touches[0].clientX;
@@ -799,8 +808,8 @@ const PAGE_HTML: &str = r#"<!doctype html>
       var dx = e.changedTouches[0].clientX - previewTouch.startX;
       var dy = e.changedTouches[0].clientY - previewTouch.y;
       if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
-      if (dx < 0) openPreviewAt(previewIndex + 1);
-      else openPreviewAt(previewIndex - 1);
+      var next = neighborPreview(previewIndex, dx < 0 ? 1 : -1);
+      if (next !== -1) openPreviewAt(next);
     }, { passive: true });
   }
 
