@@ -158,6 +158,7 @@ export function Transfer() {
           <p style={{ margin: "0 0 6px" }}><b>{text("快捷指令一「发送到电脑」（管照片/文件/PDF）：", "Shortcut 1 - files:")}</b>{text("在快捷指令 App 新建：① 添加「从共享表单接收」，类型勾选「图像」「文件」「PDF 文本」；② 添加「获取 URL 内容」：方法 POST，URL 填上方局域网地址，请求体选「表单」，添加新字段时类型选「文件」，Key 手动输入 file（小写），值选「快捷指令输入」；③ 命名保存。", "1) Receive: Images, Files, PDF; 2) Get Contents of URL: POST to LAN address above, Form body, add a File-type field with key file and value Shortcut Input; 3) Save.")}</p>
           <p style={{ margin: "0 0 6px" }}><b>{text("快捷指令二「发送链接到电脑」（管网页/链接/文本）：", "Shortcut 2 - links:")}</b>{text("复制快捷指令一，改三处：① 接收类型取消图像/文件，只勾「Safari 浏览器」「网页 URL」「文章」「链接」；② 表单字段删除 file 那行，重新添加新字段时类型选「文本」，Key 手动输入 text，值选「快捷指令输入」；③ 改名「发送链接到电脑」保存。", "Duplicate shortcut 1: uncheck Images/Files, check Safari web page / URLs / Articles / Links; replace the file field with a Text-type field, key text, value Shortcut Input; rename it.")}</p>
           <p style={{ margin: 0 }}>{text("之后在相册/文件里分享用快捷指令一，在 Safari 分享网页时用快捷指令二。电脑会自动抓网页标题生成快捷方式文件。", "Share files with #1; share web pages with #2. The PC fetches the page title and creates a .url shortcut file.")}</p>
+          <p className="hint-text" style={{ margin: "8px 0 0" }}>{text("如果您熟悉 iOS 快捷指令，可将「获取 URL 内容」动作合并到现有的自动化中统一管理——多条通知转发可共用一条自动化，效果与分步创建相同。", "If you are familiar with iOS Shortcuts, you can merge the Get Contents of URL action into an existing automation - multiple notification forwards can share one automation, with the same result as creating them separately.")}</p>
         </p>
       </Disclosure>
 
