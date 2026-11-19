@@ -130,9 +130,9 @@ body {
 .toast-call {
   border: 1.5px solid #34C759;
 }
-.toast-call .toast-body { font-size: 12.5px; }
+.toast-call .toast-body { font-size: 12.5px; margin-top: 2px; }
 .toast-call .toast-reject {
-  margin-top: 8px;
+  margin-top: 5px;
   padding: 3px 0;
 }
 
