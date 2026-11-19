@@ -621,11 +621,15 @@ const PAGE_HTML: &str = r#"<!doctype html>
   .row-swipe {
     position: relative; z-index: 1; display: flex; align-items: center; gap: 12px;
     flex: 1; min-width: 0; background: #ffffff; padding: 13px 0;
-    transition: transform .2s ease;
+    transition: transform .18s ease-out;
+    will-change: transform;
   }
+  /* 滑动期间暂时关掉毛玻璃：backdrop-filter 实时重算是不丝滑的根源 */
+  .card.swiping { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  .card.swiping .row-swipe { background: #ffffff; }
   .swipe-del {
-    position: absolute; right: 0; top: 0; bottom: 0; width: 72px;
-    border: 0; background: #c0392b; color: #fff;
+    position: absolute; right: 6px; top: 6px; bottom: 6px; width: 60px;
+    border: 0; border-radius: 10px; background: #c0392b; color: #fff;
     font-size: 13px; font-weight: 600; cursor: pointer;
   }
   .file-n { font-weight: 500; }
@@ -642,7 +646,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
   }
   .empty { text-align: center; color: #6e6e73; padding: 18px 0 6px; font-size: 13.5px; }
   .file-sub { display: block; font-size: 10.5px; color: #a6a6ab; }
-  .file-ops { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; align-items: stretch; }
+  .file-ops { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; align-items: stretch; }
   .file-del {
     border: 0; border-radius: 9px; padding: 6px 12px;
     background: #fdeaea; color: #c0392b; font-size: 12px; font-weight: 600; cursor: pointer;
@@ -697,6 +701,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     .empty { color: #a6a6ab; }
     .swipe-del { background: #c0392b; }
     .row-swipe { background: #2a2a2d; padding: 13px 0; }
+    .card.swiping .row-swipe { background: #2a2a2d; }
     .folder-row { border-bottom-color: rgba(255,255,255,.09); color: #8ab4ff; }
     .row { border-bottom-color: rgba(255,255,255,.09); }
     .btn.secondary { background: #2c3d5c; color: #8ab4ff; }
@@ -826,7 +831,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
   function openSwipe(row) {
     closeSwipe();
     var el = row.querySelector('.row-swipe');
-    el.style.transform = 'translateX(-72px)';
+    el.style.transform = 'translateX(-78px)';
     swipeState.row = row;
   }
   document.getElementById('list').addEventListener('touchstart', function (e) {
@@ -837,6 +842,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     swipeState.moved = false;
     var swipe = row.querySelector('.row-swipe');
     swipe.style.transition = 'none';
+    row.closest('.card').classList.add('swiping');
     swipeState.timer = setTimeout(function () {
       if (swipeState.row === row && !swipeState.moved) openSwipe(row);
     }, 600);
@@ -848,19 +854,20 @@ const PAGE_HTML: &str = r#"<!doctype html>
     if (!swipeState.moved) return;
     var swipe = swipeState.row.querySelector('.row-swipe');
     swipe.style.transition = 'none';
-    var base = swipe.style.transform.indexOf('-72') !== -1 ? -72 : 0;
-    var offset = Math.max(-72, Math.min(0, base + dx));
+    var base = swipe.style.transform.indexOf('-78') !== -1 ? -72 : 0;
+    var offset = Math.max(-78, Math.min(0, base + dx));
     swipe.style.transform = 'translateX(' + offset + 'px)';
     swipeState.dx = offset;
   }, { passive: true });
   document.getElementById('list').addEventListener('touchend', function () {
     clearTimeout(swipeState.timer);
+    var card = document.querySelector('.card.swiping');
+    if (card) card.classList.remove('swiping');
     if (!swipeState.row) return;
+    if (swipeState.axis !== 'x') { swipeState.row = null; return; }
     var swipe = swipeState.row.querySelector('.row-swipe');
-    swipe.style.transition = 'transform .2s ease';
-    var match = swipe.style.transform.match(/-?\d+/);
-    var offset = match ? parseInt(match[0], 10) : 0;
-    if (offset < -36) { swipe.style.transform = 'translateX(-72px)'; swipeState.row = swipeState.row; }
+    swipe.style.transition = 'transform .18s ease-out';
+    if (swipeState.dx < -39) { swipe.style.transform = 'translateX(-78px)'; }
     else { swipe.style.transform = ''; swipeState.row = null; }
   });
   document.getElementById('list').addEventListener('click', function (e) {
@@ -873,7 +880,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
       return;
     }
     var row = e.target.closest('.row');
-    if (row && row.querySelector('.row-swipe') && row.querySelector('.row-swipe').style.transform.indexOf('-72') !== -1) {
+    if (row && row.querySelector('.row-swipe') && row.querySelector('.row-swipe').style.transform.indexOf('-78') !== -1) {
       closeSwipe();
       return;
     }
