@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "cross-env CARGO_TARGET_DIR=D://cargo-target tauri"
+    "tauri": "cross-env CARGO_TARGET_DIR=D:/cargo-target tauri"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
