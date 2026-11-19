@@ -13,12 +13,15 @@ use std::time::Duration;
 use log::{info, warn};
 use zhixin_core::model::PhoneNotification;
 use tauri::{
-    AppHandle, Manager, PhysicalPosition, PhysicalSize, Position, Size, WebviewUrl,
+    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, WebviewUrl,
     WebviewWindowBuilder, WindowEvent,
 };
 
 use crate::state::AppState;
 use crate::types::ToastPayload;
+
+/// 常驻弹窗池窗口的标签：应用启动时预建、关闭时隐藏不销毁，通知到达时热复用（零延迟）。
+pub const POOL_LABEL: &str = "toast-pool";
 
 /// 刚创建时的占位高度（DIP；马上会被前端报上来的真实高度替换）。
 const DEFAULT_HEIGHT: f64 = 96.0;
@@ -87,6 +90,37 @@ pub fn start_fullscreen_watch(app: &AppHandle) {
     });
 }
 
+/// 预建常驻弹窗池窗口（隐藏、无负载）。前端发现自己是池窗口且无负载时保持隐藏待命。
+pub fn ensure_pool(app: &AppHandle) {
+    if app.get_webview_window(POOL_LABEL).is_some() {
+        return;
+    }
+    let state = app.state::<AppState>();
+    state
+        .toast_heights
+        .lock()
+        .unwrap()
+        .insert(POOL_LABEL.to_string(), DEFAULT_HEIGHT);
+
+    let builder = WebviewWindowBuilder::new(app, POOL_LABEL, WebviewUrl::App("toast.html".into()))
+        .title("知信")
+        .decorations(false)
+        .transparent(true)
+        .shadow(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .focusable(false)
+        .focused(false)
+        .resizable(false)
+        .inner_size(state.config().notifications.popup.width, DEFAULT_HEIGHT)
+        .visible(false);
+
+    if let Err(error) = builder.build() {
+        warn!("弹窗池预建失败：{error}");
+        state.toast_heights.lock().unwrap().remove(POOL_LABEL);
+    }
+}
+
 /// 弹一条通知。
 pub fn show(app: &AppHandle, notification: &PhoneNotification) {
     if is_fullscreen() {
@@ -135,6 +169,43 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
     };
 
     info!("弹窗：{} — {}", payload.origin, payload.body);
+
+    // 弹窗池热复用：常驻窗口空闲时直接换内容显示（零延迟，免 webview 冷加载）
+    {
+        let pool_free = app.get_webview_window(POOL_LABEL).is_some()
+            && !state
+                .toasts
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|item| item == POOL_LABEL);
+        if pool_free {
+            state
+                .pending_toasts
+                .lock()
+                .unwrap()
+                .insert(POOL_LABEL.to_string(), payload);
+            state
+                .toasts
+                .lock()
+                .unwrap()
+                .push_back(POOL_LABEL.to_string());
+            state
+                .toast_heights
+                .lock()
+                .unwrap()
+                .insert(POOL_LABEL.to_string(), DEFAULT_HEIGHT);
+            let _ = app.emit_to(POOL_LABEL, "toast-payload", ());
+            reposition_all(app);
+            let duration = u64::from(popup.duration_seconds).max(2) + 2;
+            let app_for_timer = app.clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(Duration::from_secs(duration)).await;
+                close_toast(&app_for_timer, POOL_LABEL);
+            });
+            return;
+        }
+    }
 
     // 通知历史留档（含验证码，敏感数据仅本地存储）
     crate::history::record(app, notification);
@@ -394,6 +465,14 @@ pub fn resize_and_show(app: &AppHandle, label: &str, height_dip: f64) {
 
 /// 关掉一个 toast（用户点掉 / 超时 / 被挤掉）。
 pub fn close_toast(app: &AppHandle, label: &str) {
+    // 池窗口只隐藏不销毁 —— 保留 webview 热状态，下一条通知零延迟复用
+    if label == POOL_LABEL {
+        if let Some(window) = app.get_webview_window(label) {
+            let _ = window.hide();
+        }
+        on_toast_destroyed(app, label);
+        return;
+    }
     if let Some(window) = app.get_webview_window(label) {
         let _ = window.close();
     } else {

@@ -64,6 +64,7 @@ pub fn run() {
             http_ingress::start(app.handle().clone());
 
             tray::setup(app.handle())?;
+            popups::ensure_pool(app.handle());
             link_worker::spawn(app.handle().clone());
             proximity::spawn(app.handle().clone());
             mdns::spawn(app.handle().clone());

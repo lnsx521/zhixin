@@ -14,6 +14,7 @@ import { dict, resolveLang, type Lang } from "../shared/i18n";
 import { Icon } from "../shared/Icon";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useSavedTheme } from "../shared/theme";
 import { brandAsset } from "../shared/brandIcons";
 
@@ -42,14 +43,26 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
       .then((config) => setLang(resolveLang(config.general.language)))
       .catch(() => {});
 
+    const label = getCurrentWindow().label;
     getToastPayload().then((payload) => {
       if (!payload) {
-        // 没有负载（比如兜底定时器已把它清掉）→ 直接关
-        toastClose();
+        // 弹窗池窗口：无负载 = 热待命，保持隐藏（不销毁 webview）
+        if (label !== "toast-pool") toastClose();
         return;
       }
       setPayload(payload);
     });
+    // 池复用：Rust 换好负载后广播，重取并渲染（量高度 → 显示 由既有流程完成）
+    let unlisten: (() => void) | undefined;
+    void listen("toast-payload").then((un) => {
+      unlisten = un;
+      un(() => {
+        getToastPayload().then((p) => {
+          if (p) setPayload(p);
+        });
+      });
+    });
+    return () => unlisten?.();
   }, []);
 
   // 联网获取的/手动设置的图标（Rust 缓存，data URL）优先于内置品牌图
