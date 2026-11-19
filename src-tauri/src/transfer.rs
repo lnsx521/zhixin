@@ -158,14 +158,31 @@ async fn list(
     if let Err(_) = tokio::fs::metadata(&browse_dir).await {
         return reply(StatusCode::NOT_FOUND, "dir_not_found");
     }
-    let mut folders: Vec<String> = Vec::new();
+    let mut folders: Vec<serde_json::Value> = Vec::new();
     let mut entries: Vec<FileEntry> = Vec::new();
     if let Ok(mut read) = tokio::fs::read_dir(&browse_dir).await {
         while let Ok(Some(entry)) = read.next_entry().await {
             let Ok(meta) = entry.metadata().await else { continue };
             let Some(name) = entry.file_name().to_str().map(str::to_string) else { continue };
             if meta.is_dir() {
-                folders.push(name);
+                let sub = browse_dir.join(&name);
+                let mut folder_size: u64 = 0;
+                let mut latest: u64 = 0;
+                for entry in walkdir(&sub) {
+                    if let Ok(fm) = entry.metadata() {
+                        folder_size += fm.len();
+                        if let Ok(modified) = fm.modified() {
+                            if let Ok(d) = modified.duration_since(std::time::UNIX_EPOCH) {
+                                latest = latest.max(d.as_secs());
+                            }
+                        }
+                    }
+                }
+                folders.push(serde_json::json!({
+                    "name": name,
+                    "size": folder_size,
+                    "mtime": latest,
+                }));
             } else {
                 entries.push(FileEntry {
                     name,
@@ -180,7 +197,8 @@ async fn list(
             }
         }
     }
-    folders.sort();
+    folders.sort_by_key(|f| f.get("mtime").and_then(|m| m.as_u64()).unwrap_or(0));
+    folders.reverse();
     entries.sort_by_key(|a| std::cmp::Reverse(a.mtime));
     entries.truncate(LIST_LIMIT);
     (
@@ -469,6 +487,30 @@ fn domain_of(url: &str) -> String {
     host.trim_start_matches("www.").split(':').next().unwrap_or(host).to_string()
 }
 
+/// 同步递归遍历目录下的全部文件（统计文件夹大小用）。
+fn walkdir(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let mut out = Vec::new();
+    let mut stack = vec![dir.to_path_buf()];
+    let mut depth = 0;
+    while let Some(cur) = stack.pop() {
+        depth += 1;
+        if depth > 6 {
+            continue;
+        }
+        if let Ok(read) = std::fs::read_dir(&cur) {
+            for entry in read.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    stack.push(path);
+                } else {
+                    out.push(path);
+                }
+            }
+        }
+    }
+    out
+}
+
 /// 共享文本落盘文件名时间戳（东八区，YYYYMMDD-HHMMSS）。
 fn share_stamp() -> String {
     let secs = std::time::SystemTime::now()
@@ -751,8 +793,8 @@ const PAGE_HTML: &str = r#"<!doctype html>
   }
   .thumb-doc { font-size: 10px; font-weight: 700; letter-spacing: .5px; }
   .folder-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 9px 0; font-size: 13px; font-weight: 600; color: #3478f6;
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 0; font-size: 14.5px; font-weight: 600; color: #3478f6;
     cursor: pointer; border-bottom: 1px solid rgba(0,0,0,.06);
   }
   .folder-row:active { opacity: .6; }
@@ -1062,8 +1104,16 @@ const PAGE_HTML: &str = r#"<!doctype html>
         parent.pop();
         html += '<div class="folder-row" data-dir="' + esc(parent.join('/')) + '">📁 返回上级</div>';
       }
+      var folderSvg = '<svg viewBox="0 0 64 52" style="width:100%;height:100%;display:block">'
+        + '<path d="M2 10 a7 7 0 0 1 7-7 h15 l7 7 h24 a7 7 0 0 1 7 7 v8 H2 z" fill="#3E9DF7"/>'
+        + '<path d="M2 17 h60 v25 a7 7 0 0 1 -7 7 H9 a7 7 0 0 1 -7-7 z" fill="#63B0FF"/>'
+        + '</svg>';
       html += (data.folders || []).map(function (d) {
-        return '<div class="folder-row" data-dir="' + esc(curDir ? curDir + '/' + d : d) + '">📁 ' + esc(d) + '</div>';
+        return '<div class="folder-row" data-dir="' + esc(curDir ? curDir + '/' + d.name : d.name) + '">'
+          + '<div class="file-thumb">' + folderSvg + '</div>'
+          + '<div class="file-name"><span class="file-n">' + esc(d.name) + '</span>'
+          + '<div class="file-meta">' + fmtSize(d.size) + ' · ' + fmtTime(d.mtime) + '</div></div>'
+          + '</div>';
       }).join('');
       if (!data.ok) {
         box.innerHTML = '<div class="empty">刷新失败</div>';
