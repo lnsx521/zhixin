@@ -1194,7 +1194,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
     box.innerHTML = '<div style="background:#fff;border-radius:14px;padding:16px;max-width:86vw;width:340px">'
       + '<p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#1d1d1f">上传地址（已全选）</p>'
       + '<input readonly id="copy-prompt-input" style="width:100%;box-sizing:border-box;font-size:13px;padding:10px;border-radius:8px;border:1px solid #ddd;color:#1d1d1f">'
-      + '<p style="margin:8px 0 0;font-size:12px;color:#6e6e73">iOS 请长按输入框 → 拷贝</p>'
+      + '<p style="margin:8px 0 0;font-size:12px;color:#6e6e73">iOS 请长按输入框 → 拷贝；<b style="color:#c0392b">请勿将此令牌分享给他人</b>（拿到即可上传/下载/删除电脑文件）</p>'
       + '<button id="copy-prompt-close" style="margin-top:12px;width:100%;border:0;border-radius:10px;padding:10px 0;background:#3478f6;color:#fff;font-size:14px;font-weight:600">关闭</button>'
       + '</div>';
     document.body.appendChild(box);

@@ -152,6 +152,7 @@ pub fn run() {
             transfer::get_transfer_info,
             transfer::set_transfer_folder,
             transfer::open_transfer_folder,
+            http_ingress::reset_token,
             mdns::get_mdns_hostname,
             popups::list_known_apps,
         ])

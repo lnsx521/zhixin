@@ -140,6 +140,7 @@ export const configureHttp = (enabled: boolean, bind: string, port: number) => i
 // ── 文件互传 ─────────────────────────────────────────────────
 export interface TransferInfo { enabled: boolean; port: number; token: string | null; folder: string }
 export const getTransferInfo = () => invoke<TransferInfo>("get_transfer_info");
+export const resetIngressToken = () => invoke<string>("reset_token");
 export const setTransferFolder = (folder: string) => invoke<string>("set_transfer_folder", { folder });
 export const openTransferFolder = () => invoke<void>("open_transfer_folder");
 

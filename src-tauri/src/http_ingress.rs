@@ -489,6 +489,43 @@ async fn launch(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// 重置接入令牌：重新生成并持久化；监听器保持运行（令牌即时生效）。
+/// 已配对的通知设备使用设备级令牌，不受影响；互传页面地址需重新扫码。
+#[tauri::command]
+pub async fn reset_token(window: tauri::WebviewWindow, app: AppHandle) -> Result<String, String> {
+    main_only(&window)?;
+    let state = app.state::<HttpIngress>();
+    let _guard = state.operation.lock().await;
+    let new_token = format!(
+        "{}{}",
+        uuid::Uuid::new_v4().simple(),
+        uuid::Uuid::new_v4().simple()
+    );
+    let cipher = crate::token_store::protect(new_token.as_bytes(), false)
+        .map_err(|e| format!("token_protect_failed:{e}"))?;
+    let stopped = {
+        let mut i = state.inner.lock().unwrap();
+        let mut next = i.settings.clone();
+        next.encrypted_token = cipher;
+        save(&app, &next)?;
+        i.generation = i.generation.wrapping_add(1);
+        if let Some(tx) = i.shutdown.take() {
+            let _ = tx.send(());
+        }
+        i.settings = next;
+        i.error = None;
+        i.stopped.take()
+    };
+    if let Some(stopped) = stopped {
+        let _ = stopped.await;
+    }
+    if let Err(e) = launch(app.clone()).await {
+        state.inner.lock().unwrap().error = Some(e.clone());
+        return Err(e);
+    }
+    Ok(new_token)
+}
+
 #[tauri::command]
 pub async fn configure_http(
     window: tauri::WebviewWindow,
