@@ -213,7 +213,6 @@ pub fn forget_device(app: AppHandle, id: String) -> Result<(), String> {
 ///
 /// 点击立即发送，无延迟。
 #[tauri::command]
-#[tauri::command]
 pub fn send_test_notification(app: AppHandle, kind: Option<String>) {
     send_test_kind(app, kind.as_deref().unwrap_or("sms"));
 }
