@@ -2,6 +2,8 @@
  * 图标来自 macosicons.com，256px PNG；打包时随 dist 一起出。 */
 export const BRAND_ASSETS: Record<string, string> = {
   "com.apple.mobilesms": "/brands/messages.png",
+  "com.apple.mobilephone": "/brands/phone.png",
+  "com.apple.facetime": "/brands/phone.png",
   "com.tencent.xin": "/brands/wechat.png",
   "com.tencent.wework": "/brands/wecom.png",
   "com.apple.mail": "/brands/mail.png",

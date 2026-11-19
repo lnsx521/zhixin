@@ -42,7 +42,7 @@ export function History({ query }: { query: string }) {
                   ? <img src={brandAsset(entry.app_id)!} alt="" />
                   : cachedIcons[entry.app_id ?? ""]
                     ? <img src={cachedIcons[entry.app_id ?? ""]} alt="" />
-                    : <img src="/brands/phone.png" alt="" style={{ opacity: 0.45 }} />}
+                    : <img src="/brands/generic.png" alt="" style={{ opacity: 0.45 }} />}
               </div>
               <div className="history-main">
               <div className="history-head">

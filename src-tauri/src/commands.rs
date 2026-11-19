@@ -234,7 +234,7 @@ pub fn send_test_kind(app: AppHandle, kind: &str) {
         let kind = kind.as_str();
         let (app_id, title, message, category) = match kind {
             "call" => (
-                "com.apple.facetime",
+                "com.apple.mobilephone",
                 "12312341234",
                 "来电",
                 Some(1u8),
