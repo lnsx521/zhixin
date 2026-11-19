@@ -197,12 +197,12 @@ body {
   border-radius: 8px;
   font-size: 12.5px;
   background: rgba(52, 199, 89, 0.18);
-  color: #4cd964;
+  color: #1a7f37;
 }
 .toast-actions button.toast-code:hover { background: rgba(52, 199, 89, 0.28); }
 .toast-code.copied {
   background: rgba(52, 199, 89, 0.32);
-  color: #4cd964;
+  color: #1a7f37;
 }
 
 .toast-error {
