@@ -1065,12 +1065,12 @@ const PAGE_HTML: &str = r#"<!doctype html>
       html += (data.folders || []).map(function (d) {
         return '<div class="folder-row" data-dir="' + esc(curDir ? curDir + '/' + d : d) + '">📁 ' + esc(d) + '</div>';
       }).join('');
-      if (!data.ok || !data.files.length) {
-        box.innerHTML = html + '<div class="empty">还没有文件</div>';
+      if (!data.ok) {
+        box.innerHTML = '<div class="empty">刷新失败</div>';
         return;
       }
       var previewQueue = [];
-      box.innerHTML = data.files.map(function (f) {
+      box.innerHTML = html + (data.files.length ? data.files.map(function (f) {
         var dot = f.name.lastIndexOf('.');
         var baseName = dot > 0 ? f.name.slice(0, dot) : f.name;
         var ext = (dot > 0 ? f.name.slice(dot + 1) : 'file').toUpperCase();
@@ -1098,7 +1098,7 @@ const PAGE_HTML: &str = r#"<!doctype html>
           + '</div>'
           + '</div>'
           + '</div>';
-      }).join('');
+      }).join('') : '<div class="empty">还没有文件</div>');
       previewItems = previewQueue;
     }).catch(function () { toast('刷新失败'); });
   }
