@@ -249,13 +249,11 @@ async fn upload(
     let mut shared_text: Option<String> = None;
     while let Ok(Some(mut field)) = multipart.next_field().await {
         let Some(raw_name) = field.file_name().map(str::to_string) else {
-            // 无文件名的字段 = 快捷指令传来的共享文本（字段名 text）
-            if field.name() == Some("text") {
-                if let Ok(text) = field.text().await {
-                    let trimmed = text.trim().to_string();
-                    if !trimmed.is_empty() {
-                        shared_text = Some(trimmed);
-                    }
+            // 无文件名的字段 = 快捷指令传来的共享文本（任意字段名都收）
+            if let Ok(text) = field.text().await {
+                let trimmed = text.trim().to_string();
+                if !trimmed.is_empty() {
+                    shared_text = Some(trimmed);
                 }
             }
             continue;
@@ -861,7 +859,10 @@ const PAGE_HTML: &str = r#"<!doctype html>
     <input type="file" id="files" multiple>
     <div id="help-box" style="display:none">
       <p class="muted" style="margin:10px 0 6px">配到 iPhone「分享」菜单（可选）</p>
-      <p style="font-size:13px;line-height:1.7;margin:0 0 10px">在快捷指令 App 新建指令：<br>① 添加「从共享表单接收」，类型选「图像」「文件」或「文本」；<br>② 添加「获取 URL 内容」：方法选 POST，URL 填下面这条，请求体选「表单」，添加字段 file，值选「快捷指令输入」；<br>③ 命名保存。以后在照片里点「分享」→ 选它，照片直接传到这台电脑。</p>
+      <p style="font-size:13px;line-height:1.7;margin:0 0 8px">在快捷指令 App 新建指令：</p>
+      <p style="font-size:13px;line-height:1.7;margin:0 0 8px"><b>①</b> 添加「从共享表单接收」，类型勾选「图像」「文件」和「文本」；</p>
+      <p style="font-size:13px;line-height:1.7;margin:0 0 8px"><b>②</b> 添加「获取 URL 内容」：方法选 POST，URL 填下面这条，请求体选「表单」，添加字段 file，值选「快捷指令输入」；</p>
+      <p style="font-size:13px;line-height:1.7;margin:0 0 10px"><b>③</b> 命名保存。以后任何内容点「分享」→ 选它，直接传到这台电脑。</p>
       <button class="btn secondary" id="copyurl">复制上传地址</button>
     </div>
     <p class="muted" style="margin:12px 0 4px">电脑上的文件</p>

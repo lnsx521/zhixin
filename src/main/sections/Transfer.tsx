@@ -139,10 +139,10 @@ export function Transfer() {
 
       <Disclosure title={text("iOS 快捷指令设置（把手机文件分享到电脑）", "iOS Shortcuts setup (share phone files to PC)")} hint={text("教程已从手机页移到这里", "Moved from the phone page")}>
         <p style={{ fontSize: 13.5, lineHeight: 1.75, margin: "0 0 10px", color: "var(--text-secondary)" }}>
-          {text(
-            "在 iPhone 的快捷指令 App 新建指令：① 添加「从共享表单接收」，类型选「图像」或「文件」；② 添加「获取 URL 内容」：方法选 POST，URL 填下方地址（选择上方局域网地址），请求体选「表单」，添加字段 file，值选「快捷指令输入」；③ 命名保存。以后在照片里点「分享」→ 选它，照片直接传到这台电脑。",
-            "In the iPhone Shortcuts app: 1) Add 'Receive from Share Sheet' (Images/Files); 2) Add 'Get contents of URL' — POST to the LAN address above, Form body, field file = Shortcut Input; 3) Save. Then share photos to it from the share menu."
-          )}
+          <p style={{ margin: "0 0 8px", fontWeight: 600, color: "var(--text)" }}>{text("在 iPhone 的快捷指令 App 新建指令：", "Create a shortcut in the iPhone Shortcuts app:")}</p>
+          <p style={{ margin: "0 0 6px" }}>{text("① 添加「从共享表单接收」，类型勾选「图像」「文件」和「文本」；", "1) Add 'Receive from Share Sheet', check Images, Files and Text;")}</p>
+          <p style={{ margin: "0 0 6px" }}>{text("② 添加「获取 URL 内容」：方法选 POST，URL 填上方局域网地址，请求体选「表单」，添加字段 file，值选「快捷指令输入」；", "2) Add 'Get contents of URL' — POST to the LAN address above, Form body, field file = Shortcut Input;")}</p>
+          <p style={{ margin: 0 }}>{text("③ 命名保存。以后任何内容点「分享」→ 选它，直接传到这台电脑。", "3) Save. Share anything to it and it lands on this PC.")}</p>
         </p>
       </Disclosure>
 
