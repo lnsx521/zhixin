@@ -23,6 +23,8 @@ export interface PopupOptions {
   height: number;
   /** 弹出通知时播放系统提示音 */
   sound: boolean;
+  /** 自定义提示音（wav 路径）。null = Windows 默认提示音 */
+  sound_file: string | null;
 }
 
 export interface NotificationOptions {

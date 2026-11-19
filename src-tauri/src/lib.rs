@@ -49,6 +49,7 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--silent"]),
         ))
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(updater::UpdateState::default())
@@ -153,6 +154,7 @@ pub fn run() {
             transfer::set_transfer_folder,
             transfer::open_transfer_folder,
             http_ingress::reset_token,
+            popups::pick_sound_file,
             mdns::get_mdns_hostname,
             popups::list_known_apps,
         ])

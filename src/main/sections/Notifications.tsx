@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { listKnownApps, sendTestNotification, type Config, type KnownApp } from "../../shared/api";
 import { useT } from "../../shared/i18n";
 import { Disclosure, NumberField, Row, Section, TextList, Toggle } from "../components";
@@ -69,6 +70,29 @@ export function Notifications({ config, update }: Props) {
               update((d) => void (d.notifications.popup.sound = value))
             }
           />
+        </Row>
+        <Row label={t.notifications.soundFile} hint={t.notifications.soundFileHint}>
+          <span className="sound-file-path">{notifications.popup.sound_file || t.notifications.soundFileDefault}</span>
+          <button
+            className="btn"
+            onClick={() => {
+              invoke<string | null>("pick_sound_file")
+                .then((path) => {
+                  if (path) update((d) => void (d.notifications.popup.sound_file = path));
+                })
+                .catch(() => {});
+            }}
+          >
+            {t.notifications.pickSound}
+          </button>
+          {notifications.popup.sound_file && (
+            <button
+              className="btn"
+              onClick={() => update((d) => void (d.notifications.popup.sound_file = null))}
+            >
+              {t.notifications.clearSound}
+            </button>
+          )}
         </Row>
         <Row label={t.notifications.maxVisible} hint={t.notifications.maxVisibleHint}>
           <NumberField

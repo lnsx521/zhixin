@@ -239,6 +239,9 @@ pub struct PopupOptions {
     /// 弹出通知时播放系统提示音。
     #[serde(default = "default_sound")]
     pub sound: bool,
+    /// 自定义提示音（wav 文件路径）。None = Windows 默认提示音。
+    #[serde(default)]
+    pub sound_file: Option<String>,
 }
 
 fn default_sound() -> bool {
@@ -257,6 +260,7 @@ impl Default for PopupOptions {
             width: 310.0,
             height: 0.0,
             sound: true,
+            sound_file: None,
         }
     }
 }

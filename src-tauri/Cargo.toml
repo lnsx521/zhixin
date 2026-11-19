@@ -28,6 +28,7 @@ serde_json = { workspace = true }
 log = { workspace = true }
 tokio = { version = "1", features = ["time", "sync", "macros"] }
 tauri-plugin-updater = "2"
+tauri-plugin-dialog = "2"
 axum = { version = "0.8", features = ["multipart"] }
 sha2 = "0.10"
 uuid = { version = "1", features = ["v4"] }
@@ -55,4 +56,5 @@ features = [
     "Win32_Graphics_Gdi",
     "Win32_UI_HiDpi",
     "Win32_UI_Shell",
+    "Win32_Media_Audio",
 ]

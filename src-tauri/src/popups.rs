@@ -315,6 +315,21 @@ pub fn toast_expand(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), 
     Ok(())
 }
 
+/// 选择自定义提示音（wav 文件）。
+#[tauri::command]
+pub async fn pick_sound_file(window: tauri::WebviewWindow) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    window
+        .dialog()
+        .file()
+        .add_filter("WAV 音频", &["wav"])
+        .pick_file(move |path| {
+            let _ = tx.send(path.map(|p| p.to_string()));
+        });
+    Ok(rx.await.map_err(|e| e.to_string())?)
+}
+
 /// 前端量出了真实高度 → 记高度、改尺寸、重排、显示。
 pub fn resize_and_show(app: &AppHandle, label: &str, height_dip: f64) {
     if app
@@ -324,9 +339,25 @@ pub fn resize_and_show(app: &AppHandle, label: &str, height_dip: f64) {
         .popup
         .sound
     {
-        use windows::Win32::System::Diagnostics::Debug::MessageBeep;
-        use windows::Win32::UI::WindowsAndMessaging::MB_ICONASTERISK;
-        unsafe { let _ = MessageBeep(MB_ICONASTERISK); }
+        let sound_file = app
+            .state::<crate::state::AppState>()
+            .config()
+            .notifications
+            .popup
+            .sound_file
+            .clone();
+        let custom = sound_file.filter(|p| !p.trim().is_empty()).filter(|p| std::path::Path::new(p).is_file());
+        if let Some(path) = custom {
+            use windows::Win32::Media::Audio::{PlaySoundW, SND_ASYNC, SND_FILENAME};
+            use windows::core::HSTRING;
+            unsafe {
+                let _ = PlaySoundW(&HSTRING::from(path.as_str()), None, SND_FILENAME | SND_ASYNC);
+            }
+        } else {
+            use windows::Win32::System::Diagnostics::Debug::MessageBeep;
+            use windows::Win32::UI::WindowsAndMessaging::MB_ICONASTERISK;
+            unsafe { let _ = MessageBeep(MB_ICONASTERISK); }
+        }
     }
     // 设置里指定了固定高度就用它；0 = 按内容自动。
     let configured = app

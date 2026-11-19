@@ -886,3 +886,9 @@ body::before {
 
 /* 关于页按钮不折行 */
 .about-update .btn { white-space: nowrap; }
+
+/* 自定义提示音路径显示 */
+.sound-file-path {
+  flex: 1; min-width: 0; font-size: 12px; color: var(--text-secondary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
