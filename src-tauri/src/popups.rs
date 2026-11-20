@@ -290,8 +290,10 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
 pub fn toast_expand(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {
     let small_label = window.label().to_string();
     let state = app.state::<AppState>();
+    info!("展开请求：{}（展开窗口开始创建）", small_label);
 
     let Some(payload) = state.pending_toasts.lock().unwrap().get(&small_label).cloned() else {
+        warn!("展开失败：{} 的负载已不存在", small_label);
         return Err("payload gone".into());
     };
 
@@ -330,10 +332,12 @@ pub fn toast_expand(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), 
     let window = match builder.build() {
         Ok(window) => window,
         Err(error) => {
+            warn!("展开窗口创建失败：{error}");
             state.pending_toasts.lock().unwrap().remove(&label);
             return Err(error.to_string());
         }
     };
+    info!("展开窗口已创建：{}", label);
 
     // 大窗销毁 → 清理负载
     let app_for_event = app.clone();

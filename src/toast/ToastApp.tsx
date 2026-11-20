@@ -118,7 +118,7 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
 
   // 小窗：点卡片任意处（除按钮）→ 展开成大窗；大窗点空白不动作
   const onCardClick = () => {
-    if (!expanded) void toastExpand().catch(() => {});
+    if (!expanded) toastExpand().catch((err) => setError(String(err)));
   };
 
   return (
