@@ -346,6 +346,18 @@ pub fn toast_open_app(app: AppHandle, window: tauri::WebviewWindow) -> Result<()
     crate::app_launcher::open(rule)
 }
 
+/// 弹出 Windows 原生文件夹选择框（接收文件夹用）。
+#[tauri::command]
+pub fn pick_transfer_folder(window: tauri::WebviewWindow) -> Option<String> {
+    use tauri_plugin_dialog::DialogExt;
+    window
+        .dialog()
+        .file()
+        .set_title("选择接收文件夹")
+        .blocking_pick_folder()
+        .map(|path| path.to_string())
+}
+
 /// 电脑蓝牙名称（Windows 默认为计算机名，iPhone 蓝牙列表里显示的就是它）。
 #[tauri::command]
 pub fn get_computer_name() -> String {

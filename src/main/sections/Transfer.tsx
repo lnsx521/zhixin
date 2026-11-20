@@ -1,7 +1,7 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { renderSVG } from "uqr";
-import { getTransferInfo, getMdnsHostname, listHttpAddresses, setTransferFolder, type LocalAddress, type TransferInfo } from "../../shared/api";
+import { getTransferInfo, getMdnsHostname, listHttpAddresses, pickTransferFolder, setTransferFolder, type LocalAddress, type TransferInfo } from "../../shared/api";
 import { ReceiverControls } from "./Network";
 import { LangContext } from "../../shared/i18n";
 import { Icon } from "../../shared/Icon";
@@ -20,8 +20,6 @@ export function Transfer() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(copyTimer.current), []);
 
@@ -118,24 +116,7 @@ export function Transfer() {
 
       <Section narrow title={text("接收文件夹", "Receive folder")}>
         <Row label={info?.folder ?? "…"} hint={text("手机上传的文件保存到这里；手机页面也列出此文件夹内的文件供下载。", "Files uploaded from the phone land here; the phone page also lists files in this folder for download.")}>
-          {editing ? (
-            <div className="transfer-edit">
-              <input
-                className="input"
-                value={draft}
-                placeholder={info?.folder ?? "D:\\Files"}
-                disabled={busy}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") void applyFolder(); }}
-              />
-              <button className="btn" disabled={busy || !draft.trim()} onClick={() => void applyFolder()}>{text("应用", "Apply")}</button>
-              <button className="network-quiet-action" disabled={busy} onClick={() => { setEditing(false); setError(null); }}>{text("取消", "Cancel")}</button>
-            </div>
-          ) : (
-            <button className="network-quiet-action" disabled={!info || busy} onClick={() => { setEditing(true); setDraft(info?.folder ?? ""); }}>
-              {text("更改文件夹", "Change folder")}
-            </button>
-          )}
+
         </Row>
       </Section>
 

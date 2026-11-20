@@ -137,6 +137,7 @@ pub fn run() {
             commands::forget_device,
             commands::send_test_notification,
             commands::get_computer_name,
+            commands::pick_transfer_folder,
             commands::get_toast_payload,
             commands::toast_click,
             commands::toast_open_app,
