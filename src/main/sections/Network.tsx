@@ -44,6 +44,7 @@ export function ReceiverControls() {
           <button className="network-quiet-action" disabled={!status?.token||host.includes("<")} onClick={()=>void copy(url,"sender")}>{copied==="sender"?t.copied:text("仅复制接口地址","Copy API URL")}</button>
           <button className="network-quiet-action" disabled={busy||!status} onClick={()=>setDialog("reset")} style={{ color: "#dc2626", fontWeight: 600 }}>{t.reset}</button>
         </div>
+          <p className="hint-text" style={{ margin: "10px 0 0" }}>本软件并非专为安卓开发，熟悉安卓的用户可用此协议自行推送。</p>
       </div>
     </div>
       </>}
