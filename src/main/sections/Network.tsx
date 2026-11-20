@@ -9,6 +9,7 @@ export function ReceiverControls() {
   const lang=useContext(LangContext), t=networkDict[lang];
   const text=(zh:string,en:string)=>lang==="zh"?zh:en;
   const [status,setStatus]=useState<HttpStatus|null>(null),[bind,setBind]=useState("0.0.0.0"),[port,setPort]=useState(24836),[advOpen,setAdvOpen]=useState(false);
+  useEffect(()=>{void listHttpAddresses().then(a=>{if(a.length)setAddresses(a);}).catch(()=>{});},[]);
   const [addresses,setAddresses]=useState<LocalAddress[]>([]),[ip,setIp]=useState(""),[dialog,setDialog]=useState<"ip"|"reset"|null>(null);
   const [busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null),[copied,setCopied]=useState<string|null>(null);
   const [domain,setDomain]=useState("");
@@ -45,6 +46,16 @@ export function ReceiverControls() {
           <button className="network-quiet-action" disabled={busy||!status} onClick={()=>setDialog("reset")} style={{ color: "#dc2626", fontWeight: 600 }}>{t.reset}</button>
         </div>
           <p className="hint-text" style={{ margin: "10px 0 0" }}>本软件并非专为安卓开发，熟悉安卓的用户可用此协议自行推送。</p>
+        <div style={{ margin: "10px 0 0", padding: "12px", border: "1px solid var(--border)", borderRadius: 10 }}><div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>局域网地址（备用）</div><p className="hint-text" style={{ margin: "0 0 6px" }}>域名不可用时的直连地址。</p>
+          <div className="network-address-list">
+            {addresses.map((a) => (
+              <Row key={`${a.name}:${a.address}`} label={a.address} hint={a.name}>
+                <button className="network-quiet-action" onClick={()=>void copy(`http://${a.address}:24836`)}>{copied==="lan"?"已复制":"复制"}</button>
+              </Row>
+            ))}
+            {addresses.length===0 && <p className="hint-text">未找到可用网卡地址。</p>}
+          </div>
+        </div>
       </div>
     </div>
       </>}
