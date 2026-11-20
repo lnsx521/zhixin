@@ -42,7 +42,7 @@ export function ReceiverControls() {
         <button className="btn primary" disabled={!status?.token||host.includes("<")} onClick={()=>void copy(testUrl,"test")}>{copied==="test"?t.copied:text("复制链接","Copy link")}</button>
         <div className="network-link-secondary">
           <button className="network-quiet-action" disabled={!status?.token||host.includes("<")} onClick={()=>void copy(url,"sender")}>{copied==="sender"?t.copied:text("仅复制接口地址","Copy API URL")}</button>
-          <button className="network-quiet-action" disabled={busy||!status} onClick={()=>setDialog("reset")}>{t.reset}</button>
+          <button className="network-quiet-action" disabled={busy||!status} onClick={()=>setDialog("reset")} style={{ color: "#dc2626", fontWeight: 600 }}>{t.reset}</button>
         </div>
       </div>
     </div>
