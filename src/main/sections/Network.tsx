@@ -28,8 +28,6 @@ export function ReceiverControls() {
   const displayedParams=[["device_name",testName],["body",testBody],["from",testSender],["token",status?.token??"…"]];
   const copy=async(value:string,key:string)=>{try{await writeText(value);clearTimeout(copyTimer.current);setCopied(key);copyTimer.current=setTimeout(()=>setCopied(null),2000);}catch{setError(t.clipboardError);}};
   const dirty=status&&(bind!==status.settings.bind||port!==status.settings.port);
-  const curl=`curl.exe -G "${endpoint}" \`\n  --data-urlencode "token=YOUR_TOKEN" \`\n  --data-urlencode "device_name=Phone" \`\n  --data-urlencode "body=Verification code: 123456"`;
-  const python=`import getpass, json, urllib.request\nfrom urllib.parse import urlencode\n\nurl = "${endpoint}?" + urlencode({"token": getpass.getpass("Token: ")})\ndata = json.dumps({"device_name": "Phone", "body": "验证码 123456"}).encode("utf-8")\nrequest = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")\nwith urllib.request.urlopen(request, timeout=10) as response:\n    print(response.status, response.read().decode("utf-8"))`;
   return <>
     <Section wide title={<>{t.receiver} <span className={"receiver-status " + (status?.running ? "on" : "off")} role="status">{status?.running ? "● 运行中" : "○ 已关闭"}</span></>} action={<><button className="network-quiet-action" onClick={()=>setAdvOpen(o=>!o)}>{text("高级设置","Advanced settings")} {advOpen?"▾":"▸"}</button><Toggle checked={status?.settings.enabled??false} disabled={busy||!status} onChange={v=>void run(()=>configureHttp(v,status!.settings.bind,status!.settings.port))}/></>}>
       {advOpen && <>
@@ -60,19 +58,6 @@ export function ReceiverControls() {
     </div>
       </>}
     </Section>
-    <Disclosure title={t.guide} hint={t.guideHint}>
-      <p className="hint-text">{text("若无法访问，请检查本机防火墙配置。","If unreachable, check your local firewall configuration.")}</p>
-      <Disclosure title={t.generic}>
-        <code className="network-code">GET /api/v1/notifications?token=YOUR_TOKEN&amp;device_name=Phone&amp;body=URL_ENCODED_MESSAGE<br/>POST /api/v1/notifications?token=YOUR_TOKEN</code>
-        <p>{text("GET 参数须 URL 编码；POST 支持 JSON 或表单。令牌也可通过 Authorization: Bearer 或请求体 token 传入，只能选择一种位置。URL 包含凭据，请勿分享。","URL-encode GET parameters. POST accepts JSON or form bodies. Authorization: Bearer and body token are also supported; use exactly one location. URLs contain credentials: do not share.")}</p>
-        <div className="network-table-wrap"><table className="network-table"><thead><tr><th>{t.field}</th><th>{t.requirement}</th><th>{t.meaning}</th></tr></thead><tbody>{[["token",t.required,text("统一接入令牌","Shared receiver token")],["body / content",t.required,t.bodyField],["device_name",t.optional,text("展示名称，最多 256 字节；不是可信身份","Display name, up to 256 bytes; not an authenticated identity")],["kind",t.optional,t.kindField],["sender / from",t.optional,t.senderField],["title",t.optional,t.titleField],["app_identifier",t.optional,t.appField],["message_id",t.optional,t.idField]].map(([f,r,d])=><tr key={f}><th>{f}</th><td>{r}</td><td>{d}</td></tr>)}</tbody></table></div>
-        <p>{t.responseHint}</p><p className="hint-text">{t.limits}</p>
-        <p className="hint-text">{text("复制链接可直接进行 GET 测试。正式 POST 配置使用“仅复制接口地址”，不带示例正文。服务需先开启；15 秒内重复发送相同内容可能被去重。","Use Copy link for a GET test. For POST, use Copy API URL without sample text. Enable the receiver first; identical messages within 15 seconds may be deduplicated.")}</p>
-        <Disclosure title="curl · PowerShell"><pre className="network-code">{curl}</pre><button className="btn" onClick={()=>void copy(curl,"curl")}>{copied==="curl"?t.copied:t.copy}</button></Disclosure>
-        <Disclosure title="Python · urllib"><p>{t.pythonHint}</p><pre className="network-code">{python}</pre><button className="btn" onClick={()=>void copy(python,"python")}>{copied==="python"?t.copied:t.copy}</button></Disclosure>
-      </Disclosure>
-      <Disclosure title={t.ios}><p>{text("信息自动化 → 获取 URL 内容 → POST JSON。URL 填入接收链接，字典填写 body、sender、device_name，无需额外鉴权头。立即运行、锁屏和网络权限需按 iOS 版本验证。","Message automation → Get Contents of URL → POST JSON. Use the receiver URL and dictionary fields body, sender and device_name; no extra auth header is needed. Test lock-screen behavior and permissions on your iOS version.")}</p></Disclosure><p className="hint-text">{t.publicHint}</p>
-    </Disclosure>
     {(error||status?.error)&&<p className="bad-text" role="alert">{error||status?.error}</p>}
     {dialog&&<Modal title={dialog==="ip"?t.chooseAddress:t.resetTitle} onClose={()=>{if(!busy)setDialog(null);}}>
       {dialog==="ip"?<><p>{t.addressHint}</p><div className="network-addresses">{domain&&<button className={`network-address${host===domain?" selected":""}`} onClick={()=>{setHostChoice(domain);setCopied(null);setDialog(null);}}><strong>{domain}</strong><small>{text("固定域名，换 Wi-Fi 不用改地址","Fixed domain, survives Wi-Fi changes")}</small></button>}{addresses.map(a=><button className={`network-address${host===a.address?" selected":""}`} key={`${a.name}:${a.address}`} onClick={()=>{setHostChoice(a.address);setCopied(null);setDialog(null);}}><strong>{a.address}</strong><small>{a.name}</small></button>)}</div>{!addresses.length&&!domain&&<p>{t.noAddresses}</p>}</>:<><p>{text("重置后所有发送端的旧链接立即失效，需要重新配置。","Resetting immediately invalidates every sender's old URL. Reconfigure all senders.")}</p><button className="btn network-danger" disabled={busy} onClick={()=>void run(async()=>{await resetHttpToken();setCopied(null);setDialog(null);})}>{t.reset}</button></>}
