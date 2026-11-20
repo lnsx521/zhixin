@@ -32,10 +32,12 @@ export function ReceiverControls() {
   return <>
     <Section wide title={t.receiver} action={<span className="network-status" role="status">{status?.running?t.running:status?.settings.enabled?t.failed:t.stopped}</span>}>
       <Row label={t.enable}><Toggle checked={status?.settings.enabled??false} disabled={busy||!status} onChange={v=>void run(()=>configureHttp(v,status!.settings.bind,status!.settings.port))}/></Row>
-      <Row label={t.scope}><select className="select" value={bind} disabled={busy} onChange={e=>setBind(e.target.value)}><option value="127.0.0.1">{t.local}</option><option value="0.0.0.0">{t.lan}</option></select></Row>
-      <Row label={t.port}><NumberField value={port} onChange={setPort} min={1} max={65535} disabled={busy}/></Row>
-      <Row label={text("允许网络消息自动复制验证码","Allow automatic code copying")} hint={t.copyHint}><Toggle checked={status?.settings.allow_copy??false} disabled={busy||!status} onChange={v=>void run(()=>setHttpCopy(v))}/></Row>
-      {dirty&&<button className="btn" disabled={busy||!Number.isInteger(port)||port<1||port>65535} onClick={()=>void run(()=>configureHttp(status!.settings.enabled,bind,port))}>{status?.settings.enabled?t.apply:t.save}</button>}
+      <Disclosure title={text("高级设置","Advanced settings")}>
+        <Row label={t.scope}><select className="select" value={bind} disabled={busy} onChange={e=>setBind(e.target.value)}><option value="127.0.0.1">{t.local}</option><option value="0.0.0.0">{t.lan}</option></select></Row>
+        <Row label={t.port}><NumberField value={port} onChange={setPort} min={1} max={65535} disabled={busy}/></Row>
+        <Row label={text("允许网络消息自动复制验证码","Allow automatic code copying")} hint={t.copyHint}><Toggle checked={status?.settings.allow_copy??false} disabled={busy||!status} onChange={v=>void run(()=>setHttpCopy(v))}/></Row>
+        {dirty&&<button className="btn" disabled={busy||!Number.isInteger(port)||port<1||port>65535} onClick={()=>void run(()=>configureHttp(status!.settings.enabled,bind,port))}>{status?.settings.enabled?t.apply:t.save}</button>}
+      </Disclosure>
     </Section>
     <Section wide title={text("接收链接","Receiver link")} action={<button className="network-interface" disabled={!status||status.settings.bind==="127.0.0.1"} aria-haspopup="dialog" onClick={()=>{setDialog("ip");void listHttpAddresses().then(setAddresses).catch(e=>setError(String(e)));}}><span>{text("网卡","Interface")}</span><span>{host}</span><span aria-hidden="true">▾</span></button>}>
       <code className="network-receiver-url"><span className="network-url-endpoint">{endpoint}</span>{displayedParams.map(([key,value],index)=><span key={key}><span className="network-url-punctuation">{index===0?"?":"&"}</span><span className="network-url-key">{key}</span><span className="network-url-punctuation">=</span><span className={key==="token"?"network-url-token":"network-url-value"}>{value}</span></span>)}</code>
