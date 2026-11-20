@@ -145,6 +145,8 @@ const zh = {
     height: "弹窗高度",
     heightHint: "0 = 按内容自动；填了就用固定高度",
     filterTitle: "过滤",
+    keepHistoryApps: "保留名单", keepHistoryHint: "主窗口只保留这些应用的消息（bundle id，一行一个）；留空表示全部保留",
+    excludeHistoryApps: "排除名单", excludeHistoryHint: "这些应用的消息不进主窗口；优先于保留名单",
     historyTitle: "消息保留时长", historyDesc: "填 0 不保存；填 N 则保留最近 N 天并滚动覆盖（填 365 即保存一年）。默认 3 天。",
     filterDesc:
       "黑名单优先于白名单。App 填 iOS 的 bundle id（如 com.tencent.xin），一行一条。",
@@ -432,6 +434,8 @@ const en: Dict = {
     height: "Toast height",
     heightHint: "0 = fit content; otherwise a fixed height",
     filterTitle: "Filters",
+    keepHistoryApps: "Kept apps", keepHistoryHint: "Only these apps' messages are kept in the main window (bundle id, one per line); empty = keep all.",
+    excludeHistoryApps: "Excluded apps", excludeHistoryHint: "These apps' messages never enter the main window; takes priority over the kept list.",
     historyTitle: "Notification history", historyDesc: "Keep popped notifications for review, 0 = don't save history.",
     filterDesc:
       "Blocklist wins over allowlist. Apps use iOS bundle ids (e.g. com.tencent.xin), one per line.",

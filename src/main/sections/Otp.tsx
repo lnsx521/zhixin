@@ -110,19 +110,6 @@ export function Otp({ config, update }: Props) {
           </Row>
         )}
         </fieldset>
-        <fieldset className="settings-fields">
-        <Row label={t.notifications.historyTitle} hint={t.notifications.historyDesc}>
-          <NumberField
-            value={config.notifications.history_limit}
-            min={0}
-            max={3650}
-            suffix="天"
-            onChange={(value) =>
-              update((d) => void (d.notifications.history_limit = Math.max(0, Math.min(3650, value))))
-            }
-          />
-        </Row>
-        </fieldset>
       </Disclosure>}
     </>
   );

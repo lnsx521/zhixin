@@ -143,6 +143,7 @@ pub fn run() {
             popups::open_settings,
             commands::get_toast_payload,
             commands::toast_click,
+            commands::toast_click_for_main,
             commands::toast_open_app,
             commands::test_app_rule,
             commands::validate_app_rule,

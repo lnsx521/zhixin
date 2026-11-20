@@ -124,6 +124,7 @@ body {
   -webkit-line-clamp: none;
   font-size: 13.5px;
   line-height: 1.8;
+  user-select: text;
 }
 .toast-expanded {
   max-height: 84vh;
@@ -315,6 +316,7 @@ body {
   color: var(--text);
   white-space: pre-wrap;
   word-break: break-word;
+  user-select: text;
 }
 .imsg-time { display: block; margin-top: 4px; font-size: 10px; color: var(--text-faint); text-align: right; }
 .imsg-foot {

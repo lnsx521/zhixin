@@ -1,5 +1,5 @@
-import { useContext, useEffect, useRef, useState } from "react";
-import { getBackgroundImage, getConfig, onThemeChanged, openTransferFolder, saveConfig, type Config } from "../shared/api";
+import { useEffect, useRef, useState } from "react";
+import { getBackgroundImage, getConfig, saveConfig, type Config } from "../shared/api";
 import { LangContext, resolveLang, useT } from "../shared/i18n";
 import appIcon from "../shared/app-icon.svg";
 import { Connection } from "./sections/Connection";
@@ -14,7 +14,7 @@ import { applyTheme, watchSystemTheme } from "../shared/theme";
 import { AutoSave, type SaveStatus } from "../shared/autosave";
 import { Titlebar } from "./Titlebar";
 import { useUpdater } from "./useUpdater";
-import { UpdateNotice, UpdateDialog } from "./sections/SoftwareUpdate";
+import { UpdateNotice } from "./sections/SoftwareUpdate";
 
 type Page = "connection" | "notifications" | "proximity" | "transfer" | "general" | "about";
 
@@ -28,6 +28,7 @@ const NAV_ICONS: Record<Page, IconName> = {
 };
 
 export function App() {
+  const [view, setView] = useState<'home' | 'settings'>('home');
   const [page, setPage] = useState<Page>("connection");
   const [config, setConfig] = useState<Config | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -58,11 +59,6 @@ export function App() {
   useEffect(() => {
     applyTheme(config?.general.theme);
   }, [config?.general.theme]);
-
-  // 设置窗口改主题 → 主窗口实时跟随
-  useEffect(() => {
-    void onThemeChanged((theme) => applyTheme(theme)).catch(() => {});
-  }, []);
 
   // 跟随系统时，OS 深浅切换实时重解析
   useEffect(() => watchSystemTheme(), []);
@@ -119,23 +115,31 @@ export function App() {
 
   return (
     <LangContext.Provider value={lang}>
-      <Shell
-        page={page}
-        setPage={setPage}
-        config={config}
-        update={update}
-        saveStatus={saveStatus}
-        saveError={saveError}
-        error={error}
-        retry={() => { void autosave.flush(); }}
-        beforeClose={() => autosave.flush()}
-        beforeInstall={() => autosave.flushBeforeExit()}
-      />
+      <div className={`app-shell ${view === 'settings' ? 'view-settings' : ''} pt-titlebar`}>
+        <Titlebar beforeClose={() => autosave.flush()} />
+        {view === 'home' && (
+          <HomeView onOpenSettings={() => setView('settings')} />
+        )}
+        {view === 'settings' && (
+          <SettingsView
+            page={page}
+            setPage={setPage}
+            config={config}
+            update={update}
+            saveStatus={saveStatus}
+            saveError={saveError}
+            error={error}
+            retry={() => { void autosave.flush(); }}
+            onBack={() => setView('home')}
+          />
+        )}
+        <UpdateNotice updater={useUpdater()} />
+      </div>
     </LangContext.Provider>
   );
 }
 
-function Shell(props: {
+function SettingsView(props: {
   page: Page;
   setPage: (page: Page) => void;
   config: Config | null;
@@ -144,15 +148,11 @@ function Shell(props: {
   saveError: string | null;
   error: string | null;
   retry: () => void;
-  beforeClose: () => Promise<void>;
-  beforeInstall: () => Promise<void>;
+  onBack: () => void;
 }) {
   const t = useT();
   const updater = useUpdater();
-  const lang = useContext(LangContext);
-  const isSettingsWindow = new URLSearchParams(window.location.search).get("view") === "settings";
-  const { page, setPage, config, update, saveStatus, saveError, error, retry, beforeClose } = props;
-
+  const { page, setPage, config, update, saveStatus, saveError, error, retry, onBack } = props;
 
   const nav: { key: Page; label: string }[] = [
     { key: "connection", label: t.nav.connection },
@@ -163,87 +163,67 @@ function Shell(props: {
     { key: "about", label: t.nav.about },
   ];
 
-  if (!isSettingsWindow) {
-    return (
-      <LangContext.Provider value={lang}>
-        <div className="app-shell">
-          <Titlebar beforeClose={beforeClose} closeOnly />
-          <HomeView />
-          {updater.open && <UpdateDialog updater={updater} beforeInstall={props.beforeInstall} />}
-        </div>
-      </LangContext.Provider>
-    );
-  }
-
   return (
-    <div className="app-shell">
-      <Titlebar beforeClose={beforeClose} closeOnly />
-
-      <div className="layout">
-        <aside className="sidebar">
-          <div className="brand">
-            <img src={appIcon} width="38" height="38" alt="" />
-            <div className="brand-text">
-              <span className="brand-name">知信</span>
-              <span className="brand-sub">{t.shell.tagline}</span>
-            </div>
+    <div className="settings-view">
+      <aside className="sidebar">
+        <button className="back-btn" onClick={onBack} aria-label="返回">
+          <Icon name="chevron" />
+          <span>{t.ui.back}</span>
+        </button>
+        <div className="brand">
+          <img src={appIcon} width="38" height="38" alt="" />
+          <div className="brand-text">
+            <span className="brand-name">知信</span>
+            <span className="brand-sub">{t.shell.tagline}</span>
           </div>
-          <nav aria-label={t.shell.navigation}>
-            {nav.map((item) => (
-              <button
-                key={item.key}
-                className={`nav-item ${page === item.key ? "active" : ""}`}
-                onClick={() => setPage(item.key)}
-                aria-current={page === item.key ? "page" : undefined}
-              >
-                <Icon name={NAV_ICONS[item.key]} />
-                {item.label}
-              </button>
-            ))}
-          </nav>
-          <div className="sidebar-foot">
-            <UpdateNotice updater={updater} />
+        </div>
+        <nav aria-label={t.shell.navigation}>
+          {nav.map((item) => (
+            <button
+              key={item.key}
+              className={`nav-item ${page === item.key ? "active" : ""}`}
+              onClick={() => setPage(item.key)}
+              aria-current={page === item.key ? "page" : undefined}
+            >
+              <Icon name={NAV_ICONS[item.key]} />
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-foot">
+          <UpdateNotice updater={updater} />
+        </div>
+      </aside>
+
+      <main className="content">
+        <header className="page-header">
+          <div>
+            <h1>{t.nav[page]}</h1>
+            <p>{t.shell[page]}</p>
           </div>
-        </aside>
+          {saveStatus === "saved" && <span className="save-toast" role="status">{t.common.saved}</span>}
+          {saveStatus === "error" && <span className="save-toast bad-text" role="alert">{t.common.saveFailed}</span>}
+          {saveStatus === "saving" && <span className="save-toast" style={{ opacity: 0.6 }}>{t.common.saving}</span>}
+        </header>
+        {error && <div className="error-banner">{error}</div>}
+        {saveError && <div className="error-banner" role="alert">
+          <span>{t.common.saveFailed}: {saveError}</span>
+          <button className="btn" onClick={retry}>{t.common.retry}</button>
+        </div>}
 
-        <main className="content">
-          <header className="page-header">
-            <div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-                <h1>{t.nav[page]}</h1>
-                {saveStatus === "saved" && <span className="save-toast" role="status">{t.common.saved}</span>}
-                {saveStatus === "error" && <span className="save-toast bad-text" role="alert">{t.common.saveFailed}</span>}
-                {saveStatus === "saving" && <span className="save-toast" style={{ opacity: 0.6 }}>{t.common.saving}</span>}
-              </div>
-              <p>{t.shell[page]}</p>
-            </div>
-            {page === "transfer" && (
-              <div className="page-actions">
-                <button className="btn" onClick={() => void openTransferFolder().catch(() => {})}>{t.general.openDir}</button>
-              </div>
-            )}
-          </header>
-          {error && <div className="error-banner">{error}</div>}
-          {saveError && <div className="error-banner" role="alert">
-            <span>{t.common.saveFailed}: {saveError}</span>
-            <button className="btn" onClick={retry}>{t.common.retry}</button>
-          </div>}
-
-          {config ? (
-            <>
-              {page === "connection" && <Connection />}
-              {page === "notifications" && <Notifications config={config} update={update} />}
-              {page === "proximity" && <Proximity config={config} update={update} />}
-              {page === "transfer" && <Transfer />}
-              {page === "general" && <General config={config} update={update} />}
-              {page === "about" && <About updater={updater} />}
-            </>
-          ) : (
-            <p className="loading">{t.common.loading}</p>
-          )}
-        </main>
-      </div>
-      {updater.open && <UpdateDialog updater={updater} beforeInstall={props.beforeInstall} />}
+        {config ? (
+          <>
+            {page === "connection" && <Connection />}
+            {page === "notifications" && <Notifications config={config} update={update} />}
+            {page === "proximity" && <Proximity config={config} update={update} />}
+            {page === "transfer" && <Transfer />}
+            {page === "general" && <General config={config} update={update} />}
+            {page === "about" && <About updater={updater} />}
+          </>
+        ) : (
+          <p className="loading">{t.common.loading}</p>
+        )}
+      </main>
     </div>
   );
 }

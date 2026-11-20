@@ -3,9 +3,8 @@ import {
   getConfig,
   getAppIcon,
   getToastPayload,
-  toastClick,
+  toastClickForMain,
   toastClose,
-  toastExpand,
   toastResize,
   toastOpenApp,
   type ToastPayload,
@@ -99,7 +98,7 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
 
   const onCopy = async () => {
     if (copied) return;
-    const code = await toastClick().catch(() => null);
+    const code = await toastClickForMain().catch(() => null);
     if (code) {
       setCopied(true);
       if (!expanded) setTimeout(() => toastClose(), 700);
@@ -116,9 +115,15 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
     catch (err) { setError(String(err)); setOpening(false); }
   };
 
-  // 小窗：点卡片任意处（除按钮）→ 展开成大窗；大窗点空白不动作
-  const onCardClick = () => {
-    if (!expanded) toastExpand().catch((err) => setError(String(err)));
+  // 小窗：点卡片任意处（除按钮）→ 关闭弹窗并通知主窗口定位到该消息
+  const onCardClick = async () => {
+    try {
+      await toastClickForMain();
+      toastClose();
+    } catch (err) {
+      setError(String(err));
+      toastClose();
+    }
   };
 
   // 大窗：仿 macOS 信息（iMessage）阅读窗口

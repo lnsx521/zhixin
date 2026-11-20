@@ -33,6 +33,12 @@ pub struct PhoneNotification {
     /// iOS 通知分类（ANCS category）：1 = 来电，4 = 短信。HTTP 接入的通知没有分类。
     pub category: Option<u8>,
 
+    /// 通话结果（仅 category=1 且为"通话记录"类通知时填充）。
+    /// - Some("answered")：接听，body 含"已接通 XX秒"
+    /// - Some("missed")   : 未接听，body 含"未接听"
+    /// - None             : 来电响铃阶段（"来电 XXX"）或普通消息
+    pub call_outcome: Option<String>,
+
     pub received_at: SystemTime,
 }
 
@@ -54,6 +60,7 @@ impl PhoneNotification {
             message: attributes.message.clone(),
             code: None,
             category,
+            call_outcome: derive_call_outcome(&attributes.title, &attributes.subtitle, &attributes.message),
             received_at: SystemTime::now(),
         };
 
@@ -153,6 +160,32 @@ pub fn friendly_app_name(bundle_id: &str) -> String {
         "com.taobao.taobao4iphone" => "淘宝".to_string(),
         other => other.to_string(),
     }
+}
+
+/// 从来电类通知的 title/subtitle/message 推断通话结果。
+///
+/// ANCS 会把 iOS 电话状态变化作为独立通知推送，category=1、app=com.apple.MobilePhone：
+/// * 响铃阶段：title="来电"，body 含对方名字 → call_outcome=None（用户能看到但不应弹小窗）
+/// * 接通：body 含"已接通 XX秒" → Some("answered") + duration_secs
+/// * 未接：body 含"未接听" → Some("missed")
+fn derive_call_outcome(
+    title: &Option<String>,
+    subtitle: &Option<String>,
+    message: &Option<String>,
+) -> Option<String> {
+    let text = [title, subtitle, message]
+        .iter()
+        .filter_map(|v| v.as_deref())
+        .collect::<Vec<&str>>()
+        .join(" ");
+
+    if text.contains("未接听") || text.contains("未接") || text.contains("missed") {
+        return Some("missed".to_string());
+    }
+    if text.contains("已接通") || text.contains("接通了") || text.contains("answered") {
+        return Some("answered".to_string());
+    }
+    None
 }
 
 #[cfg(test)]

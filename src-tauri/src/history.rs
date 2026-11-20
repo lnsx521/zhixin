@@ -36,19 +36,36 @@ pub struct HistoryEntry {
     pub origin: String,
     pub body: String,
     pub code: Option<String>,
+    /// iOS ANCS 通知分类：1 = 来电；其余场景 None。
     pub category: Option<u8>,
+    // ── 以下可选字段仅来电/部分来源携带 ───────────────────────────────
+    pub device_id: Option<String>,
+    pub device_name: Option<String>,
+    /// ANCS Notification UID（拒接动作要用）；历史展开/HTTP 入为 None。
+    pub uid: Option<u32>,
+    pub title: Option<String>,
+    pub subtitle: Option<String>,
+    pub message: Option<String>,
+    /// 陌生号码运营商描述（"中国移动 · 手机号"）；已存联系人或短信为 None。
+    pub carrier: Option<String>,
+    /// 通话结果（仅来电类有效）：None=响铃中/来电通知、Some("answered")=接通、Some("missed")=未接。
+    pub call_outcome: Option<String>,
 }
 
 /// 弹窗时留档（在 popups::show 里调用；全屏暂存的通知在补弹时也会走到这里）。
 /// 保留天数跟随设置（notifications.history_limit = 天数，滚动覆盖；0 = 不保存）。
 pub fn record(app: &AppHandle, notification: &PhoneNotification) {
-    let days = {
+    let (keep, days) = {
         use zhixin_core::config::Config;
-        Config::load_or_default(paths::config_path(app))
-            .map(|config| config.notifications.history_limit)
-            .unwrap_or(3)
+        match Config::load_or_default(paths::config_path(app)) {
+            Ok(config) => (
+                config.notifications.keeps_in_history(notification.app_identifier.as_deref().unwrap_or("")),
+                config.notifications.history_limit,
+            ),
+            Err(_) => (true, 3),
+        }
     };
-    if days == 0 {
+    if !keep || days == 0 {
         return;
     }
     let mut entries = load(app);
@@ -63,6 +80,18 @@ pub fn record(app: &AppHandle, notification: &PhoneNotification) {
         body: notification.summary(),
         code: notification.code.clone(),
         category: notification.category,
+        device_id: Some(notification.device_id.clone()),
+        device_name: notification.device_name.clone(),
+        uid: Some(notification.uid),
+        title: notification.title.clone(),
+        subtitle: notification.subtitle.clone(),
+        message: notification.message.clone(),
+        carrier: if notification.category == Some(1) {
+            zhixin_core::carrier::describe(&extract_longest_digits(&notification.origin()))
+        } else {
+            None
+        },
+        call_outcome: notification.call_outcome.clone(),
     });
     // 滚动覆盖：只保留最近 N 天（含今天），更早的直接丢弃
     let cutoff_ms = (std::time::SystemTime::now()
@@ -134,6 +163,26 @@ fn chrono_fmt(ms: u64) -> String {
     let (h, m, s) = (rem / 3600, (rem % 3600) / 60, rem % 60);
     let date = days_to_date(days);
     format!("{date} {h:02}:{m:02}:{s:02}")
+}
+
+/// 从文本里提取最长连续数字串（号码识别用）。
+fn extract_longest_digits(text: &str) -> String {
+    let mut best = String::new();
+    let mut current = String::new();
+    for c in text.chars() {
+        if c.is_ascii_digit() {
+            current.push(c);
+        } else {
+            if current.chars().count() > best.chars().count() {
+                best = current.clone();
+            }
+            current.clear();
+        }
+    }
+    if current.chars().count() > best.chars().count() {
+        best = current;
+    }
+    best
 }
 
 fn time_offset_secs() -> i64 {

@@ -133,6 +133,18 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
     let config = state.config();
     let popup = &config.notifications.popup;
 
+    // 来电类：
+    // * 响铃阶段（call_outcome=None）→ 正常弹小窗提醒用户
+    // * 已接通 / 未接听（call_outcome=Some）→ 直接写历史，不再打扰
+    if notification.category == Some(1) {
+        if notification.call_outcome.is_some() {
+            crate::history::record(app, notification);
+            info!("电话结果通知已记录到历史（不弹小窗）");
+            return;
+        }
+        // call_outcome=None：来电响铃中，继续走下方弹窗逻辑
+    }
+
     // 超上限先关最旧的
     {
         let open: Vec<String> = state.toasts.lock().unwrap().iter().cloned().collect();
@@ -255,6 +267,7 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
             warn!("创建 toast 窗口失败：{error}");
             state.pending_toasts.lock().unwrap().remove(&label);
             state.toast_heights.lock().unwrap().remove(&label);
+            state.phone_notifs.lock().unwrap().remove(&label);
             return;
         }
     };
@@ -262,6 +275,11 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
     {
         let mut open = state.toasts.lock().unwrap();
         open.push_back(label.clone());
+    }
+    // 记录原始通知，供点击时反向查找历史 entry。
+    {
+        let mut map = state.phone_notifs.lock().unwrap();
+        map.insert(label.clone(), notification.clone());
     }
 
     // 窗口销毁（不管哪条路关的）→ 从堆里摘掉并重排
@@ -645,6 +663,7 @@ fn on_toast_destroyed(app: &AppHandle, label: &str) {
         .map(|index| open.remove(index));
     state.pending_toasts.lock().unwrap().remove(label);
     state.toast_heights.lock().unwrap().remove(label);
+    state.phone_notifs.lock().unwrap().remove(label);
     drop(open);
 
     if removed.is_some() {

@@ -36,6 +36,10 @@ export function Titlebar({ beforeClose, closeOnly = false }: { beforeClose: () =
       <header className="titlebar">
         {/* Tauri handles native dragging and double-click maximize on this region.
             Keep nested decoration pointer-transparent so the entire region works. */}
+        <span className="brand">
+          <span className="brand-name">知信</span>
+          <span className="brand-ver">v2.0.0</span>
+        </span>
         <div className="titlebar-drag" data-tauri-drag-region />
         <div className="window-controls">
           {!closeOnly && (<>

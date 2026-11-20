@@ -67,6 +67,9 @@ pub struct AppState {
     /// toast 窗口编号。
     pub toast_seq: AtomicU64,
 
+    /// toast label → 原始通知，供点击时反向查找历史 entry。
+    pub phone_notifs: Mutex<HashMap<String, PhoneNotification>>,
+
     /// 托盘「开机自启」勾选项（切换时要同步它的勾选状态）。
     pub autostart_item: Mutex<Option<tauri::menu::CheckMenuItem<tauri::Wry>>>,
 
@@ -114,6 +117,7 @@ impl AppState {
             known_apps: Mutex::new(Vec::new()),
             toast_heights: Mutex::new(HashMap::new()),
             toast_seq: AtomicU64::new(0),
+            phone_notifs: Mutex::new(HashMap::new()),
             autostart_item: Mutex::new(None),
             caret: Mutex::new(crate::caret::CaretState::default()),
         }

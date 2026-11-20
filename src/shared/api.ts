@@ -31,6 +31,10 @@ export interface NotificationOptions {
   app_rules: AppRule[];
   enabled: boolean;
   filter: FilterOptions;
+  /** 主窗口保留名单：留空全保留，填了只保留这些应用 */
+  history_keep_apps: string[];
+  /** 主窗口排除名单：优先于保留名单 */
+  history_exclude_apps: string[];
   /** 通知历史保留条数（0 = 不保存） */
   history_limit: number;
   popup: PopupOptions;
@@ -120,6 +124,14 @@ export interface HistoryEntry {
   body: string;
   code: string | null;
   category: number | null;
+  device_id: string | null;
+  device_name: string | null;
+  uid: number | null;
+  title: string | null;
+  subtitle: string | null;
+  message: string | null;
+  carrier: string | null;
+  call_outcome: string | null;
 }
 export const listNotificationHistory = (query: string, limit: number) =>
   invoke<HistoryEntry[]>("list_notification_history", { query, limit });
@@ -242,6 +254,8 @@ export interface KnownApp { id: string; name: string }
 export const listKnownApps = () => invoke<KnownApp[]>("list_known_apps");
 export const toastClick = () =>
   invoke<string | null>("toast_click", { label: getCurrentWindow().label });
+export const toastClickForMain = () =>
+  invoke<string | null>("toast_click_for_main", { label: getCurrentWindow().label });
 export const toastExpand = () =>
   invoke<void>("toast_expand");
 export const toastClose = () =>

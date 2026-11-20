@@ -167,6 +167,15 @@ pub struct NotificationOptions {
     /// App / 关键词过滤。
     pub filter: FilterOptions,
 
+    /// 主窗口保留名单：留空 = 全部保留；填了则只保留这些应用（bundle id，一行一个）。
+    #[serde(default)]
+    pub history_keep_apps: Vec<String>,
+
+    /// 主窗口排除名单：这些应用的消息不进主窗口；优先于保留名单。
+    /// 默认排除常见 IM（微信/企业微信/钉钉/飞书/QQ）——聊天记录刷屏且隐私敏感。
+    #[serde(default = "default_history_exclude_apps")]
+    pub history_exclude_apps: Vec<String>,
+
     /// 通知历史保留天数（滚动覆盖；0 = 不保存，上限 7）。
     #[serde(default = "default_history_limit")]
     pub history_limit: u32,
@@ -181,9 +190,30 @@ impl Default for NotificationOptions {
             app_rules: Vec::new(),
             enabled: true,
             filter: FilterOptions::default(),
+            history_keep_apps: Vec::new(),
+            history_exclude_apps: Vec::new(),
             popup: PopupOptions::default(),
             history_limit: 3,
         }
+    }
+}
+
+impl NotificationOptions {
+    /// 该应用的消息要不要进主窗口历史：排除名单优先；保留名单留空 = 不限制。
+    pub fn keeps_in_history(&self, app_identifier: &str) -> bool {
+        if self
+            .history_exclude_apps
+            .iter()
+            .any(|id| id.eq_ignore_ascii_case(app_identifier))
+        {
+            return false;
+        }
+        if self.history_keep_apps.is_empty() {
+            return true;
+        }
+        self.history_keep_apps
+            .iter()
+            .any(|id| id.eq_ignore_ascii_case(app_identifier))
     }
 }
 
@@ -248,9 +278,19 @@ fn default_sound() -> bool {
     true
 }
 
-    fn default_history_limit() -> u32 {
+fn default_history_limit() -> u32 {
         3
     }
+
+fn default_history_exclude_apps() -> Vec<String> {
+    vec![
+        "com.tencent.xin".to_string(),      // 微信
+        "com.tencent.wechat".to_string(),   // 企业微信
+        "com.laiwang.DingTalk".to_string(), // 钉钉
+        "com.ss.iphone.lark".to_string(),   // 飞书
+        "com.tencent.mqq".to_string(),      // QQ
+    ]
+}
 
 impl Default for PopupOptions {
     fn default() -> Self {

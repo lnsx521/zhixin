@@ -113,6 +113,31 @@ export function Notifications({ config, update }: Props) {
       <Disclosure title={t.notifications.filterTitle} hint={filterCount ? t.ui.configured(filterCount) : t.ui.unset}>
         <p className="connection-help">{t.ui.filterNote}</p>
         <p className="connection-help">{t.notifications.filterDesc}</p>
+        <Row label={t.notifications.keepHistoryApps} hint={t.notifications.keepHistoryHint}>
+          <TextList
+            value={notifications.history_keep_apps}
+            placeholder={"com.tencent.xin"}
+            onChange={(value) => update((d) => void (d.notifications.history_keep_apps = value))}
+          />
+        </Row>
+        <Row label={t.notifications.excludeHistoryApps} hint={t.notifications.excludeHistoryHint}>
+          <TextList
+            value={notifications.history_exclude_apps}
+            placeholder={"com.tencent.xin"}
+            onChange={(value) => update((d) => void (d.notifications.history_exclude_apps = value))}
+          />
+        </Row>
+        <Row label={t.notifications.historyTitle} hint={t.notifications.historyDesc}>
+          <NumberField
+            value={notifications.history_limit}
+            min={0}
+            max={3650}
+            suffix="天"
+            onChange={(value) =>
+              update((d) => void (d.notifications.history_limit = Math.max(0, Math.min(3650, value))))
+            }
+          />
+        </Row>
         <Row label={t.notifications.excludeApps} hint={t.notifications.excludeAppsHint}>
           <TextList
             value={notifications.filter.exclude_apps}

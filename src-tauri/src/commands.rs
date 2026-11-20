@@ -475,3 +475,64 @@ pub fn caret_dismiss(app: AppHandle, session: u64) {
 pub fn open_main_window(app: AppHandle) {
     tray::open_main_window(&app);
 }
+
+/// 从文本里提取最长连续数字串（号码识别用）。
+fn extract_longest_digits(text: &str) -> String {
+    let mut best = String::new();
+    let mut current = String::new();
+    for c in text.chars() {
+        if c.is_ascii_digit() {
+            current.push(c);
+        } else {
+            if current.chars().count() > best.chars().count() {
+                best = current.clone();
+            }
+            current.clear();
+        }
+    }
+    if current.chars().count() > best.chars().count() {
+        best = current;
+    }
+    best
+}
+
+// ── Toast 点击 → 主窗口 ────────────────────────────────────────
+
+/// 用户点了小弹窗通知：先把对应原始通知发回主窗口（让主页直接展示），再按普通 click 走一遍（验证码复制等）。
+#[tauri::command]
+pub fn toast_click_for_main(app: AppHandle, label: String, state: State<'_, AppState>) -> Option<String> {
+    // 先尝试把完整历史 entry 发给主窗口，让它自动定位到这条消息。
+    if let Some(notification) = state.phone_notifs.lock().unwrap().get(&label).cloned() {
+        let received_at = notification
+            .received_at
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+        let payload = crate::history::HistoryEntry {
+            received_at,
+            app_id: notification.app_identifier.clone(),
+            origin: notification.origin(),
+            body: notification.summary(),
+            code: notification.code.clone(),
+            category: notification.category,
+            device_id: Some(notification.device_id.clone()),
+            device_name: notification.device_name.clone(),
+            uid: Some(notification.uid),
+            title: notification.title.clone(),
+            subtitle: notification.subtitle.clone(),
+            message: notification.message.clone(),
+            carrier: if notification.category == Some(1) {
+                zhixin_core::carrier::describe(&extract_longest_digits(&notification.origin()))
+            } else {
+                None
+            },
+            call_outcome: notification.call_outcome.clone(),
+        };
+        if let Err(e) = app.emit("toast-clicked", &payload) {
+            warn!("emit toast-clicked 失败：{e}");
+        }
+    }
+
+    // 仍然走原来的点击逻辑（验证码复制）
+    toast_click(app.clone(), label, state)
+}
