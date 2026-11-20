@@ -108,12 +108,6 @@ export function Transfer() {
 
       <Section narrow title={text("接收文件夹", "Receive folder")}>
         <Row label={info?.folder ?? "…"} hint={text("手机上传的文件保存到这里；手机页面也列出此文件夹内的文件供下载。", "Files uploaded from the phone land here; the phone page also lists files in this folder for download.")}>
-
-        </Row>
-      </Section>
-
-      <Section narrow title={text("接收文件夹", "Receive folder")}>
-        <Row label={info?.folder ?? "…"} hint={text("手机上传的文件保存到这里；手机页面也列出此文件夹内的文件供下载。", "Files uploaded from the phone land here; the phone page also lists files in this folder for download.")}>
           <button className="network-quiet-action" disabled={!info || busy} onClick={async () => {
             try {
               const picked = await pickTransferFolder();
