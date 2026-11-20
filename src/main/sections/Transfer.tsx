@@ -168,7 +168,7 @@ export function Transfer() {
       </Disclosure>
 
 
-      <Section narrow title={text("安全", "Security")} description={text("令牌是访问电脑的唯一凭证，泄露后请到「接收服务 → 高级设置」中重置；重置后手机互传需重新扫码，快捷指令里的令牌也需重新复制更新。", "The token is the sole credential. If leaked, reset it under Receiver service - Advanced settings. After a reset, re-scan on the phone and update the token in your shortcuts.")} />
+      <Section narrow title={text("安全提醒", "Security notice")} description={text("令牌是访问电脑的唯一凭证，泄露后请到<span className="path-ref">「接收服务 → 高级设置」</span>中重置。", "The token is the sole credential - reset it under Receiver service - Advanced settings if leaked.")} />
 
       {error && <p className="bad-text" role="alert">{error}</p>}
     </>

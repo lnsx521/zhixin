@@ -185,6 +185,9 @@ body::before {
 
 .section-desc { margin: 5px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
 
+/* 描述里的路径引用高亮（如「接收服务 → 高级设置」） */
+.section-desc .path-ref { color: var(--accent); font-weight: 600; }
+
 .section-body { margin-top: 14px; display: flex; flex-direction: column; }
 .section-head + .section-body { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 16px; }
 .section-body:empty { display: none; }
