@@ -32,7 +32,7 @@ export function Section({
   wide?: boolean;
   /** 内容简单的短分区：两个相邻 narrow 并排一行（必须成对标记，避免留空洞） */
   narrow?: boolean;
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   return (
     <section className={`section ${wide ? "wide" : ""} ${narrow ? "narrow" : ""}`}>
