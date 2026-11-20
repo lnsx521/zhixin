@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { getComputerName, openBluetoothSettings } from "../../shared/api";
 import { useT } from "../../shared/i18n";
 import { Disclosure, Modal } from "../components";
