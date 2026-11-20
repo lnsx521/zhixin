@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getAppIcon, getLinkState, listNotificationHistory, openAppById, type HistoryEntry } from "../../shared/api";
 import { brandAsset } from "../../shared/brandIcons";
+import { Icon } from "../shared/Icon";
 
 type Item = HistoryEntry & { day: string; timeText: string };
 
@@ -71,8 +72,9 @@ export function HomeView({ onOpenSettings }: { onOpenSettings: () => void }) {
       <div className="home-main">
       <aside className="home-side">
         <div className="home-top">
-          <div className="home-phone">{link?.device_name ?? "未连接手机"}</div>
-          <div className="home-status-row">
+          <div className="home-phone-row">
+            <span className="home-phone-icon"><Icon name="phone" /></span>
+            <span className="home-phone">{link?.device_name ?? "未连接手机"}</span>
             <span className="home-bt" style={{ color: link?.connected ? "#1a7f37" : "var(--text-secondary)" }}>
               {link?.connected ? "● 已连接" : "○ 未连接"}
             </span>
