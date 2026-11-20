@@ -173,8 +173,8 @@ body::before {
 
 .section-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .section-head > div:first-child { min-width: 0; }
-.section-action { flex-shrink: 0; }
-.section-action .toggle { display: block; }
+.section-action { flex-shrink: 0; display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; white-space: nowrap; }
+.section-action .toggle { display: inline-flex; }
 
 .section-head h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.1px; }
 

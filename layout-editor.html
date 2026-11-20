@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>弹窗布局拖拽排版</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Microsoft YaHei", system-ui, sans-serif;
+    background: #111418; color: #e6e9ef;
+    display: flex; gap: 32px; padding: 32px; min-height: 100vh;
+  }
+  .panel { flex: 1; }
+  h1 { font-size: 18px; margin-bottom: 6px; }
+  .sub { font-size: 12.5px; color: #8a9099; margin-bottom: 20px; line-height: 1.7; }
+  .card {
+    background: #22262e; border: 1.5px solid #34C759; border-radius: 12px;
+    padding: 12px; width: 380px;
+  }
+  .block {
+    background: #2a2f38; border: 1px dashed #4a505a; border-radius: 8px;
+    padding: 10px 12px; margin: 0; cursor: grab; user-select: none;
+    position: relative; transition: border-color .15s, background .15s;
+  }
+  .block:hover { border-color: #58a6ff; }
+  .block.dragging { opacity: 0.4; border-style: solid; border-color: #58a6ff; }
+  .block .tag {
+    position: absolute; top: -9px; right: 8px; font-size: 10.5px;
+    background: #58a6ff; color: #111; padding: 1px 8px; border-radius: 9px;
+    font-weight: 600;
+  }
+  .block .demo { pointer-events: none; font-size: 13px; }
+  .gap {
+    height: 10px; display: flex; align-items: center; justify-content: center;
+    color: #58a6ff; font-size: 11px; cursor: ns-resize; user-select: none;
+  }
+  .gap:hover { background: rgba(88,166,255,.08); border-radius: 4px; }
+  .exportbar { margin-top: 20px; width: 380px; }
+  button {
+    width: 100%; border: 0; border-radius: 8px; padding: 10px 0;
+    background: #58a6ff; color: #111; font-size: 13.5px; font-weight: 600; cursor: pointer;
+  }
+  button:hover { background: #6fb3ff; }
+  .out {
+    margin-top: 12px; background: #181c22; border: 1px solid #333a44; border-radius: 8px;
+    padding: 12px; font-size: 12px; color: #9ecbff; white-space: pre-wrap;
+    word-break: break-all; min-height: 60px; line-height: 1.7;
+  }
+  .hint { font-size: 12px; color: #8a9099; margin-top: 10px; line-height: 1.8; }
+  .right { width: 420px; }
+  .right .card { width: 100%; }
+</style>
+</head>
+<body>
+  <div class="panel">
+    <h1>拖拽排版台</h1>
+    <p class="sub">
+      左边是可拖拽的积木（按住上下拖动调顺序），积木之间的数字是<b style="color:#58a6ff">间距 px</b>
+      （点击数字可输入调整）。右边实时预览真实效果。<br>
+      排好后点「导出布局」→ 把生成的文字直接发给安安，他照着改真实弹窗。
+    </p>
+    <div class="card" id="board"></div>
+    <div class="exportbar">
+      <button onclick="exportLayout()">导出布局（复制到剪贴板）</button>
+      <div class="out" id="out">（尚未导出）</div>
+      <p class="hint">支持模块：图标行 / 号码或姓名 / 运营商或正文 / 拒接按钮 / 复制按钮 / 验证码文字。<br>
+      不需要的模块直接拖出卡片（拖到卡片外松手即删除）。双击积木可恢复删除的默认项。</p>
+    </div>
+  </div>
+  <div class="right">
+    <h1 style="font-size:18px;margin-bottom:6px">实时预览</h1>
+    <p class="sub">您拖动时这里同步变化（模拟真实弹窗）。</p>
+    <div class="card" id="preview"></div>
+  </div>
+<script>
+const DEFAULT_BLOCKS = [
+  { id: "icon",    label: "图标行",   html: "<span style='display:inline-flex;align-items:center;gap:10px'><span style='width:36px;height:36px;border-radius:9px;background:#34a853;display:inline-block'></span><b>12312341234</b><span style='color:#8a9099;font-size:11px'>01:01</span></span>" },
+  { id: "carrier", label: "运营商/正文", html: "<span style='color:#c9ced6'>中国移动 · 手机号</span>" },
+  { id: "reject",  label: "拒接按钮",  html: "<button style='width:100%;border:0;border-radius:8px;padding:5px 0;background:rgba(192,57,43,.18);color:#ff8a80;font-size:13px;font-weight:600'>📞 拒接</button>" },
+  { id: "code",    label: "复制按钮",  html: "<button style='border:0;border-radius:8px;padding:5px 22px;background:rgba(52,199,89,.18);color:#1a7f37;font-size:12.5px;font-weight:600'>点击复制 123456</button>" },
+];
+let blocks = JSON.parse(JSON.stringify(DEFAULT_BLOCKS));
+let gaps = {}; // blockId -> 下方间距 px
+blocks.forEach(b => gaps[b.id] = 8);
+
+const board = document.getElementById("board");
+const preview = document.getElementById("preview");
+let dragged = null;
+
+function render() {
+  board.innerHTML = "";
+  blocks.forEach(b => {
+    const el = document.createElement("div");
+    el.className = "block" + (dragged === b.id ? " dragging" : "");
+    el.draggable = true;
+    el.dataset.id = b.id;
+    el.innerHTML = `<span class="tag">${b.label}</span><div class="demo">${b.html}</div>`;
+    el.addEventListener("dragstart", () => { dragged = b.id; });
+    el.addEventListener("dragend", () => { dragged = null; render(); });
+    el.addEventListener("dblclick", () => {
+      if (!blocks.find(x => x.id === b.id)) return;
+      blocks = blocks.filter(x => x.id !== b.id);
+      render();
+    });
+    board.appendChild(el);
+    const g = document.createElement("div");
+    g.className = "gap";
+    g.textContent = `↕ 间距 ${gaps[b.id]}px`;
+    g.title = "点击输入间距";
+    g.addEventListener("click", () => {
+      const v = prompt("设置该模块下方的间距（px）", gaps[b.id]);
+      if (v !== null && !isNaN(+v)) { gaps[b.id] = Math.max(0, Math.min(60, +v)); render(); }
+    });
+    board.appendChild(g);
+  });
+  renderPreview();
+}
+
+board.addEventListener("dragover", e => {
+  e.preventDefault();
+  const after = getAfter(board, e.clientY);
+  const dragEl = board.querySelector(".dragging");
+  if (!dragEl) return;
+  if (after == null) board.appendChild(dragEl);
+  else board.insertBefore(dragEl, after);
+});
+board.addEventListener("drop", e => {
+  e.preventDefault();
+  const order = [...board.querySelectorAll(".block")].map(el => el.dataset.id);
+  blocks.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  render();
+});
+function getAfter(container, y) {
+  return [...container.querySelectorAll(".block:not(.dragging)")].reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) return { offset, element: child };
+    return closest;
+  }, { offset: -Infinity }).element;
+}
+
+function renderPreview() {
+  preview.innerHTML = "";
+  blocks.forEach(b => {
+    const row = document.createElement("div");
+    row.innerHTML = b.html;
+    row.style.marginBottom = gaps[b.id] + "px";
+    preview.appendChild(row);
+  });
+}
+
+function exportLayout() {
+  const lines = blocks.map((b, i) => `${i + 1}. ${b.label}（下方间距 ${gaps[b.id]}px）`);
+  const text = "【弹窗布局】\n" + lines.join("\n") + "\n（请按此顺序和间距调整真实弹窗 CSS）";
+  document.getElementById("out").textContent = text;
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById("out").textContent = text + "\n✓ 已复制到剪贴板，直接粘贴给安安";
+  }).catch(() => {});
+}
+render();
+</script>
+</body>
+</html>
