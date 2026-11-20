@@ -279,8 +279,8 @@ body {
 /* ── 大窗：仿 macOS 信息（iMessage）阅读窗口 ── */
 .toast.imsg {
   width: 100%;
-  max-height: 84vh;
-  overflow-y: auto;
+  height: 100vh;
+  max-height: none;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -300,7 +300,7 @@ body {
 .imsg-head-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
 .imsg-head-text strong { font-size: 14px; color: var(--text); }
 .imsg-head-text small { font-size: 11px; color: var(--text-faint); }
-.imsg-body { padding: 16px; }
+.imsg-body { padding: 16px; flex: 1; overflow-y: auto; }
 .imsg-bubble {
   display: inline-block;
   max-width: 92%;

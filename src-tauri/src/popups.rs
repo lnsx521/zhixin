@@ -320,7 +320,10 @@ fn toast_expand_impl(app: AppHandle, window: tauri::WebviewWindow) -> Result<(),
         .unwrap()
         .insert(label.clone(), payload);
 
-    let width = state.config().notifications.popup.width + 160.0;
+    let width = 560.0;
+    let scale0 = app.primary_monitor().ok().flatten().map(|m| m.scale_factor()).unwrap_or(1.0);
+    let work0 = app.primary_monitor().ok().flatten().map(|m| m.work_area()).unwrap();
+    let height = ((work0.size.height as f64) * 0.76 / scale0).clamp(420.0, 900.0);
     let builder = WebviewWindowBuilder::new(
         &app,
         &label,
@@ -333,7 +336,7 @@ fn toast_expand_impl(app: AppHandle, window: tauri::WebviewWindow) -> Result<(),
     .always_on_top(true)
     .skip_taskbar(true)
     .resizable(false)
-    .inner_size(width, 220.0)
+    .inner_size(width, height)
     .visible(false);
 
     let window = match builder.build() {
@@ -366,7 +369,7 @@ fn toast_expand_impl(app: AppHandle, window: tauri::WebviewWindow) -> Result<(),
         let work = monitor.work_area();
         let _ = window.set_position(Position::Physical(PhysicalPosition::new(
             work.position.x + ((work.size.width as f64 - width * scale) / 2.0).ceil() as i32,
-            work.position.y + ((work.size.height as f64 - 220.0 * scale) / 3.0).ceil() as i32,
+            work.position.y + ((work.size.height as f64 - height * scale) / 2.8).ceil() as i32,
         )));
     }
 
@@ -441,13 +444,14 @@ pub fn resize_and_show(app: &AppHandle, label: &str, height_dip: f64) {
     }
     // 高度始终按前端量出的内容自适应（用户不可自调）。
     // 大窗（长文阅读）不套小窗上限，按工作区 88% 封顶
-    let max_h = if label.starts_with("expanded-") {
-        let win_scale = app.primary_monitor().ok().flatten().map(|m| m.scale_factor()).unwrap_or(1.0);
-        (app.primary_monitor().ok().flatten().map(|m| m.work_area().size.height as f64).unwrap_or(1000.0) * 0.88) / win_scale
+    let (width, height) = if label.starts_with("expanded-") {
+        let m0 = app.primary_monitor().ok().flatten();
+        let w_scale = m0.as_ref().map(|m| m.scale_factor()).unwrap_or(1.0);
+        let w_h = m0.map(|m| m.work_area().size.height as f64).unwrap_or(1000.0);
+        (560.0f64, ((w_h * 0.76) / w_scale).clamp(420.0, 900.0))
     } else {
-        MAX_HEIGHT
+        (state.config().notifications.popup.width, height_dip.clamp(MIN_HEIGHT, MAX_HEIGHT))
     };
-    let height = height_dip.clamp(MIN_HEIGHT, max_h);
     let state = app.state::<AppState>();
 
     state
@@ -461,7 +465,6 @@ pub fn resize_and_show(app: &AppHandle, label: &str, height_dip: f64) {
     };
 
     let scale = window.scale_factor().unwrap_or(1.0);
-    let width = state.config().notifications.popup.width;
     let _ = window.set_size(Size::Physical(PhysicalSize::new(
         (width * scale).ceil() as u32,
         (height * scale).ceil() as u32,
