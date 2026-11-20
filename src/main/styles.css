@@ -866,7 +866,17 @@ body::before {
 }
 .history-head strong { font-size: 13px; color: var(--text); }
 .history-time { font-size: 11px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.history-body { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; margin: 4px 0 6px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.history-body {
+  font-size: 12.5px; color: var(--text-secondary); line-height: 1.55;
+  margin: 4px 0 6px; overflow-wrap: anywhere; white-space: pre-wrap;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; cursor: pointer;
+}
+.history-body .history-more { color: var(--accent); font-weight: 500; }
+.history-card.expanded .history-body {
+  display: block; -webkit-line-clamp: none; overflow-y: auto;
+  max-height: 60vh; cursor: default;
+}
 
 /* 通用页：通知图标折叠区 */
 .icons-fold summary { list-style: none; }

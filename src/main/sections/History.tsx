@@ -19,6 +19,7 @@ export function History({ query }: { query: string }) {
 
   // 每条通知前显示来源 App 图标：联网缓存/手动设置 > 内置品牌 > 纸飞机兜底
   const [cachedIcons, setCachedIcons] = useState<Record<string, string>>({});
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
   useEffect(() => {
     const ids = [...new Set(entries.map((e) => e.app_id).filter(Boolean))] as string[];
     ids.forEach((id) => {
@@ -36,7 +37,11 @@ export function History({ query }: { query: string }) {
         {entries.length === 0 && <p className="hint-text">{query ? t.history.noResults : t.history.empty}</p>}
         <div className="history-list">
           {entries.map((entry) => (
-            <article className="history-card" key={`${entry.received_at}-${entry.origin}`}>
+            <article
+              className={`history-card ${expandedKey === `${entry.received_at}-${entry.origin}` ? "expanded" : ""}`}
+              key={`${entry.received_at}-${entry.origin}`}
+              onClick={() => setExpandedKey((prev) => (prev === `${entry.received_at}-${entry.origin}` ? null : `${entry.received_at}-${entry.origin}`))}
+            >
               <div className="history-icon">
                 {brandAsset(entry.app_id)
                   ? <img src={brandAsset(entry.app_id)!} alt="" />
@@ -49,7 +54,7 @@ export function History({ query }: { query: string }) {
                 <strong>{entry.origin}</strong>
                 <span className="history-time">{time(entry.received_at)}</span>
               </div>
-              <p className="history-body">{entry.body}</p>
+              <p className="history-body">{entry.body}{expandedKey !== `${entry.received_at}-${entry.origin}` && <span className="history-more"> 查看全文</span>}</p>
               </div>
             </article>
           ))}
