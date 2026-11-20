@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getAppIcon, getLinkState, listNotificationHistory, openAppById, type HistoryEntry } from "../../shared/api";
+import { getAppIcon, getLinkState, listNotificationHistory, openAppById, openSettingsWindow, type HistoryEntry } from "../../shared/api";
 import { brandAsset } from "../../shared/brandIcons";
 import { Icon } from "../../shared/Icon";
 
@@ -16,7 +16,7 @@ function dayGroup(receivedAt: number): string {
   return `${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
-export function HomeView({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function HomeView() {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [link, setLink] = useState<{ device_name: string | null; battery: number | null; connected: boolean } | null>(null);
   const [query, setQuery] = useState("");
@@ -126,7 +126,7 @@ export function HomeView({ onOpenSettings }: { onOpenSettings: () => void }) {
           {filtered.length === 0 && <p className="home-empty">暂无消息</p>}
         </div>
         <div className="home-foot">
-          <div className="home-setbtn" onClick={onOpenSettings}>
+          <div className="home-setbtn" onClick={() => { void openSettingsWindow().catch(() => {}); }}>
             <span className="home-gear">⚙</span>设置
           </div>
         </div>

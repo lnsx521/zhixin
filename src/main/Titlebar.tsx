@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useT } from "../shared/i18n";
 
-export function Titlebar({ beforeClose }: { beforeClose: () => Promise<void> }) {
+export function Titlebar({ beforeClose, closeOnly = false }: { beforeClose: () => Promise<void>; closeOnly?: boolean }) {
   const t = useT();
   const [maximized, setMaximized] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +38,7 @@ export function Titlebar({ beforeClose }: { beforeClose: () => Promise<void> }) 
             Keep nested decoration pointer-transparent so the entire region works. */}
         <div className="titlebar-drag" data-tauri-drag-region />
         <div className="window-controls">
+          {!closeOnly && (<>
           <button className="window-control" aria-label={t.window.minimize} title={t.window.minimize}
             onClick={() => { void run(() => getCurrentWindow().minimize()); }}>
             <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6h10" /></svg>
@@ -49,6 +50,7 @@ export function Titlebar({ beforeClose }: { beforeClose: () => Promise<void> }) 
               {maximized ? <path d="M3.5 3.5v-2h7v7h-2M1.5 3.5h7v7h-7Z" /> : <rect x="1.5" y="1.5" width="9" height="9" />}
             </svg>
           </button>
+          </>)}
           <button className="window-control close" aria-label={t.window.close} title={t.window.close}
             onClick={() => { void run(async () => { await beforeClose(); await getCurrentWindow().close(); }); }}>
             <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="m1.5 1.5 9 9m0-9-9 9" /></svg>

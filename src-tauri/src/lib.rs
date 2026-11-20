@@ -140,6 +140,7 @@ pub fn run() {
             popups::history_expand,
             commands::pick_transfer_folder,
             commands::open_app_by_id,
+            popups::open_settings,
             commands::get_toast_payload,
             commands::toast_click,
             commands::toast_open_app,

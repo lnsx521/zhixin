@@ -192,6 +192,7 @@ export const getComputerName = () => invoke<string>("get_computer_name");
 export const pickTransferFolder = () => invoke<string | null>("pick_transfer_folder");
 export const historyExpand = (entry: unknown) => invoke<void>("history_expand", { entry });
 export const openAppById = (appId: string) => invoke<void>("open_app_by_id", { appId });
+export const openSettingsWindow = () => invoke<void>("open_settings");
 
 export interface ManagedDevice {
   id: string;

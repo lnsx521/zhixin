@@ -295,6 +295,43 @@ pub async fn toast_expand(app: AppHandle, window: tauri::WebviewWindow) -> Resul
         .map_err(|e| e.to_string())?
 }
 
+/// 打开独立设置窗口（只有关闭按钮；已开则聚焦）。
+#[tauri::command]
+pub async fn open_settings(app: AppHandle) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || open_settings_impl(app))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn open_settings_impl(app: AppHandle) -> Result<(), String> {
+    use tauri::{WebviewUrl, WebviewWindowBuilder};
+    if let Some(existing) = app.get_webview_window("settings") {
+        let _ = existing.show();
+        let _ = existing.set_focus();
+        return Ok(());
+    }
+    let mon = app.primary_monitor().ok().flatten();
+    let scale = mon.as_ref().map(|m| m.scale_factor()).unwrap_or(1.0);
+    let work_h = mon.map(|m| m.work_area().size.height as f64).unwrap_or(1000.0);
+    let height = ((work_h * 0.8) / scale).clamp(560.0, 980.0);
+    let builder = WebviewWindowBuilder::new(
+        &app,
+        "settings",
+        WebviewUrl::App("index.html?view=settings".into()),
+    )
+    .title("知信 · 设置")
+    .decorations(false)
+    .transparent(false)
+    .shadow(true)
+    .resizable(true)
+    .inner_size(820.0, height)
+    .visible(true);
+    builder
+        .build()
+        .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
 /// 历史消息展开：构造负载并弹 iMessage 大窗（不经小窗）。
 #[tauri::command]
 pub async fn history_expand(app: AppHandle, entry: crate::history::HistoryEntry) -> Result<(), String> {

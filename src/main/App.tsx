@@ -142,7 +142,7 @@ function Shell(props: {
   const t = useT();
   const updater = useUpdater();
   const lang = useContext(LangContext);
-  const [view, setView] = useState<"home" | "settings">("home");
+  const isSettingsWindow = new URLSearchParams(window.location.search).get("view") === "settings";
   const { page, setPage, config, update, saveStatus, saveError, error, retry, beforeClose } = props;
 
 
@@ -155,11 +155,11 @@ function Shell(props: {
     { key: "about", label: t.nav.about },
   ];
 
-  if (view === "home") {
+  if (!isSettingsWindow) {
     return (
       <LangContext.Provider value={lang}>
         <div className="app-shell">
-          <Titlebar beforeClose={beforeClose} />
+          <Titlebar beforeClose={beforeClose} closeOnly />
           <HomeView onOpenSettings={() => setView("settings")} />
           {updater.open && <UpdateDialog updater={updater} beforeInstall={props.beforeInstall} />}
         </div>
@@ -169,7 +169,7 @@ function Shell(props: {
 
   return (
     <div className="app-shell">
-      <Titlebar beforeClose={beforeClose} />
+      <Titlebar beforeClose={beforeClose} closeOnly />
 
       <div className="layout">
         <aside className="sidebar">
@@ -180,10 +180,6 @@ function Shell(props: {
               <span className="brand-sub">{t.shell.tagline}</span>
             </div>
           </div>
-          <button className="nav-item" onClick={() => setView("home")}>
-            <Icon name="message" />
-            {lang === "zh" ? "消息" : "Messages"}
-          </button>
           <nav aria-label={t.shell.navigation}>
             {nav.map((item) => (
               <button
