@@ -167,7 +167,7 @@ pub struct NotificationOptions {
     /// App / 关键词过滤。
     pub filter: FilterOptions,
 
-    /// 通知历史保留条数（0 = 不保存，上限 300）。
+    /// 通知历史保留天数（滚动覆盖；0 = 不保存，上限 7）。
     #[serde(default = "default_history_limit")]
     pub history_limit: u32,
 
@@ -182,7 +182,7 @@ impl Default for NotificationOptions {
             enabled: true,
             filter: FilterOptions::default(),
             popup: PopupOptions::default(),
-            history_limit: 10,
+            history_limit: 3,
         }
     }
 }
@@ -249,7 +249,7 @@ fn default_sound() -> bool {
 }
 
     fn default_history_limit() -> u32 {
-        10
+        3
     }
 
 impl Default for PopupOptions {

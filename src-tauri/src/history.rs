@@ -40,15 +40,15 @@ pub struct HistoryEntry {
 }
 
 /// 弹窗时留档（在 popups::show 里调用；全屏暂存的通知在补弹时也会走到这里）。
-/// 保留条数跟随设置（notifications.history_limit，0 = 不保存）。
+/// 保留天数跟随设置（notifications.history_limit = 天数，滚动覆盖；0 = 不保存）。
 pub fn record(app: &AppHandle, notification: &PhoneNotification) {
-    let limit = {
+    let days = {
         use zhixin_core::config::Config;
         Config::load_or_default(paths::config_path(app))
             .map(|config| config.notifications.history_limit)
-            .unwrap_or(10)
+            .unwrap_or(3)
     };
-    if limit == 0 {
+    if days == 0 {
         return;
     }
     let mut entries = load(app);
@@ -64,10 +64,13 @@ pub fn record(app: &AppHandle, notification: &PhoneNotification) {
         code: notification.code.clone(),
         category: notification.category,
     });
-    let cap = (limit as usize).min(CAP);
-    if entries.len() > cap {
-        let drop_count = entries.len() - cap;
-        entries.drain(0..drop_count);
+    // 滚动覆盖：只保留最近 N 天（含今天），更早的直接丢弃
+    let cutoff_ms = (std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64)
+        .saturating_sub((days as u64) * 86_400_000);
+    entries.retain(|entry| entry.received_at >= cutoff_ms);
     }
     let _ = save(app, &entries);
 }

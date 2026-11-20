@@ -145,7 +145,7 @@ const zh = {
     height: "弹窗高度",
     heightHint: "0 = 按内容自动；填了就用固定高度",
     filterTitle: "过滤",
-    historyTitle: "通知历史", historyDesc: "弹过的通知留档回查，0 = 不保存历史。",
+    historyTitle: "消息保留时长", historyDesc: "按天滚动保存，超过天数的消息自动清除；选「不保存」则不留历史。",
     filterDesc:
       "黑名单优先于白名单。App 填 iOS 的 bundle id（如 com.tencent.xin），一行一条。",
     excludeApps: "排除的 App",
