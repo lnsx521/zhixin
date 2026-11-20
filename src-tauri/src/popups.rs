@@ -447,6 +447,7 @@ pub fn resize_and_show(app: &AppHandle, label: &str, height_dip: f64) {
     }
     // 高度始终按前端量出的内容自适应（用户不可自调）。
     // 大窗（长文阅读）不套小窗上限，按工作区 88% 封顶
+    let state = app.state::<AppState>();
     let (width, height) = if label.starts_with("expanded-") {
         let m0 = app.primary_monitor().ok().flatten();
         let w_scale = m0.as_ref().map(|m| m.scale_factor()).unwrap_or(1.0);
@@ -455,7 +456,6 @@ pub fn resize_and_show(app: &AppHandle, label: &str, height_dip: f64) {
     } else {
         (state.config().notifications.popup.width, height_dip.clamp(MIN_HEIGHT, MAX_HEIGHT))
     };
-    let state = app.state::<AppState>();
 
     state
         .toast_heights
