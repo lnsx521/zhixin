@@ -121,6 +121,53 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
     if (!expanded) toastExpand().catch((err) => setError(String(err)));
   };
 
+  // 大窗：仿 macOS 信息（iMessage）阅读窗口
+  if (expanded && payload) {
+      return (
+      <div className="toast toast-expanded imsg" onClick={onCardClick}>
+        <header className="imsg-head">
+          <button className="toast-dismiss imsg-close" onClick={(event) => { event.stopPropagation(); toastClose(); }} aria-label={t.toast.dismiss}>×</button>
+          <div className={`toast-icon ${asset ? "brand-official" : ""}`} style={{ width: 44, height: 44, borderRadius: 12 }}>
+            {asset ? <img className="toast-icon-img" src={asset} alt="" /> : (
+              <svg viewBox="0 0 64 64" style={{ width: "100%", height: "100%", display: "block" }}>
+                <defs>
+                  <linearGradient id="zhixin-generic-app" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="rgb(142,154,166)" />
+                    <stop offset="1" stop-color="rgb(92,107,122)" />
+                  </linearGradient>
+                </defs>
+                <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#zhixin-generic-app)" />
+                <path d="M32 15c-10.5 0-19 6.7-19 15 0 4.7 2.9 8.9 7.4 11.6L18.6 49l8.1-3.3c1.8.5 3.7.7 5.3.7 10.5 0 19-6.7 19-15S42.5 15 32 15z" fill="#ffffff" />
+              </svg>
+            )}
+          </div>
+          <div className="imsg-head-text">
+            <strong>{payload.origin}</strong>
+            <small>{payload.open_app_name ?? ""}</small>
+          </div>
+          <span className="toast-time">{new Date().toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { hour: "2-digit", minute: "2-digit" })}</span>
+        </header>
+        <div className="imsg-body">
+          <div className="imsg-bubble">
+            <p className="imsg-text">{payload.body}</p>
+            <small className="imsg-time">iMessage · {new Date().toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { hour: "2-digit", minute: "2-digit" })}</small>
+          </div>
+        </div>
+        <footer className="imsg-foot">
+          {payload.code && (
+            <button className={`toast-code ${copied ? "copied" : ""}`} onClick={(event) => { event.stopPropagation(); void onCopy(); }}>
+              {copied ? t.toast.copied : t.toast.copyCode(payload.code)}
+            </button>
+          )}
+          <button className="imsg-copyall" onClick={(event) => { event.stopPropagation(); void navigator.clipboard.writeText(payload.body); setCopied(true); }}>
+            {t.toast.copyAll ?? "复制全文"}
+          </button>
+          {error && <p className="toast-error" role="alert">{error}</p>}
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div className={`toast ${expanded ? "toast-expanded" : ""} ${isCall ? "toast-call" : ""}`} onClick={onCardClick}>
       <div className={`toast-icon ${asset ? "brand-official" : ""}`}>

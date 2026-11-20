@@ -286,6 +286,7 @@ const zh = {
   },
   toast: {
     copyCode: (code: string) => `点击复制 ${code}`,
+          copyAll: "复制全文",
     copied: "✓ 已复制",
     dismiss: "关闭",
   },
