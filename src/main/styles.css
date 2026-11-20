@@ -18,6 +18,14 @@ body::before {
     radial-gradient(560px circle at 44% 42%, var(--glow-3), transparent 58%);
 }
 
+
+/* classic 背景 = 纯色（浅色纯白 / 深色纯黑），不用光斑渐变 */
+:root[data-bg="classic"] body::before { background: #ffffff; }
+:root[data-bg="classic"][data-theme="dark"] body::before { background: #000000; }
+@media (prefers-color-scheme: dark) {
+  :root[data-bg="classic"]:not([data-theme="light"]) body::before { background: #000000; }
+}
+
 .app-shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
 .layout { display: flex; flex: 1; min-height: 0; height: 100vh; }
@@ -763,14 +771,14 @@ body::before {
   display: block; width: 44px; height: 30px; border-radius: 9px;
   border: 1px solid var(--border);
 }
-.bg-swatch-fill.bg-classic { background: linear-gradient(150deg, #f7f8fa, #e8eef8); }
+.bg-swatch-fill.bg-classic { background: #ffffff; }
 .bg-swatch-fill.bg-blue { background: linear-gradient(150deg, #d3e6ff, #eef6ff); }
 .bg-swatch-fill.bg-custom { background: linear-gradient(150deg, #b9c8e8, #d9c3ea); }
 .bg-custom-plus { font-size: 16px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.3); pointer-events: none; }
 .bg-swatch-fill.bg-warm { background: linear-gradient(150deg, #ffe2c8, #fff2e2); }
 .bg-swatch-fill.bg-mint { background: linear-gradient(150deg, #c9efdd, #ecfff6); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .bg-swatch-fill.bg-classic { background: linear-gradient(150deg, #23252b, #16171c); }
+  :root:not([data-theme="light"]) .bg-swatch-fill.bg-classic { background: #000000; }
   :root:not([data-theme="light"]) .bg-swatch-fill.bg-blue { background: linear-gradient(150deg, #17283f, #0f1723); }
 :root:not([data-theme="light"]) .bg-swatch-fill.bg-custom { background: linear-gradient(150deg, #3a3f52, #4a3a58); }
   :root:not([data-theme="light"]) .bg-swatch-fill.bg-warm { background: linear-gradient(150deg, #342417, #191310); }
