@@ -933,9 +933,6 @@ body::before {
   padding: 12px 14px;
   border: 0.5px solid var(--glass-border);
   border-radius: 12px;
-  background: var(--glass-fill);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
 }
 .home-top-row { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
 .home-phone-row { display: flex; align-items: center; gap: 11px; }
@@ -972,11 +969,8 @@ body::before {
 .home-gear { width: 24px; height: 24px; border-radius: 50%; background: color-mix(in srgb, var(--text) 12%, transparent); display: inline-flex; align-items: center; justify-content: center; }
 .home-read {
   flex: 1; display: flex; flex-direction: column; overflow: hidden;
-  background: var(--glass-fill);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  background: transparent;
 }
-:root[data-theme="dark"] .home-read { background: rgba(30, 32, 38, 0.55); }
 .home-read-head { padding: 10px 16px; border-bottom: 0.5px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; }
 .home-read-title { font-size: 13px; font-weight: 600; color: var(--text); }
 .home-read-meta { font-size: 11px; color: var(--text-faint); }
@@ -984,9 +978,7 @@ body::before {
   flex: 1; overflow-y: auto;
   margin: 14px 16px 16px;
   padding: 18px 22px;
-  background: var(--glass-fill);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  background: transparent;
   border: 0.5px solid var(--glass-border);
   border-radius: 16px;
 }
