@@ -1031,21 +1031,3 @@ body::before {
 .home-read-actions .imsg-copyall:hover { background: #dcdcdc; }
 .home-setbtn:hover { opacity: .8; }
 /* MARKER-TEST */
-/* ── 主页深色模式：显式颜色（不依赖变量解析）── */
-:root[data-theme="dark"] .home-side {
-  background: rgba(40, 42, 48, 0.55);
-  backdrop-filter: blur(40px) saturate(190%);
-  -webkit-backdrop-filter: blur(40px) saturate(190%);
-}
-:root[data-theme="dark"] .home-topbar { background: rgba(24, 26, 30, 0.80); }
-:root[data-theme="dark"] 
-:root[data-theme="dark"] .imsg-time { color: var(--text-faint); }
-:root[data-theme="dark"] .home-msg-origin { color: var(--text); }
-:root[data-theme="dark"] .home-msg-snippet { color: var(--text-secondary); }
-:root[data-theme="dark"] .home-msg-time { color: var(--text-faint); }
-:root[data-theme="dark"] .home-phone { color: var(--text); }
-:root[data-theme="dark"] .home-read-title { color: var(--text); }
-:root[data-theme="dark"] .home-read-meta { color: var(--text-faint); }
-:root[data-theme="dark"] .home-search-input { background: rgba(255,255,255,0.08); color: #f2f2f4; }
-:root[data-theme="dark"] .home-day { color: #85858a; }
-:root[data-theme="dark"] .imsg-copyall { background: rgba(255,255,255,0.10); color: var(--text); }
