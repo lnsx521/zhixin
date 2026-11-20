@@ -320,7 +320,7 @@ fn toast_expand_impl(app: AppHandle, window: tauri::WebviewWindow) -> Result<(),
         .unwrap()
         .insert(label.clone(), payload);
 
-    let width = state.config().notifications.popup.width + 80.0;
+    let width = state.config().notifications.popup.width + 160.0;
     let builder = WebviewWindowBuilder::new(
         &app,
         &label,
@@ -440,7 +440,13 @@ pub fn resize_and_show(app: &AppHandle, label: &str, height_dip: f64) {
         }
     }
     // 高度始终按前端量出的内容自适应（用户不可自调）。
-    let height = height_dip.clamp(MIN_HEIGHT, MAX_HEIGHT);
+    // 大窗（长文阅读）不套小窗上限，按工作区 88% 封顶
+    let max_h = if label.starts_with("expanded-") {
+        (app.primary_monitor().ok().flatten().map(|m| m.work_area().size.height as f64).unwrap_or(1000.0) * 0.88) / scale
+    } else {
+        MAX_HEIGHT
+    };
+    let height = height_dip.clamp(MIN_HEIGHT, max_h);
     let state = app.state::<AppState>();
 
     state

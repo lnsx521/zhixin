@@ -119,11 +119,15 @@ body {
   font-weight: 500;
 }
 
-/* 大窗：全文不截断、无倒计时 */
+/* 大窗：全文不截断、无倒计时；超长内容卡片内部滚动 */
 .toast-expanded .toast-body {
-  -webkit-line-clamp: unset;
+  -webkit-line-clamp: none;
   font-size: 13.5px;
   line-height: 1.8;
+}
+.toast-expanded {
+  max-height: 84vh;
+  overflow-y: auto;
 }
 
 /* 来电卡：绿色描边醒目 */
