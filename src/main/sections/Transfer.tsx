@@ -152,18 +152,18 @@ export function Transfer() {
             </div>
           </p>
         </Disclosure>
-        <Disclosure title={nt.android + text("（第三方推送 · 进阶）", " (third-party push, advanced)")}>
-          <p style={{ margin: "0 0 8px", fontWeight: 600 }}>{text("为什么安卓不能像 iPhone 一样蓝牙推送？", "Why can't Android push over Bluetooth like iPhone?")}</p>
-          <p style={{ margin: "0 0 8px", lineHeight: 1.8 }}>{text("电脑端的蓝牙通道基于苹果私有协议 ANCS——只有 iPhone 系统内置客户端，配对即用。安卓系统没有对等协议：蓝牙标准里的 MAP（短信访问）只覆盖系统自带短信，不含微信等 App 通知，且电脑端需要另写一套 MAP 客户端才能用；App 通知则完全没有蓝牙通道。", "The PC Bluetooth channel is Apple's proprietary ANCS - only iPhone has a built-in client. Android has no equivalent: Bluetooth MAP covers SMS only (no app notifications) and would need a separate MAP client on the PC; app notifications have no Bluetooth channel at all.")}</p>
-          <p style={{ margin: "0 0 8px", fontWeight: 600 }}>{text("安卓的现实方案：HTTP 接口推送", "The practical way for Android: HTTP push")}</p>
-          <p style={{ margin: "0 0 8px", lineHeight: 1.8 }}>{text("本软件的接收接口是通用 HTTP（不限设备类型）。在安卓手机上装一个支持自定义 HTTP 请求的自动化工具（如 HTTP Shortcuts、MacroDroid），授予「通知读取权限」，即可把微信、短信等通知转发到电脑弹窗——效果与 iPhone 蓝牙推送相同。", "The receiver is generic HTTP (device-agnostic). Install an HTTP automation tool (HTTP Shortcuts, MacroDroid), grant notification access, and forward WeChat / SMS to the PC popup - same result as iPhone Bluetooth push.")}</p>
-          <ol style={{ margin: "0 0 8px", paddingLeft: 22, fontSize: 13, lineHeight: 1.9, color: "var(--text-secondary)" }}>
-            <li>{text("手机与电脑连同一个局域网；", "Phone and PC on the same LAN;")}</li>
-            <li>{text("推送工具里新建 HTTP 请求：地址填上方「接收链接」，方法 GET 或 POST；", "Create an HTTP request with the receiver link above, GET or POST;")}</li>
-            <li>{text("携带接入令牌（token 参数，或 Authorization: Bearer 头）；", "Include the token (query param or Authorization: Bearer header);")}</li>
-            <li>{text("通知内容映射到 body 参数（URL 编码），可加 device_name 区分来源；", "Map notification text to body (URL-encoded); add device_name to identify the source;")}</li>
-            <li>{text("注意：本软件并非专为安卓开发——推送效果相同，但手机端的转发配置需要您自行完成，遇到问题不属本软件支持范围。", "Note: not built for Android - the push result is identical, but the phone-side setup is on you and outside this app's support scope.")}</li>
+        <Disclosure title={nt.android + text("（第三方推送教程）", " (third-party push tutorial)")}>
+          <p style={{ margin: "0 0 8px" }}>{text("前置条件：安卓手机与电脑连同一个局域网；安装一个支持自定义 HTTP 请求的自动化工具（推荐 HTTP Shortcuts 或 MacroDroid，应用商店均可下载），并授予「通知读取权限」。", "Prerequisites: same LAN; install an HTTP automation tool (HTTP Shortcuts or MacroDroid) and grant notification access.")}</p>
+          <p style={{ margin: "0 0 4px", fontWeight: 600 }}>{text("以 HTTP Shortcuts 为例：", "Example with HTTP Shortcuts:")}</p>
+          <ol style={{ margin: "0 0 10px", paddingLeft: 22, fontSize: 13, lineHeight: 1.9, color: "var(--text-secondary)" }}>
+            <li>{text("新建快捷方式，方法选 POST（或 GET），地址填上方「接收链接」中的完整地址；", "Create a new shortcut, method POST (or GET), URL from the receiver link above;")}</li>
+            <li>{text("POST 时请求体选「自定义文本」，填入 device_name（安卓手机名）、body（通知正文）、token（上方令牌）三个参数；GET 时三个参数直接拼在地址后面；", "For POST use a custom text body with device_name / body / token; for GET append them to the URL;")}</li>
+            <li>{text("在触发器里选择「通知接收」，勾选要转发的应用（微信、短信等）；", "Set the trigger to incoming notifications and pick the apps to forward;")}</li>
+            <li>{text("保存并测试：电脑右下角应立即弹出对应通知。", "Save and test - the PC should show the popup immediately.")}</li>
           </ol>
+          <p style={{ margin: "0 0 4px", fontWeight: 600 }}>{text("参数对照表：", "Parameters:")}</p>
+          <div className="network-table-wrap"><table className="network-table"><thead><tr><th>{nt.field}</th><th>{nt.requirement}</th><th>{nt.meaning}</th></tr></thead><tbody>{[["token", nt.required, text("统一接入令牌，缺失将被拒绝", "Shared token, required")], ["body / content", nt.required, t.bodyField], ["device_name", nt.optional, text("来源标识，弹窗标题显示", "Shown on the popup")], ["sender / from", nt.optional, t.senderField], ["title", nt.optional, t.titleField]].map(([f, r, d]) => <tr key={f as string}><th>{f}</th><td>{r}</td><td>{d}</td></tr>)}</tbody></table></div>
+          <p className="hint-text">{text("提示：全局每分钟限流 120 条；相同内容 15 秒内会被去重；测试时若未弹窗，先到「消息通知」页检查过滤规则。", "Rate limit 120/min; duplicates within 15s are dropped; if no popup, check filter rules on the notifications page.")}</p>
         </Disclosure>
       </Disclosure>
 
