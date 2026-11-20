@@ -919,7 +919,7 @@ body::before {
 .home-topbar-app { font-size: 13px; font-weight: 600; color: var(--text); }
 .home-topbar-ver { font-size: 10.5px; color: var(--text-faint); }
 .home-main { flex: 1; display: flex; overflow: hidden; }
-.home-side { width: 264px; background: var(--surface); border-right: 0.5px solid var(--border); display: flex; flex-direction: column; padding-top: 34px; }
+.home-side { width: 264px; background: var(--surface); border-right: 0.5px solid var(--border); display: flex; flex-direction: column; }
 .home-top { padding: 8px 12px 6px; border-bottom: 0.5px solid var(--border); }
 .home-top-row { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
 .home-phone-row { display: flex; align-items: center; gap: 11px; }
@@ -968,7 +968,32 @@ body::before {
 .home-search-input { background: #e4e4e9; border: none; }
 .home-msg-icon img { border-radius: 9px; box-shadow: 0 0 0 0.5px rgba(0,0,0,.08); }
 .home-read { background: #ffffff; }
-.imsg-bubble { background: #e9e9eb; }
+.imsg-bubble {
+  display: inline-block;
+  max-width: 92%;
+  background: #e9e9eb;
+  border-radius: 22px;
+  padding: 16px 20px 10px;
+}
+.imsg-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 0.5px solid var(--border);
+  position: relative;
+}
+.imsg-head .toast-time { margin-left: auto; }
+.imsg-close { position: absolute; top: 10px; left: 12px; }
+.imsg-head-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.imsg-head-text strong { font-size: 14px; color: var(--text); }
+.imsg-head-text small { font-size: 11px; color: var(--text-faint); }
+.imsg-body { padding: 16px; flex: 1; overflow-y: auto; }
+.imsg-text { margin: 0; font-size: 13.5px; line-height: 1.75; color: #1d1d1f; white-space: pre-wrap; word-break: break-word; }
+.imsg-time { display: block; margin-top: 4px; font-size: 10px; color: #86868b; text-align: right; }
+.imsg-foot { display: flex; align-items: center; gap: 10px; padding: 12px 16px 16px; border-top: 0.5px solid var(--border); }
+.toast.imsg { width: 100%; height: 100vh; max-height: none; background: var(--surface); border-radius: 16px; display: flex; flex-direction: column; gap: 0; padding: 0; }
+.toast-expanded { max-height: 84vh; overflow-y: auto; }
+.toast-expanded .toast-body { -webkit-line-clamp: none; font-size: 13.5px; line-height: 1.8; }
+.toast-expanded .toast-body { -webkit-line-clamp: none; font-size: 13.5px; line-height: 1.8; }
 .imsg-text { color: #1d1d1f; }
 .imsg-time { color: #86868b; }
 .home-read-actions button {
