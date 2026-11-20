@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import { getBackgroundImage, getConfig, openTransferFolder, saveConfig, type Config } from "../shared/api";
+import { getBackgroundImage, getConfig, onThemeChanged, openTransferFolder, saveConfig, type Config } from "../shared/api";
 import { LangContext, resolveLang, useT } from "../shared/i18n";
 import appIcon from "../shared/app-icon.svg";
 import { Connection } from "./sections/Connection";
@@ -58,6 +58,11 @@ export function App() {
   useEffect(() => {
     applyTheme(config?.general.theme);
   }, [config?.general.theme]);
+
+  // 设置窗口改主题 → 主窗口实时跟随
+  useEffect(() => {
+    void onThemeChanged((theme) => applyTheme(theme)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const bg = config?.general.background;
