@@ -3,7 +3,7 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { configureHttp, getHttpStatus, getMdnsHostname, listHttpAddresses, resetHttpToken, setHttpCopy, type HttpStatus, type LocalAddress } from "../../shared/api";
 import { LangContext } from "../../shared/i18n";
 import { networkDict } from "../../shared/network-i18n";
-import { Disclosure, Modal, NumberField, Row, Section, Toggle } from "../components";
+import { Modal, NumberField, Row, Section, Toggle } from "../components";
 
 export function ReceiverControls() {
   const lang=useContext(LangContext), t=networkDict[lang];
