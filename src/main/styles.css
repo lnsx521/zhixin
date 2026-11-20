@@ -964,6 +964,17 @@ body::before {
 .imsg-bubble { background: #e9e9eb; }
 .imsg-text { color: #1d1d1f; }
 .imsg-time { color: #86868b; }
-.home-read-actions .toast-code { background: #0a84ff; color: #fff; padding: 6px 16px; font-size: 12.5px; }
-.home-read-actions .imsg-copyall { background: #e9e9eb; color: #1d1d1f; padding: 6px 16px; font-size: 12.5px; }
+.home-read-actions button {
+  appearance: none; -webkit-appearance: none;
+  border: none; outline: none;
+  border-radius: 10px; padding: 8px 20px;
+  font-family: inherit; font-size: 12.5px; font-weight: 600;
+  cursor: pointer; transition: filter .15s, transform .1s;
+  line-height: 1.4;
+}
+.home-read-actions button:active { transform: scale(.97); }
+.home-read-actions .toast-code { background: #0a84ff; color: #fff; box-shadow: 0 1px 4px rgba(10,132,255,.35); }
+.home-read-actions .toast-code:hover { filter: brightness(1.1); }
+.home-read-actions .imsg-copyall { background: #e9e9eb; color: #1d1d1f; }
+.home-read-actions .imsg-copyall:hover { background: #dcdcdc; }
 .home-setbtn:hover { opacity: .8; }
