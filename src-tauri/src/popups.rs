@@ -166,6 +166,7 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
         } else {
             None
         },
+        time: None,
     };
 
     info!("弹窗：{} — {}", payload.origin, payload.body);
@@ -292,6 +293,108 @@ pub async fn toast_expand(app: AppHandle, window: tauri::WebviewWindow) -> Resul
     tauri::async_runtime::spawn_blocking(move || toast_expand_impl(app, window))
         .await
         .map_err(|e| e.to_string())?
+}
+
+/// 历史消息展开：构造负载并弹 iMessage 大窗（不经小窗）。
+#[tauri::command]
+pub async fn history_expand(app: AppHandle, entry: crate::history::HistoryEntry) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || history_expand_impl(app, entry))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn history_expand_impl(app: AppHandle, entry: crate::history::HistoryEntry) -> Result<(), String> {
+    use std::sync::atomic::Ordering;
+    let state = app.state::<AppState>();
+    let time_text = {
+        // Unix 毫秒 → 本地 "HH:mm"
+        let secs = entry.received_at / 1000;
+        let dur = std::time::Duration::from_secs(secs);
+        let (h, m) = time_hm(dur);
+        format!("{h:02}:{m:02}")
+    };
+    let id = state.toast_seq.fetch_add(1, Ordering::Relaxed);
+    let label = format!("expanded-{id}");
+    let payload = crate::types::ToastPayload {
+        app_id: entry.app_id.clone(),
+        open_app_name: None,
+        origin: entry.origin.clone(),
+        body: entry.body.clone(),
+        code: entry.code.clone(),
+        duration_secs: 86400,
+        category: entry.category,
+        uid: 0,
+        carrier: None,
+        time: Some(time_text),
+    };
+    state.pending_toasts.lock().unwrap().insert(label.clone(), payload);
+    open_expanded_window(&app, &label)?;
+    Ok(())
+}
+
+/// 计算本地时分（简化：按系统时区）。
+fn time_hm(dur: std::time::Duration) -> (u64, u64) {
+    let secs = dur.as_secs() + 8 * 3600; // UTC+8 近似
+    ((secs / 3600) % 24, (secs / 60) % 60)
+}
+
+/// 从 toast_expand_impl 中抽出的大窗创建流程（label 的负载须已在 pending_toasts 中）。
+fn open_expanded_window(app: &AppHandle, label: &str) -> Result<(), String> {
+    let state = app.state::<AppState>();
+    let width = 560.0;
+    let mon0 = app.primary_monitor().ok().flatten();
+    let scale0 = mon0.as_ref().map(|m| m.scale_factor()).unwrap_or(1.0);
+    let height = match mon0.as_ref() {
+        Some(m) => ((m.work_area().size.height as f64) * 0.76 / scale0).clamp(420.0, 900.0),
+        None => 700.0,
+    };
+    let builder = WebviewWindowBuilder::new(
+        app,
+        label,
+        WebviewUrl::App("expanded.html".into()),
+    )
+    .title("知信")
+    .decorations(false)
+    .transparent(true)
+    .shadow(false)
+    .always_on_top(true)
+    .skip_taskbar(true)
+    .resizable(false)
+    .inner_size(width, height)
+    .visible(false);
+
+    let window = match builder.build() {
+        Ok(window) => window,
+        Err(error) => {
+            warn!("展开窗口创建失败：{error}");
+            state.pending_toasts.lock().unwrap().remove(label);
+            return Err(error.to_string());
+        }
+    };
+    info!("展开窗口已创建：{}", label);
+
+    let app_for_event = app.clone();
+    let label_for_event = label.to_string();
+    window.on_window_event(move |event| {
+        if matches!(event, WindowEvent::Destroyed) {
+            app_for_event
+                .state::<AppState>()
+                .pending_toasts
+                .lock()
+                .unwrap()
+                .remove(&label_for_event);
+        }
+    });
+
+    if let Some(monitor) = app.primary_monitor().ok().flatten() {
+        let scale = window.scale_factor().unwrap_or(1.0);
+        let work = monitor.work_area();
+        let _ = window.set_position(Position::Physical(PhysicalPosition::new(
+            work.position.x + ((work.size.width as f64 - width * scale) / 2.0).ceil() as i32,
+            work.position.y + ((work.size.height as f64 - height * scale) / 2.8).ceil() as i32,
+        )));
+    }
+    Ok(())
 }
 
 fn toast_expand_impl(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {

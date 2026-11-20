@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { clearNotificationHistory, getAppIcon, listNotificationHistory, type HistoryEntry } from "../../shared/api";
+import { clearNotificationHistory, getAppIcon, historyExpand, listNotificationHistory, type HistoryEntry } from "../../shared/api";
 import { brandAsset } from "../../shared/brandIcons";
 import { useT } from "../../shared/i18n";
 import { Section, Row } from "../components";
@@ -19,7 +19,6 @@ export function History({ query }: { query: string }) {
 
   // 每条通知前显示来源 App 图标：联网缓存/手动设置 > 内置品牌 > 纸飞机兜底
   const [cachedIcons, setCachedIcons] = useState<Record<string, string>>({});
-  const [expandedKey, setExpandedKey] = useState<string | null>(null);
   useEffect(() => {
     const ids = [...new Set(entries.map((e) => e.app_id).filter(Boolean))] as string[];
     ids.forEach((id) => {
@@ -38,9 +37,9 @@ export function History({ query }: { query: string }) {
         <div className="history-list">
           {entries.map((entry) => (
             <article
-              className={`history-card ${expandedKey === `${entry.received_at}-${entry.origin}` ? "expanded" : ""}`}
+              className="history-card"
               key={`${entry.received_at}-${entry.origin}`}
-              onClick={() => setExpandedKey((prev) => (prev === `${entry.received_at}-${entry.origin}` ? null : `${entry.received_at}-${entry.origin}`))}
+              onClick={() => { void historyExpand(entry).catch((err) => setError(String(err))); }}
             >
               <div className="history-icon">
                 {brandAsset(entry.app_id)
@@ -54,7 +53,7 @@ export function History({ query }: { query: string }) {
                 <strong>{entry.origin}</strong>
                 <span className="history-time">{time(entry.received_at)}</span>
               </div>
-              <p className="history-body">{entry.body}{expandedKey !== `${entry.received_at}-${entry.origin}` && <span className="history-more"> 查看全文</span>}</p>
+              <p className="history-body">{entry.body}<span className="history-more"> 查看全文</span></p>
               </div>
             </article>
           ))}

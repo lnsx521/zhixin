@@ -145,12 +145,12 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
             <strong>{payload.origin}</strong>
             <small>{payload.open_app_name ?? ""}</small>
           </div>
-          <span className="toast-time">{new Date().toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { hour: "2-digit", minute: "2-digit" })}</span>
+          <span className="toast-time">{payload.time ?? new Date().toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { hour: "2-digit", minute: "2-digit" })}</span>
         </header>
         <div className="imsg-body">
           <div className="imsg-bubble">
             <p className="imsg-text">{payload.body}</p>
-            <small className="imsg-time">iMessage · {new Date().toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { hour: "2-digit", minute: "2-digit" })}</small>
+            <small className="imsg-time">{payload.time ?? new Date().toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { hour: "2-digit", minute: "2-digit" })}</small>
           </div>
         </div>
         <footer className="imsg-foot">

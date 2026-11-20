@@ -60,6 +60,8 @@ pub struct ToastPayload {
     pub uid: u32,
     /// 陌生号码的运营商描述（"中国移动 · 手机号"）；已存联系人/非来电为 None
     pub carrier: Option<String>,
+    /// 展示时间（实时弹窗为空 = 显示当前时间；历史展开为原始收信时间）
+    pub time: Option<String>,
 }
 
 /// 当前生效的候选条提议。
