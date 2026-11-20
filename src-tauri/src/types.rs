@@ -39,6 +39,10 @@ pub struct LinkStatePayload {
     pub ready: bool,
     /// ANCS 已订阅，但尚未用一条真实 iPhone 通知验证。
     pub awaiting_verification: bool,
+    /// 当前连接的手机名（主页顶栏展示）。
+    pub device_name: Option<String>,
+    /// 手机电量百分比。
+    pub battery: Option<u8>,
 }
 
 /// 一条 toast 弹窗的展示负载。

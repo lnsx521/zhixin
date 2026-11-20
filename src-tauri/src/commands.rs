@@ -158,12 +158,25 @@ pub fn get_link_state(app_state: State<'_, AppState>) -> LinkStatePayload {
             .link_verified
             .load(std::sync::atomic::Ordering::Relaxed);
 
+    let (device_name, battery) = {
+        let devices = app_state
+            .devices
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .payloads();
+        match devices.iter().find(|d| d.connected).or_else(|| devices.iter().find(|d| d.preferred)) {
+            Some(d) => (Some(d.name.clone()), d.battery_level),
+            None => (None, None),
+        }
+    };
     LinkStatePayload {
         state: crate::types::state_key(link_state).to_string(),
         label: link_state.describe().to_string(),
         detail,
         ready: verified,
         awaiting_verification: link_state.is_ready() && !verified,
+        device_name,
+        battery,
     }
 }
 

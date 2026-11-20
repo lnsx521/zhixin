@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { getBackgroundImage, getConfig, openTransferFolder, saveConfig, type Config } from "../shared/api";
 import { LangContext, resolveLang, useT } from "../shared/i18n";
 import appIcon from "../shared/app-icon.svg";
 import { Connection } from "./sections/Connection";
+import { HomeView } from "./sections/HomeView";
 import { Notifications } from "./sections/Notifications";
 import { General } from "./sections/General";
 import { History } from "./sections/History";
@@ -141,6 +142,8 @@ function Shell(props: {
 }) {
   const t = useT();
   const updater = useUpdater();
+  const lang = useContext(LangContext);
+  const [view, setView] = useState<"home" | "settings">("home");
   const [historyQuery, setHistoryQuery] = useState("");
   const { page, setPage, config, update, saveStatus, saveError, error, retry, beforeClose } = props;
 
@@ -155,6 +158,18 @@ function Shell(props: {
     { key: "about", label: t.nav.about },
   ];
 
+  if (view === "home") {
+    return (
+      <LangContext.Provider value={lang}>
+        <div className="app-shell">
+          <Titlebar beforeClose={beforeClose} />
+          <HomeView onOpenSettings={() => setView("settings")} />
+          {updater.open && <UpdateDialog updater={updater} beforeInstall={props.beforeInstall} />}
+        </div>
+      </LangContext.Provider>
+    );
+  }
+
   return (
     <div className="app-shell">
       <Titlebar beforeClose={beforeClose} />
@@ -168,6 +183,7 @@ function Shell(props: {
               <span className="brand-sub">{t.shell.tagline}</span>
             </div>
           </div>
+          <button className="btn" style={{ margin: "0 14px 10px" }} onClick={() => setView("home")}>{lang === "zh" ? "← 返回消息" : "← Back to messages"}</button>
           <nav aria-label={t.shell.navigation}>
             {nav.map((item) => (
               <button

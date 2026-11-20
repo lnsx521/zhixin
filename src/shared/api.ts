@@ -179,7 +179,8 @@ export interface LinkStatePayload {
   label: string;
   detail: string | null;
   ready: boolean;
-  awaiting_verification: boolean;
+  awaiting_verification: boolean;  device_name: string | null;
+  battery: number | null;
 }
 
 export const getLinkState = () => invoke<LinkStatePayload>("get_link_state");
