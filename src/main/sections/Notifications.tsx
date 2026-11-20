@@ -99,6 +99,7 @@ export function Notifications({ config, update }: Props) {
         <div><strong>{t.connection.testTitle}</strong><p>{t.connection.testDesc}</p>{error && <p className="bad-text" role="alert">{error}</p>}</div>
         <select className="select" value={testKind} onChange={(e) => setTestKind(e.target.value)} style={{ maxWidth: 180 }}>
           <option value="sms">短信 · 验证码</option>
+          <option value="long_sms">长短信 · 全文阅读</option>
           <option value="call">来电</option>
           <option value="wechat">微信</option>
           <option value="mail">邮件</option>
