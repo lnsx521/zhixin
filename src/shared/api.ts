@@ -230,6 +230,8 @@ export interface ToastPayload {
   uid: number;
   /** 陌生号码的运营商描述（"中国移动 · 手机号"）；已存联系人为 null */
   carrier: string | null;
+  /** 展示时间（历史展开为原始收信时间；实时弹窗为空 = 显示当前时间） */
+  time?: string | null;
 }
 
 export const getToastPayload = () => invoke<ToastPayload | null>("get_toast_payload");
