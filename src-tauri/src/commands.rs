@@ -377,6 +377,15 @@ pub fn pick_transfer_folder(window: tauri::WebviewWindow) -> Option<String> {
         .map(|path| path.to_string())
 }
 
+/// 按应用标识打开对应软件（历史消息阅读区用）。
+#[tauri::command]
+pub fn open_app_by_id(app: AppHandle, app_id: String) -> Result<(), String> {
+    let config = app.state::<AppState>().config();
+    let rule = zhixin_core::app_rules::matching_rule(&config.notifications.app_rules, Some(&app_id))
+        .ok_or("没有启用的打开规则")?;
+    crate::app_launcher::open(&rule)
+}
+
 /// 电脑蓝牙名称（Windows 默认为计算机名，iPhone 蓝牙列表里显示的就是它）。
 #[tauri::command]
 pub fn get_computer_name() -> String {

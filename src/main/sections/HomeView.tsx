@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getAppIcon, getLinkState, listNotificationHistory, type HistoryEntry } from "../../shared/api";
+import { getAppIcon, getLinkState, listNotificationHistory, openAppById, type HistoryEntry } from "../../shared/api";
 import { brandAsset } from "../../shared/brandIcons";
 
 type Item = HistoryEntry & { day: string; timeText: string };
@@ -64,22 +64,26 @@ export function HomeView({ onOpenSettings }: { onOpenSettings: () => void }) {
 
   return (
     <div className="home">
+      <div className="home-topbar">
+        <span className="home-topbar-app">知信</span>
+        <span className="home-topbar-ver">v1.1.1</span>
+      </div>
+      <div className="home-main">
       <aside className="home-side">
         <div className="home-top">
-          <div className="home-top-row">
-            <span className="home-phone">{link?.device_name ?? "未连接手机"}</span>
-            <span className="home-ver">v1.1.1</span>
+          <div className="home-phone">{link?.device_name ?? "未连接手机"}</div>
+          <div className="home-status-row">
             <span className="home-bt" style={{ color: link?.connected ? "#1a7f37" : "var(--text-secondary)" }}>
               {link?.connected ? "● 已连接" : "○ 未连接"}
             </span>
-          </div>
-          <div className="home-battery">
-            <svg viewBox="0 0 28 14" style={{ width: 26, height: 13 }}>
-              <rect x="0.5" y="0.5" width="23" height="13" rx="3.5" fill="none" stroke="var(--text-faint)" />
-              <rect x="2" y="2" width={Math.max(0, ((link?.battery ?? 0) / 100) * 20)} height="11" rx="2.5" fill={(link?.battery ?? 0) > 20 ? "#34C759" : "#E24B4A"} />
-              <rect x="24.5" y="4.5" width="2.5" height="5" rx="1" fill="var(--text-faint)" />
-            </svg>
-            <span style={{ marginLeft: 5 }}>{link?.battery ?? "–"}%</span>
+            <span className="home-battery">
+              <svg viewBox="0 0 28 14" style={{ width: 24, height: 12 }}>
+                <rect x="0.5" y="0.5" width="23" height="13" rx="3.5" fill="none" stroke="var(--text-faint)" />
+                <rect x="2" y="2" width={Math.max(0, ((link?.battery ?? 0) / 100) * 20)} height="11" rx="2.5" fill={(link?.battery ?? 0) > 20 ? "#34C759" : "#E24B4A"} />
+                <rect x="24.5" y="4.5" width="2.5" height="5" rx="1" fill="var(--text-faint)" />
+              </svg>
+              <span style={{ marginLeft: 4 }}>{link?.battery ?? "–"}%</span>
+            </span>
           </div>
         </div>
         <div className="home-search">
@@ -133,30 +137,31 @@ export function HomeView({ onOpenSettings }: { onOpenSettings: () => void }) {
                 <p className="imsg-text">{selected.body}</p>
                 <small className="imsg-time">{selected.timeText}</small>
               </div>
-              {selected.code && (
-                <div className="home-read-actions">
+              <div className="home-read-actions">
+                {selected.code && (
                   <button
                     className="toast-code"
-                    onClick={async () => { await navigator.clipboard.writeText(selected.code!); setSelected({ ...selected }); }}
+                    onClick={async (e) => { e.stopPropagation(); await navigator.clipboard.writeText(selected.code!); }}
                   >
                     点击复制 {selected.code}
                   </button>
-                  <button className="imsg-copyall" onClick={async () => { await navigator.clipboard.writeText(selected.body); }}>
-                    复制全文
+                )}
+                <button className="imsg-copyall" onClick={async (e) => { e.stopPropagation(); await navigator.clipboard.writeText(selected.body); }}>
+                  复制全文
+                </button>
+                {selected.app_id && (
+                  <button className="imsg-copyall" onClick={async (e) => { e.stopPropagation(); await openAppById(selected.app_id!).catch(() => {}); }}>
+                    打开应用
                   </button>
-                </div>
-              )}
-              {!selected.code && (
-                <div className="home-read-actions">
-                  <button className="imsg-copyall" onClick={async () => { await navigator.clipboard.writeText(selected.body); }}>复制全文</button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </>
         ) : (
           <div className="home-read-empty">选择左侧消息查看全文</div>
         )}
       </section>
+      </div>
     </div>
   );
 }

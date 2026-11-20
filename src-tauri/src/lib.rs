@@ -139,6 +139,7 @@ pub fn run() {
             commands::get_computer_name,
             popups::history_expand,
             commands::pick_transfer_folder,
+            commands::open_app_by_id,
             commands::get_toast_payload,
             commands::toast_click,
             commands::toast_open_app,

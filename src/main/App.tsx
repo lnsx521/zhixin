@@ -6,7 +6,6 @@ import { Connection } from "./sections/Connection";
 import { HomeView } from "./sections/HomeView";
 import { Notifications } from "./sections/Notifications";
 import { General } from "./sections/General";
-import { History } from "./sections/History";
 import { Proximity } from "./sections/Proximity";
 import { About } from "./sections/About";
 import { Transfer } from "./sections/Transfer";
@@ -17,13 +16,13 @@ import { Titlebar } from "./Titlebar";
 import { useUpdater } from "./useUpdater";
 import { UpdateNotice, UpdateDialog } from "./sections/SoftwareUpdate";
 
-type Page = "connection" | "notifications" | "proximity" | "transfer" | "history" | "general" | "about";
+type Page = "connection" | "notifications" | "proximity" | "transfer" | "general" | "about";
 
 const NAV_ICONS: Record<Page, IconName> = {
   connection: "phone",
   notifications: "bell",
   proximity: "lock",
-  transfer: "folder", history: "message",
+  transfer: "folder",
   general: "settings",
   about: "info",
 };
@@ -144,14 +143,12 @@ function Shell(props: {
   const updater = useUpdater();
   const lang = useContext(LangContext);
   const [view, setView] = useState<"home" | "settings">("home");
-  const [historyQuery, setHistoryQuery] = useState("");
   const { page, setPage, config, update, saveStatus, saveError, error, retry, beforeClose } = props;
 
 
   const nav: { key: Page; label: string }[] = [
     { key: "connection", label: t.nav.connection },
     { key: "transfer", label: t.nav.transfer },
-    { key: "history", label: t.nav.history },
     { key: "notifications", label: t.nav.notifications },
     { key: "proximity", label: t.nav.proximity },
     { key: "general", label: t.nav.general },
@@ -183,7 +180,10 @@ function Shell(props: {
               <span className="brand-sub">{t.shell.tagline}</span>
             </div>
           </div>
-          <button className="btn" style={{ margin: "0 14px 10px" }} onClick={() => setView("home")}>{lang === "zh" ? "← 返回消息" : "← Back to messages"}</button>
+          <button className="nav-item" onClick={() => setView("home")}>
+            <Icon name="message" />
+            {lang === "zh" ? "消息" : "Messages"}
+          </button>
           <nav aria-label={t.shell.navigation}>
             {nav.map((item) => (
               <button
@@ -211,22 +211,11 @@ function Shell(props: {
                 {saveStatus === "error" && <span className="save-toast bad-text" role="alert">{t.common.saveFailed}</span>}
                 {saveStatus === "saving" && <span className="save-toast" style={{ opacity: 0.6 }}>{t.common.saving}</span>}
               </div>
-              <p>{page === "history" ? `最多保留 ${config?.notifications.history_limit ?? 10} 条。内容仅存储在本机。` : t.shell[page]}</p>
+              <p>{t.shell[page]}</p>
             </div>
             {page === "transfer" && (
               <div className="page-actions">
                 <button className="btn" onClick={() => void openTransferFolder().catch(() => {})}>{t.general.openDir}</button>
-              </div>
-            )}
-            {page === "history" && (
-              <div className="page-actions">
-                <input
-                  className="history-search"
-                  placeholder="搜索发件人或内容"
-                  value={historyQuery}
-                  onChange={(event) => setHistoryQuery(event.target.value)}
-                  style={{ padding: "6px 12px", borderRadius: 8, border: "0.5px solid var(--border)", font: "inherit", background: "var(--surface)", color: "var(--text)", minWidth: 200 }}
-                />
               </div>
             )}
           </header>
@@ -239,7 +228,6 @@ function Shell(props: {
           {config ? (
             <>
               {page === "connection" && <Connection />}
-              {page === "history" && <History query={historyQuery} />}
               {page === "notifications" && <Notifications config={config} update={update} />}
               {page === "proximity" && <Proximity config={config} update={update} />}
               {page === "transfer" && <Transfer />}
