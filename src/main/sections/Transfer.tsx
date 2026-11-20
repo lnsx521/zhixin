@@ -110,6 +110,21 @@ export function Transfer() {
         </Row>
       </Section>
 
+      <Section narrow title={text("接收文件夹", "Receive folder")}>
+        <Row label={info?.folder ?? "…"} hint={text("手机上传的文件保存到这里；手机页面也列出此文件夹内的文件供下载。", "Files uploaded from the phone land here; the phone page also lists files in this folder for download.")}>
+          <button className="network-quiet-action" disabled={!info || busy} onClick={async () => {
+            try {
+              const picked = await pickTransferFolder();
+              if (!picked) return;
+              await setTransferFolder(picked);
+              await refresh();
+            } catch (err) { setError(String(err)); }
+          }}>
+            {text("更改文件夹", "Change folder")}
+          </button>
+        </Row>
+      </Section>
+
       {urls.length > 0 && (
         <Section narrow title={text("局域网地址（备用）", "LAN addresses (fallback)")} description={text("域名不可用时的直连地址。", "Direct addresses for when the domain is unreachable.")}>
           <div className="network-address-list">
