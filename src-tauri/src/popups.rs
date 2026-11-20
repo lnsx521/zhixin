@@ -287,7 +287,14 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
 
 /// 点小弹窗展开 → 关小窗，开一个 Mac 风格大窗展示全文。
 #[tauri::command]
-pub fn toast_expand(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {
+pub async fn toast_expand(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {
+    // ★ 必须异步：同步命令在主线程执行，而窗口创建要派发回主线程并等待——同步执行会自死锁。
+    tauri::async_runtime::spawn_blocking(move || toast_expand_impl(app, window))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn toast_expand_impl(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {
     let small_label = window.label().to_string();
     let state = app.state::<AppState>();
     info!("展开请求：{}（展开窗口开始创建）", small_label);
