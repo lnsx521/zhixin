@@ -114,6 +114,8 @@ export function Transfer() {
         </div>
       </div>
 
+      <ReceiverControls />
+
       <Section narrow title={text("接收文件夹", "Receive folder")}>
         <Row label={info?.folder ?? "…"} hint={text("手机上传的文件保存到这里；手机页面也列出此文件夹内的文件供下载。", "Files uploaded from the phone land here; the phone page also lists files in this folder for download.")}>
           {editing ? (
@@ -165,7 +167,6 @@ export function Transfer() {
         </p>
       </Disclosure>
 
-      <ReceiverControls />
 
       <Section narrow title={text("安全", "Security")} description={text("令牌是访问电脑的唯一凭证，泄露后应立即重置。", "The token is the sole credential - reset it immediately if leaked.")}>
         <Row label={text("重置令牌", "Reset token")} hint={text("重置后旧地址立即失效：手机互传页面需重新扫码打开；已配对的通知设备不受影响。", "Old link dies instantly; re-scan on the phone. Paired notification devices are unaffected.")}>
