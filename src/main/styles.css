@@ -178,6 +178,11 @@ body::before {
 
 .section-head h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.1px; }
 
+/* 接收服务标题旁的运行状态：绿=运行中，灰=已关闭 */
+.receiver-status { font-size: 12px; font-weight: 500; margin-left: 8px; }
+.receiver-status.on { color: #34C759; }
+.receiver-status.off { color: var(--text-secondary); }
+
 .section-desc { margin: 5px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
 
 .section-body { margin-top: 14px; display: flex; flex-direction: column; }

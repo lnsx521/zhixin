@@ -25,7 +25,7 @@ export function Section({
   narrow,
   children,
 }: {
-  title: string;
+  title: ReactNode;
   description?: string;
   action?: ReactNode;
   /** 内容复杂（表格/设备卡/长代码块）时占满整行，避免被双列挤压 */
