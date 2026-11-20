@@ -11,7 +11,7 @@ export function ConnectionGuide({ onClose }: { onClose: () => void }) {
   useEffect(() => { getComputerName().then(setPcName).catch(() => {}); }, []);
   const steps = [
     [t.connection.step1, t.connection.step1Ok],
-    [t.connection.step2, pcName ? t.connection.step2Desc.replace("这台电脑", `「${pcName}」`) : t.connection.step2Desc],
+    [pcName ? t.connection.step2.replace("这台电脑", `「${pcName}」`) : t.connection.step2, t.connection.step2Desc],
     [t.ui.shareTitle, t.connection.tipsBody],
     [t.connection.step3, t.connection.step3Desc],
   ];
