@@ -928,7 +928,15 @@ body::before {
 .home-topbar-ver { font-size: 10.5px; color: var(--text-faint); }
 .home-main { flex: 1; display: flex; overflow: hidden; }
 .home-side { width: 264px; background: var(--glass-fill); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border-right: 0.5px solid var(--glass-border); display: flex; flex-direction: column; }
-.home-top { padding: 10px 14px 8px; border-bottom: 0.5px solid var(--border); }
+.home-top {
+  margin: 10px 10px 8px;
+  padding: 12px 14px;
+  border: 0.5px solid var(--glass-border);
+  border-radius: 12px;
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
 .home-top-row { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
 .home-phone-row { display: flex; align-items: center; gap: 11px; }
 .home-phone-icon { width: 44px; height: 44px; border-radius: 12px; background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -946,6 +954,7 @@ body::before {
 .home-list { flex: 1; overflow-y: auto; }
 .home-day { padding: 6px 14px 3px; font-size: 11px; color: var(--text-faint); }
 .home-msg { display: flex; gap: 10px; align-items: center; padding: 9px 12px; cursor: pointer; }
+.home-msg:not(.selected):not(:last-child) { border-bottom: 0.5px solid color-mix(in srgb, var(--border) 65%, transparent); }
 .home-msg:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
 .home-msg.selected { background: var(--accent); }
 .home-msg-icon img { width: 34px; height: 34px; border-radius: 9px; display: block; }
@@ -999,8 +1008,8 @@ body::before {
 .imsg-head-text strong { font-size: 14px; color: var(--text); }
 .imsg-head-text small { font-size: 11px; color: var(--text-faint); }
 .imsg-body { padding: 16px; flex: 1; overflow-y: auto; }
-.imsg-text { margin: 0; font-size: 13.5px; line-height: 1.75; color: #1d1d1f; white-space: pre-wrap; word-break: break-word; }
-.imsg-time { display: block; margin-top: 4px; font-size: 10px; color: #86868b; text-align: right; }
+.imsg-text { margin: 0; font-size: 13.5px; line-height: 1.75; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+.imsg-time { display: block; margin-top: 4px; font-size: 10px; color: var(--text-faint); text-align: right; }
 .imsg-foot { display: flex; align-items: center; gap: 10px; padding: 12px 16px 16px; border-top: 0.5px solid var(--border); }
 .toast.imsg { width: 100%; height: 100vh; max-height: none; background: var(--surface); border-radius: 16px; display: flex; flex-direction: column; gap: 0; padding: 0; }
 .toast-expanded { max-height: 84vh; overflow-y: auto; }
@@ -1019,7 +1028,7 @@ body::before {
 .home-read-actions button:active { transform: scale(.97); }
 .home-read-actions .toast-code { background: #0a84ff; color: #fff; box-shadow: 0 1px 4px rgba(10,132,255,.35); }
 .home-read-actions .toast-code:hover { filter: brightness(1.1); }
-.home-read-actions .imsg-copyall { background: #e9e9eb; color: #1d1d1f; }
+.home-read-actions .imsg-copyall { background: var(--glass-fill); color: var(--text); border: 0.5px solid var(--glass-border); }
 .home-read-actions .imsg-copyall:hover { background: #dcdcdc; }
 .home-setbtn:hover { opacity: .8; }
 /* MARKER-TEST */
@@ -1036,8 +1045,8 @@ body::before {
 }
 :root[data-theme="dark"] .home-topbar { background: rgba(24, 26, 30, 0.80); }
 :root[data-theme="dark"] .imsg-bubble { background: rgba(48, 50, 56, 0.60); border-color: rgba(255,255,255,0.10); }
-:root[data-theme="dark"] .imsg-text { color: #f2f2f4; }
-:root[data-theme="dark"] .imsg-time { color: #85858a; }
+:root[data-theme="dark"] 
+:root[data-theme="dark"] .imsg-time { color: var(--text-faint); }
 :root[data-theme="dark"] .home-msg-origin { color: #f2f2f4; }
 :root[data-theme="dark"] .home-msg-snippet { color: #a6a6ab; }
 :root[data-theme="dark"] .home-msg-time { color: #85858a; }
@@ -1046,4 +1055,4 @@ body::before {
 :root[data-theme="dark"] .home-read-meta { color: #85858a; }
 :root[data-theme="dark"] .home-search-input { background: rgba(255,255,255,0.08); color: #f2f2f4; }
 :root[data-theme="dark"] .home-day { color: #85858a; }
-:root[data-theme="dark"] .imsg-copyall { background: rgba(255,255,255,0.10); color: #f2f2f4; }
+:root[data-theme="dark"] .imsg-copyall { background: rgba(255,255,255,0.10); color: var(--text); }
