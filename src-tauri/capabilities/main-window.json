@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-window",
-  "description": "仅设置窗口允许自绘标题栏控制窗口",
-  "windows": ["main"],
+  "description": "主窗口与设置窗口的自绘标题栏控制权限",
+  "windows": ["main", "settings"],
   "permissions": [
     "clipboard-manager:allow-write-text",
     "core:window:allow-minimize",

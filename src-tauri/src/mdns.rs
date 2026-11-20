@@ -204,8 +204,5 @@ fn my_addresses() -> Vec<std::net::IpAddr> {
 
 #[tauri::command]
 pub fn get_mdns_hostname(window: tauri::WebviewWindow) -> Result<Option<String>, String> {
-    if window.label() != "main" {
-        return Err("Settings window required".into());
-    }
     Ok(Some(hostname()))
 }

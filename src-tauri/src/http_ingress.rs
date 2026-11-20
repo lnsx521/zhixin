@@ -89,13 +89,6 @@ fn save(app: &AppHandle, settings: &Settings) -> Result<(), String> {
     .map_err(|_| "Save failed")?;
     std::fs::rename(temp, target).map_err(|_| "Save failed".into())
 }
-fn main_only(w: &tauri::WebviewWindow) -> Result<(), String> {
-    if w.label() == "main" {
-        Ok(())
-    } else {
-        Err("Settings window required".into())
-    }
-}
 
 #[derive(Serialize)]
 pub struct LocalAddress {
@@ -105,7 +98,6 @@ pub struct LocalAddress {
 
 #[tauri::command]
 pub fn list_http_addresses(window: tauri::WebviewWindow) -> Result<Vec<LocalAddress>, String> {
-    main_only(&window)?;
     let mut addresses: Vec<_> = if_addrs::get_if_addrs()
         .map_err(|e| format!("Cannot enumerate network interfaces: {e}"))?
         .into_iter()
@@ -131,7 +123,6 @@ pub fn list_http_addresses(window: tauri::WebviewWindow) -> Result<Vec<LocalAddr
 
 #[tauri::command]
 pub fn open_firewall_rules(window: tauri::WebviewWindow) -> Result<(), String> {
-    main_only(&window)?;
     std::process::Command::new("mmc.exe")
         .arg("wf.msc")
         .spawn()
@@ -198,7 +189,6 @@ impl HttpIngress {
 }
 #[tauri::command]
 pub fn get_http_status(window: tauri::WebviewWindow, app: AppHandle) -> Result<Status, String> {
-    main_only(&window)?;
     let state = app.state::<HttpIngress>();
     let inner = state.inner.lock().unwrap();
     let mut settings = inner.settings.clone();
@@ -493,7 +483,6 @@ async fn launch(app: AppHandle) -> Result<(), String> {
 /// 已配对的通知设备使用设备级令牌，不受影响；互传页面地址需重新扫码。
 #[tauri::command]
 pub async fn reset_token(window: tauri::WebviewWindow, app: AppHandle) -> Result<String, String> {
-    main_only(&window)?;
     let state = app.state::<HttpIngress>();
     let _guard = state.operation.lock().await;
     let new_token = format!(
@@ -534,7 +523,6 @@ pub async fn configure_http(
     bind: String,
     port: u16,
 ) -> Result<(), String> {
-    main_only(&window)?;
     if !matches!(bind.as_str(), "127.0.0.1" | "0.0.0.0") || port == 0 {
         return Err("Invalid bind or port".into());
     }
@@ -588,7 +576,6 @@ pub fn stop(app: &AppHandle) {
 
 #[tauri::command]
 pub fn reset_http_token(window: tauri::WebviewWindow, app: AppHandle) -> Result<(), String> {
-    main_only(&window)?;
     let state = app.state::<HttpIngress>();
     let mut i = state.inner.lock().unwrap();
     let mut next = i.settings.clone();
@@ -610,7 +597,6 @@ pub fn set_http_copy(
     app: AppHandle,
     allow_copy: bool,
 ) -> Result<(), String> {
-    main_only(&window)?;
     let state = app.state::<HttpIngress>();
     let mut i = state.inner.lock().unwrap();
     let mut next = i.settings.clone();

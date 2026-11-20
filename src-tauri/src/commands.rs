@@ -125,9 +125,6 @@ fn open_in_explorer(path: &std::path::Path) -> Result<(), String> {
 /// 仅允许设置窗口打开固定项目链接，不接受前端传入任意 URL 或命令。
 #[tauri::command]
 pub fn open_project_link(window: tauri::WebviewWindow, target: String) -> Result<(), String> {
-    if window.label() != "main" {
-        return Err("Project links are only available in settings".into());
-    }
     let url = match target.as_str() {
         "repository" => "https://github.com/lnsx521/zhixin",
         "maintainer" => "https://github.com/lnsx521",
@@ -331,9 +328,6 @@ pub fn validate_app_rule(
     window: tauri::WebviewWindow,
     rule: zhixin_core::app_rules::AppRule,
 ) -> Result<(), String> {
-    if window.label() != "main" {
-        return Err("仅设置窗口可以配置规则".into());
-    }
     rule.validate()
 }
 
@@ -342,9 +336,6 @@ pub fn test_app_rule(
     window: tauri::WebviewWindow,
     rule: zhixin_core::app_rules::AppRule,
 ) -> Result<(), String> {
-    if window.label() != "main" {
-        return Err("仅设置窗口可以测试规则".into());
-    }
     crate::app_launcher::open(&rule)
 }
 
