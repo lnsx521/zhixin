@@ -168,7 +168,7 @@ export function Transfer() {
       </Disclosure>
 
 
-      <Section narrow title={text("安全提醒", "Security notice")} description={<>{text("令牌是访问电脑的唯一凭证，泄露后请到", "The token is the sole credential - reset it under ")}<span className="path-ref">{text("「接收服务 → 高级设置」", "Receiver service - Advanced settings")}</span>{text("中重置。", " if leaked.")}</>} />
+      <Section narrow title={text("安全提醒", "Security notice")} description={<>{text("令牌是访问电脑的唯一凭证，泄露后请到", "The token is the sole credential - if leaked, reset it under ")}<span className="path-ref">{text("「接收服务 → 高级设置」", "Receiver service - Advanced settings")}</span>{text("中重置。", ".")}</>} />
 
       {error && <p className="bad-text" role="alert">{error}</p>}
     </>
