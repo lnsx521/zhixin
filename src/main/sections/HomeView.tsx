@@ -161,7 +161,7 @@ export function HomeView() {
                   </button>
                 )}
               </div>
-            </div>
+            </section>
           </>
         ) : (
           <div className="home-read-empty">选择左侧消息查看全文</div>
