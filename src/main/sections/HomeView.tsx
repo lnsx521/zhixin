@@ -76,7 +76,7 @@ export function HomeView({ onOpenSettings }: { onOpenSettings: () => void }) {
             <span className="home-phone-icon"><Icon name="phone" /></span>
             <div className="home-phone-col">
               <div className="home-phone-line">
-                <span className="home-phone">{link?.device_name ?? "未连接手机"}</span>
+                <span className="home-phone" title={link?.device_name ?? ""}>{link?.device_name ?? "未连接手机"}</span>
                 <span className="home-battery">
                   <svg viewBox="0 0 28 14" style={{ width: 24, height: 12 }}>
                     <rect x="0.5" y="0.5" width="23" height="13" rx="3.5" fill="none" stroke="var(--text-faint)" />
