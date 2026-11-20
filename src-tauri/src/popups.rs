@@ -442,7 +442,7 @@ pub fn resize_and_show(app: &AppHandle, label: &str, height_dip: f64) {
     // 高度始终按前端量出的内容自适应（用户不可自调）。
     // 大窗（长文阅读）不套小窗上限，按工作区 88% 封顶
     let max_h = if label.starts_with("expanded-") {
-        let win_scale = window.scale_factor().unwrap_or(1.0);
+        let win_scale = app.primary_monitor().ok().flatten().map(|m| m.scale_factor()).unwrap_or(1.0);
         (app.primary_monitor().ok().flatten().map(|m| m.work_area().size.height as f64).unwrap_or(1000.0) * 0.88) / win_scale
     } else {
         MAX_HEIGHT
