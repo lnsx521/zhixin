@@ -428,18 +428,8 @@ pub fn resize_and_show(app: &AppHandle, label: &str, height_dip: f64) {
             unsafe { let _ = MessageBeep(MB_ICONASTERISK); }
         }
     }
-    // 设置里指定了固定高度就用它；0 = 按内容自动。
-    let configured = app
-        .state::<crate::state::AppState>()
-        .config()
-        .notifications
-        .popup
-        .height;
-    let height = if configured > 0.0 {
-        configured.clamp(MIN_HEIGHT, MAX_HEIGHT)
-    } else {
-        height_dip.clamp(MIN_HEIGHT, MAX_HEIGHT)
-    };
+    // 高度始终按前端量出的内容自适应（用户不可自调）。
+    let height = height_dip.clamp(MIN_HEIGHT, MAX_HEIGHT);
     let state = app.state::<AppState>();
 
     state
