@@ -74,18 +74,22 @@ export function HomeView({ onOpenSettings }: { onOpenSettings: () => void }) {
         <div className="home-top">
           <div className="home-phone-row">
             <span className="home-phone-icon"><Icon name="phone" /></span>
-            <span className="home-phone">{link?.device_name ?? "未连接手机"}</span>
-            <span className="home-bt" style={{ color: link?.connected ? "#1a7f37" : "var(--text-secondary)" }}>
-              {link?.connected ? "● 已连接" : "○ 未连接"}
-            </span>
-            <span className="home-battery">
-              <svg viewBox="0 0 28 14" style={{ width: 24, height: 12 }}>
-                <rect x="0.5" y="0.5" width="23" height="13" rx="3.5" fill="none" stroke="var(--text-faint)" />
-                <rect x="2" y="2" width={Math.max(0, ((link?.battery ?? 0) / 100) * 20)} height="11" rx="2.5" fill={(link?.battery ?? 0) > 20 ? "#34C759" : "#E24B4A"} />
-                <rect x="24.5" y="4.5" width="2.5" height="5" rx="1" fill="var(--text-faint)" />
-              </svg>
-              <span style={{ marginLeft: 4 }}>{link?.battery ?? "–"}%</span>
-            </span>
+            <div className="home-phone-col">
+              <div className="home-phone-line">
+                <span className="home-phone">{link?.device_name ?? "未连接手机"}</span>
+                <span className="home-battery">
+                  <svg viewBox="0 0 28 14" style={{ width: 24, height: 12 }}>
+                    <rect x="0.5" y="0.5" width="23" height="13" rx="3.5" fill="none" stroke="var(--text-faint)" />
+                    <rect x="2" y="2" width={Math.max(0, ((link?.battery ?? 0) / 100) * 20)} height="11" rx="2.5" fill={(link?.battery ?? 0) > 20 ? "#34C759" : "#E24B4A"} />
+                    <rect x="24.5" y="4.5" width="2.5" height="5" rx="1" fill="var(--text-faint)" />
+                  </svg>
+                  <span style={{ marginLeft: 4 }}>{link?.battery ?? "–"}%</span>
+                </span>
+              </div>
+              <span className="home-bt" style={{ color: link?.connected ? "#1a7f37" : "var(--text-secondary)" }}>
+                {link?.connected ? "● 已连接" : "○ 未连接"}
+              </span>
+            </div>
           </div>
         </div>
         <div className="home-search">
