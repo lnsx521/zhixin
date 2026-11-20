@@ -10,7 +10,7 @@ import { Proximity } from "./sections/Proximity";
 import { About } from "./sections/About";
 import { Transfer } from "./sections/Transfer";
 import { Icon, type IconName } from "../shared/Icon";
-import { applyTheme } from "../shared/theme";
+import { applyTheme, watchSystemTheme } from "../shared/theme";
 import { AutoSave, type SaveStatus } from "../shared/autosave";
 import { Titlebar } from "./Titlebar";
 import { useUpdater } from "./useUpdater";
@@ -63,6 +63,9 @@ export function App() {
   useEffect(() => {
     void onThemeChanged((theme) => applyTheme(theme)).catch(() => {});
   }, []);
+
+  // 跟随系统时，OS 深浅切换实时重解析
+  useEffect(() => watchSystemTheme(), []);
 
   useEffect(() => {
     const bg = config?.general.background;
