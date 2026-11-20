@@ -138,7 +138,7 @@ export function HomeView() {
               <span className="home-read-title">{selected.origin}</span>
               <span className="home-read-meta">{selected.timeText} · {selected.app_id === "com.apple.mobilephone" ? "来电" : "消息"}</span>
             </div>
-            <div className="home-read-body">
+            <section className="section" style={{ margin: "14px 16px 16px", padding: "18px 22px", flex: 1, overflowY: "auto" }}>
               <div className="imsg-bubble">
                 <p className="imsg-text">{selected.body}</p>
                 <small className="imsg-time">{selected.timeText}</small>

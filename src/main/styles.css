@@ -946,7 +946,7 @@ body::before {
 .home-ver { font-size: 10.5px; color: var(--text-faint); }
 .home-bt { font-size: 11px; }
 .home-battery { font-size: 11.5px; color: var(--text-secondary); margin-top: 5px; display: flex; align-items: center; }
-.home-search { padding: 10px 14px 6px; }
+.home-search { padding: 10px 14px 6px; border-bottom: 0.5px solid color-mix(in srgb, var(--border) 65%, transparent); }
 .home-search-input { width: 100%; background: var(--bg); border: 0.5px solid var(--border); border-radius: 7px; padding: 5px 10px; font-size: 12px; color: var(--text); }
 .home-list { flex: 1; overflow-y: auto; }
 .home-day { padding: 6px 14px 3px; font-size: 11px; color: var(--text-faint); }
