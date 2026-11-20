@@ -346,6 +346,12 @@ pub fn toast_open_app(app: AppHandle, window: tauri::WebviewWindow) -> Result<()
     crate::app_launcher::open(rule)
 }
 
+/// 电脑蓝牙名称（Windows 默认为计算机名，iPhone 蓝牙列表里显示的就是它）。
+#[tauri::command]
+pub fn get_computer_name() -> String {
+    std::env::var("COMPUTERNAME").unwrap_or_else(|_| "这台电脑".into())
+}
+
 /// toast 前端加载完成后主动来取自己的负载。
 #[tauri::command]
 pub fn get_toast_payload(

@@ -187,6 +187,7 @@ export const onLinkState = (handler: (payload: LinkStatePayload) => void) =>
   listen<LinkStatePayload>("link-state", (event) => handler(event.payload));
 
 export const sendTestNotification = (kind: string) => invoke<void>("send_test_notification", { kind });
+export const getComputerName = () => invoke<string>("get_computer_name");
 
 export interface ManagedDevice {
   id: string;
