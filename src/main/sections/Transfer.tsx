@@ -125,21 +125,6 @@ export function Transfer() {
         </Row>
       </Section>
 
-      {urls.length > 0 && (
-        <Section narrow title={text("局域网地址（备用）", "LAN addresses (fallback)")} description={text("域名不可用时的直连地址。", "Direct addresses for when the domain is unreachable.")}>
-          <div className="network-address-list">
-            {urls.map((u) => (
-              <Row key={u.label} label={u.label} hint={u.name}>
-                <button className="network-quiet-action" onClick={() => void copy(u.url)}>{copied ? text("已复制", "Copied") : text("复制", "Copy")}</button>
-              </Row>
-            ))}
-          </div>
-        </Section>
-      )}
-      {info?.enabled && urls.length === 0 && (
-        <p className="hint-text">{text("未找到可用网卡地址。", "No usable network address found.")}</p>
-      )}
-
       <Disclosure title={text("iOS 快捷指令设置（把手机文件分享到电脑）", "iOS Shortcuts setup (share phone files to PC)")} hint={text("教程已从手机页移到这里", "Moved from the phone page")}>
         <p style={{ fontSize: 13.5, lineHeight: 1.75, margin: "0 0 10px", color: "var(--text-secondary)" }}>
           <p style={{ margin: "0 0 8px", fontWeight: 600, color: "var(--text)" }}>{text("需要两个快捷指令（各管一类内容）：", "Two shortcuts are needed:")}</p>
