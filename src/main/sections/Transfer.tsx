@@ -164,6 +164,7 @@ export function Transfer() {
           <p style={{ margin: "0 0 4px", fontWeight: 600 }}>{text("参数对照表：", "Parameters:")}</p>
           <div className="network-table-wrap"><table className="network-table"><thead><tr><th>{nt.field}</th><th>{nt.requirement}</th><th>{nt.meaning}</th></tr></thead><tbody>{[["token", nt.required, text("统一接入令牌，缺失将被拒绝", "Shared token, required")], ["body / content", nt.required, nt.bodyField], ["device_name", nt.optional, text("来源标识，弹窗标题显示", "Shown on the popup")], ["sender / from", nt.optional, nt.senderField], ["title", nt.optional, nt.titleField]].map(([f, r, d]) => <tr key={f as string}><th>{f}</th><td>{r}</td><td>{d}</td></tr>)}</tbody></table></div>
           <p className="hint-text">{text("提示：全局每分钟限流 120 条；相同内容 15 秒内会被去重；测试时若未弹窗，先到「消息通知」页检查过滤规则。", "Rate limit 120/min; duplicates within 15s are dropped; if no popup, check filter rules on the notifications page.")}</p>
+          <p className="hint-text">{text("说明：本软件暂不支持安卓。如需安卓推送（含蓝牙通知），可基于本软件的架构与代码自行扩展——本项目为开源软件。", "Note: Android is not officially supported. Since this project is open source, you are welcome to extend it for Android push, including Bluetooth notifications.")}</p>
         </Disclosure>
       </Disclosure>
 

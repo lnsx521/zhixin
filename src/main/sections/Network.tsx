@@ -43,7 +43,7 @@ export function ReceiverControls() {
           <button className="network-quiet-action" disabled={!status?.token||host.includes("<")} onClick={()=>void copy(url,"sender")}>{copied==="sender"?t.copied:text("仅复制接口地址","Copy API URL")}</button>
           <button className="network-quiet-action" disabled={busy||!status} onClick={()=>setDialog("reset")} style={{ color: "#dc2626", fontWeight: 600 }}>{t.reset}</button>
         </div>
-          <p className="hint-text" style={{ margin: "10px 0 0" }}>本软件暂不支持安卓。如需安卓推送效果（如蓝牙通知），欢迎基于本软件的架构与代码自行实现——本项目开源，随意改造。</p>
+          <p className="hint-text" style={{ margin: "10px 0 0" }}>本软件并非专为安卓开发，熟悉安卓的用户可用此协议自行推送。</p>
         <div style={{ margin: "10px 0 0", padding: "12px", border: "1px solid var(--border)", borderRadius: 10, width: "100%", alignSelf: "stretch" }}><div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>局域网地址（备用）</div><p className="hint-text" style={{ margin: "0 0 6px" }}>域名不可用时的直连地址。</p>
           <div className="network-address-list">
             {addresses.map((a) => (
