@@ -127,15 +127,30 @@ export function Transfer() {
         </Row>
       </Section>
 
-      <Disclosure title={text("手机连接指南", "Phone connection guide")} hint={text("电脑分享给手机 + 手机发送到电脑", "PC to phone + phone to PC")}>
+      <Disclosure title={text("连接指南", "Connection guide")} hint={text("电脑分享给手机 + 手机发送到电脑", "PC to phone + phone to PC")}>
         <Disclosure title={text("① 电脑分享给手机（扫码访问电脑页面）", "PC to phone (scan QR)")}>
           <p className="hint-text">{text("手机扫上方二维码（或浏览器输入局域网地址）打开电脑互传页面，即可浏览和下载电脑收到的文件。", "Scan the QR above (or enter the LAN address) on the phone to open the transfer page and browse received files.")}</p>
         </Disclosure>
           <Disclosure title={nt.ios + text("（手机发送到电脑 · 文件互传）", " (phone to PC, files)")}>
           <p style={{ fontSize: 13.5, lineHeight: 1.75, margin: "0 0 10px", color: "var(--text-secondary)" }}>
             <p style={{ margin: "0 0 8px", fontWeight: 600, color: "var(--text)" }}>{text("需要两个快捷指令（各管一类内容）：", "Two shortcuts are needed:")}</p>
-            <p style={{ margin: "0 0 6px" }}><b>{text("快捷指令一「发送到电脑」（管照片/文件/PDF）：", "Shortcut 1 - files:")}</b>{text("在快捷指令 App 新建：① 添加「从共享表单接收」，类型勾选「图像」「文件」「PDF 文本」；② 添加「获取 URL 内容」：方法 POST，URL 填上方局域网地址，请求体选「表单」，添加新字段时类型选「文件」，Key 手动输入 file（小写），值选「快捷指令输入」；③ 命名保存。", "1) Receive: Images, Files, PDF; 2) Get Contents of URL: POST to LAN address above, Form body, add a File-type field with key file and value Shortcut Input; 3) Save.")}</p>
-            <p style={{ margin: "0 0 6px" }}><b>{text("快捷指令二「发送链接到电脑」（管网页/链接/文本）：", "Shortcut 2 - links:")}</b>{text("复制快捷指令一，改三处：① 接收类型取消图像/文件，只勾「Safari 浏览器」「网页 URL」「文章」「链接」；② 表单字段删除 file 那行，重新添加新字段时类型选「文本」，Key 手动输入 text，值选「快捷指令输入」；③ 改名「发送链接到电脑」保存。", "Duplicate shortcut 1: uncheck Images/Files, check Safari web page / URLs / Articles / Links; replace the file field with a Text-type field, key text, value Shortcut Input; rename it.")}</p>
+            <div style={{ margin: "0 0 6px" }}>
+            <b>{text("快捷指令一「发送到电脑」（管照片/文件/PDF）：", "Shortcut 1 - files:")}</b>
+            <ol style={{ margin: "6px 0 0", paddingLeft: 22, fontSize: 13, lineHeight: 1.9, color: "var(--text-secondary)" }}>
+              <li>{text("快捷指令 App 新建，添加「从共享表单接收」，类型勾选「图像」「文件」「PDF 文本」；", "Create a new shortcut, add Receive from Share Sheet with Images / Files / PDF enabled;")}</li>
+              <li>{text("添加「获取 URL 内容」：方法 POST，URL 填上方局域网地址，请求体选「表单」，新字段类型选「文件」，Key 输入 file（小写），值选「快捷指令输入」；", "Add Get Contents of URL: POST to the LAN address above, Form body, File-type field with key file (lowercase), value Shortcut Input;")}</li>
+              <li>{text("命名「发送到电脑」保存。", "Name it and save.")}</li>
+            </ol>
+          </div>
+            <div style={{ margin: "0 0 6px" }}>
+            <b>{text("快捷指令二「发送链接到电脑」（管网页/链接/文本）：", "Shortcut 2 - links:")}</b>
+            <ol style={{ margin: "6px 0 0", paddingLeft: 22, fontSize: 13, lineHeight: 1.9, color: "var(--text-secondary)" }}>
+              <li>{text("复制快捷指令一；", "Duplicate shortcut 1;")}</li>
+              <li>{text("接收类型取消「图像」「文件」，只勾「Safari 浏览器」「网页 URL」「文章」「链接」；", "Uncheck Images / Files, check Safari Web Page / URLs / Articles / Links;")}</li>
+              <li>{text("表单字段删除 file 那行，重新添加新字段：类型「文本」，Key 输入 text（小写），值选「快捷指令输入」；", "Delete the file field, add a Text-type field with key text (lowercase), value Shortcut Input;")}</li>
+              <li>{text("改名「发送链接到电脑」保存。", "Rename and save.")}</li>
+            </ol>
+          </div>
             <p style={{ margin: 0 }}>{text("之后在相册/文件里分享用快捷指令一，在 Safari 分享网页时用快捷指令二。电脑会自动抓网页标题生成快捷方式文件。", "Share files with #1; share web pages with #2. The PC fetches the page title and creates a .url shortcut file.")}</p>
             <div style={{ margin: "12px 0 0", padding: "10px 12px", borderLeft: "3px solid #2f6feb", background: "#eef4fe", borderRadius: "0 8px 8px 0" }}>
               <b style={{ fontSize: 12.5, color: "#1f2733" }}>提示</b>
@@ -144,8 +159,15 @@ export function Transfer() {
           </p>
         </Disclosure>
         <Disclosure title={nt.android + text("（第三方推送 · 进阶）", " (third-party push, advanced)")}>
-          <p className="hint-text">{nt.genericHint}</p>
-          <p className="hint-text">{text("本软件并非专为安卓开发，熟悉安卓的用户可用此协议自行推送。", "Not built for Android, but Android users may push via this protocol.")}</p>
+          <p style={{ margin: "0 0 8px" }}>{text("说明：本软件的蓝牙通道基于苹果私有协议（ANCS），仅 iPhone 可自动接收通知；安卓系统不支持该协议，蓝牙无法推送。", "The Bluetooth channel uses Apple's proprietary ANCS protocol - iPhone only. Android cannot push over Bluetooth.")}</p>
+          <p style={{ margin: "0 0 8px" }}>{text("安卓用户的替代方案：在安卓手机上安装任意支持自定义 HTTP 请求的推送工具（如 HTTP Shortcuts、MacroDroid），按以下要点配置即可把消息推送到电脑弹窗：", "Android alternative: install any HTTP-capable automation tool (HTTP Shortcuts, MacroDroid) and configure as follows:")}</p>
+          <ol style={{ margin: "0 0 8px", paddingLeft: 22, fontSize: 13, lineHeight: 1.8, color: "var(--text-secondary)" }}>
+            <li>{text("手机与电脑连同一个局域网；", "Phone and PC on the same LAN;")}</li>
+            <li>{text("请求地址填上方「接收链接」，方法选 GET 或 POST；", "Use the receiver link above, GET or POST;")}</li>
+            <li>{text("携带接入令牌（token 参数或 Authorization 头）；", "Include the token (query param or Authorization header);")}</li>
+            <li>{text("正文填入 body 参数（URL 编码）。", "Put the message text in the body parameter (URL-encoded).")}</li>
+          </ol>
+          <p className="hint-text">{text("本软件并非专为安卓开发，以上为通用协议的自助用法，效果与 iPhone 蓝牙推送相同（仅弹窗提示）。", "Not built for Android, but the generic protocol works the same - popup notifications only.")}</p>
         </Disclosure>
       </Disclosure>
 

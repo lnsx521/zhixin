@@ -467,7 +467,9 @@ body::before {
 .wizard-note { background: var(--bg); border-radius: 8px; padding: 12px; }
 
 .disclosure {
-  border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+  background: var(--glass-fill); backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-soft); margin: 16px 0; padding: 0 22px;
 }
 .disclosure summary { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 18px 0; font-size: 14px; font-weight: 600; list-style: none; }
