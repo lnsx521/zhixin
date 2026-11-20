@@ -162,7 +162,7 @@ export function Transfer() {
             <li>{text("保存并测试：电脑右下角应立即弹出对应通知。", "Save and test - the PC should show the popup immediately.")}</li>
           </ol>
           <p style={{ margin: "0 0 4px", fontWeight: 600 }}>{text("参数对照表：", "Parameters:")}</p>
-          <div className="network-table-wrap"><table className="network-table"><thead><tr><th>{nt.field}</th><th>{nt.requirement}</th><th>{nt.meaning}</th></tr></thead><tbody>{[["token", nt.required, text("统一接入令牌，缺失将被拒绝", "Shared token, required")], ["body / content", nt.required, t.bodyField], ["device_name", nt.optional, text("来源标识，弹窗标题显示", "Shown on the popup")], ["sender / from", nt.optional, t.senderField], ["title", nt.optional, t.titleField]].map(([f, r, d]) => <tr key={f as string}><th>{f}</th><td>{r}</td><td>{d}</td></tr>)}</tbody></table></div>
+          <div className="network-table-wrap"><table className="network-table"><thead><tr><th>{nt.field}</th><th>{nt.requirement}</th><th>{nt.meaning}</th></tr></thead><tbody>{[["token", nt.required, text("统一接入令牌，缺失将被拒绝", "Shared token, required")], ["body / content", nt.required, nt.bodyField], ["device_name", nt.optional, text("来源标识，弹窗标题显示", "Shown on the popup")], ["sender / from", nt.optional, nt.senderField], ["title", nt.optional, nt.titleField]].map(([f, r, d]) => <tr key={f as string}><th>{f}</th><td>{r}</td><td>{d}</td></tr>)}</tbody></table></div>
           <p className="hint-text">{text("提示：全局每分钟限流 120 条；相同内容 15 秒内会被去重；测试时若未弹窗，先到「消息通知」页检查过滤规则。", "Rate limit 120/min; duplicates within 15s are dropped; if no popup, check filter rules on the notifications page.")}</p>
         </Disclosure>
       </Disclosure>
