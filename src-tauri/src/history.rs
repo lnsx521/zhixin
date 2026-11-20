@@ -71,7 +71,6 @@ pub fn record(app: &AppHandle, notification: &PhoneNotification) {
         .as_millis() as u64)
         .saturating_sub((days as u64) * 86_400_000);
     entries.retain(|entry| entry.received_at >= cutoff_ms);
-    }
     let _ = save(app, &entries);
 }
 
