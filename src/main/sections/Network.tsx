@@ -50,7 +50,7 @@ export function ReceiverControls() {
           <div className="network-address-list">
             {addresses.map((a) => (
               <Row key={`${a.name}:${a.address}`} label={a.address} hint={a.name}>
-                <button className="network-quiet-action" onClick={()=>void copy(`http://${a.address}:24836`)}>{copied==="lan"?"已复制":"复制"}</button>
+                <button className="network-quiet-action" onClick={()=>void copy(`http://${a.address}:24836`,"lan")}>{copied==="lan"?text("已复制","Copied"):text("复制","Copy")}</button>
               </Row>
             ))}
             {addresses.length===0 && <p className="hint-text">未找到可用网卡地址。</p>}
