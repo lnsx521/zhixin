@@ -573,6 +573,7 @@ const en: Dict = {
   },
   toast: {
     copyCode: (code: string) => `Click to copy ${code}`,
+    copyAll: "Copy all",
     copied: "✓ Copied",
     dismiss: "Dismiss",
   },
