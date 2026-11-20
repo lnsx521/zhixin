@@ -56,7 +56,7 @@ export function Row({
 }: {
   label: string;
   hint?: string;
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   const id = useId();
   return (

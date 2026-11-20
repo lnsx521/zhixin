@@ -18,7 +18,7 @@ export function Transfer() {
   const [ip, setIp] = useState("");
   const [domain, setDomain] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy] = useState(false);
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(copyTimer.current), []);
