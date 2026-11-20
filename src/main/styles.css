@@ -1023,3 +1023,27 @@ body::before {
 .home-read-actions .imsg-copyall:hover { background: #dcdcdc; }
 .home-setbtn:hover { opacity: .8; }
 /* MARKER-TEST */
+/* ── 主页深色模式：显式颜色（不依赖变量解析）── */
+:root[data-theme="dark"] .home-side {
+  background: rgba(40, 42, 48, 0.55);
+  backdrop-filter: blur(40px) saturate(190%);
+  -webkit-backdrop-filter: blur(40px) saturate(190%);
+}
+:root[data-theme="dark"] .home-read {
+  background: rgba(30, 32, 38, 0.62);
+  backdrop-filter: blur(40px) saturate(190%);
+  -webkit-backdrop-filter: blur(40px) saturate(190%);
+}
+:root[data-theme="dark"] .home-topbar { background: rgba(24, 26, 30, 0.80); }
+:root[data-theme="dark"] .imsg-bubble { background: rgba(48, 50, 56, 0.60); border-color: rgba(255,255,255,0.10); }
+:root[data-theme="dark"] .imsg-text { color: #f2f2f4; }
+:root[data-theme="dark"] .imsg-time { color: #85858a; }
+:root[data-theme="dark"] .home-msg-origin { color: #f2f2f4; }
+:root[data-theme="dark"] .home-msg-snippet { color: #a6a6ab; }
+:root[data-theme="dark"] .home-msg-time { color: #85858a; }
+:root[data-theme="dark"] .home-phone { color: #f2f2f4; }
+:root[data-theme="dark"] .home-read-title { color: #f2f2f4; }
+:root[data-theme="dark"] .home-read-meta { color: #85858a; }
+:root[data-theme="dark"] .home-search-input { background: rgba(255,255,255,0.08); color: #f2f2f4; }
+:root[data-theme="dark"] .home-day { color: #85858a; }
+:root[data-theme="dark"] .imsg-copyall { background: rgba(255,255,255,0.10); color: #f2f2f4; }
