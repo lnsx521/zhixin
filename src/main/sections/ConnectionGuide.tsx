@@ -9,9 +9,14 @@ export function ConnectionGuide({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [pcName, setPcName] = useState<string>("");
   useEffect(() => { getComputerName().then(setPcName).catch(() => {}); }, []);
-  const steps = [
+  const steps: [ReactNode, ReactNode][] = [
     [t.connection.step1, t.connection.step1Ok],
-    [pcName ? t.connection.step2.replace("这台电脑", `「${pcName}」`) : t.connection.step2, t.connection.step2Desc],
+    [
+      pcName
+        ? (<>{t.connection.step2.replace("这台电脑", "")}「<span style={{ color: "#2f6feb" }}>{pcName}</span>」并配对</>)
+        : t.connection.step2,
+      t.connection.step2Desc,
+    ],
     [t.ui.shareTitle, t.connection.tipsBody],
     [t.connection.step3, t.connection.step3Desc],
   ];
