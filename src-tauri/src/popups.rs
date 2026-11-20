@@ -321,9 +321,12 @@ fn toast_expand_impl(app: AppHandle, window: tauri::WebviewWindow) -> Result<(),
         .insert(label.clone(), payload);
 
     let width = 560.0;
-    let scale0 = app.primary_monitor().ok().flatten().map(|m| m.scale_factor()).unwrap_or(1.0);
-    let work0 = app.primary_monitor().ok().flatten().map(|m| m.work_area()).unwrap();
-    let height = ((work0.size.height as f64) * 0.76 / scale0).clamp(420.0, 900.0);
+    let mon0 = app.primary_monitor().ok().flatten();
+    let scale0 = mon0.as_ref().map(|m| m.scale_factor()).unwrap_or(1.0);
+    let height = match mon0.as_ref() {
+        Some(m) => ((m.work_area().size.height as f64) * 0.76 / scale0).clamp(420.0, 900.0),
+        None => 700.0,
+    };
     let builder = WebviewWindowBuilder::new(
         &app,
         &label,
