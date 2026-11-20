@@ -160,7 +160,7 @@ function Shell(props: {
       <LangContext.Provider value={lang}>
         <div className="app-shell">
           <Titlebar beforeClose={beforeClose} closeOnly />
-          <HomeView onOpenSettings={() => setView("settings")} />
+          <HomeView />
           {updater.open && <UpdateDialog updater={updater} beforeInstall={props.beforeInstall} />}
         </div>
       </LangContext.Provider>
