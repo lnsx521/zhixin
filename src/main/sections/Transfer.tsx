@@ -48,16 +48,6 @@ export function Transfer() {
     } catch { setError(text("复制失败", "Copy failed")); }
   };
 
-  const applyFolder = async () => {
-    if (busy || !draft.trim()) return;
-    setBusy(true); setError(null);
-    try {
-      await setTransferFolder(draft);
-      setEditing(false);
-      await refresh();
-    } catch (e) { setError(String(e)); }
-    finally { setBusy(false); }
-  };
 
   const urls = info?.enabled && info.token
     ? addresses
