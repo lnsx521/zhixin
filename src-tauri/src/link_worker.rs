@@ -154,6 +154,8 @@ fn on_link_state(app: &AppHandle, state: LinkState, detail: Option<String>) {
         detail,
         ready: verified,
         awaiting_verification: state == LinkState::Subscribed && !verified,
+        device_name: None,
+        battery: None,
     };
 
     if let Err(error) = app.emit(crate::types::EVENT_LINK_STATE, payload) {
@@ -192,6 +194,8 @@ fn verify_link(app: &AppHandle) {
         detail,
         ready: true,
         awaiting_verification: false,
+        device_name: None,
+        battery: None,
     };
     if let Err(error) = app.emit(crate::types::EVENT_LINK_STATE, payload) {
         warn!("广播链路验证状态失败：{error}");
