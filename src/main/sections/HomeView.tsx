@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getAppIcon, getLinkState, listNotificationHistory, openAppById, type HistoryEntry } from "../../shared/api";
 import { brandAsset } from "../../shared/brandIcons";
-import { Icon } from "../shared/Icon";
+import { Icon } from "../../shared/Icon";
 
 type Item = HistoryEntry & { day: string; timeText: string };
 
