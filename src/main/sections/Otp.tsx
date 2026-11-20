@@ -112,10 +112,15 @@ export function Otp({ config, update }: Props) {
         </fieldset>
         <fieldset className="settings-fields">
         <Row label={t.notifications.historyTitle} hint={t.notifications.historyDesc}>
-          <select className="select" value={config.notifications.history_limit} onChange={(e) => update((d) => void (d.notifications.history_limit = Number(e.target.value)))}>
-            <option value={0}>不保存</option>
-            {[1, 2, 3, 4, 5, 6, 7].map((day) => <option key={day} value={day}>保留 {day} 天</option>)}
-          </select>
+          <NumberField
+            value={config.notifications.history_limit}
+            min={0}
+            max={3650}
+            suffix="天"
+            onChange={(value) =>
+              update((d) => void (d.notifications.history_limit = Math.max(0, Math.min(3650, value))))
+            }
+          />
         </Row>
         </fieldset>
       </Disclosure>}
