@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getAppIcon, getLinkState, listNotificationHistory, openAppById, type HistoryEntry } from "../../shared/api";
+import { clearNotificationHistory, getAppIcon, getCallStats, getLinkState, listNotificationHistory, openAppById, openProjectLink, type CallStats, type HistoryEntry, type ProjectLink } from "../../shared/api";
 import { brandAsset } from "../../shared/brandIcons";
 import { Icon } from "../../shared/Icon";
 import { listen } from "@tauri-apps/api/event";
@@ -28,8 +28,55 @@ function isChatEntry(e: HistoryEntry): boolean {
   return e.category !== 1 && !e.code && /tencent\.xin|wechat/i.test(e.app_id ?? "");
 }
 
+/** 电话类：category=1 或来源是系统电话（部分安卓 ANCS 兼容层用自定义类别，实测华为用 12） */
+function isCallEntry(e: HistoryEntry): boolean {
+  return e.category === 1 || /mobilephone/i.test(e.app_id ?? "");
+}
+
 function convKeyOf(e: HistoryEntry): string {
   return `${e.app_id ?? ""}|${e.origin}`;
+}
+
+/** 开发者的一封信（测试邮件）：正文中带项目主页/Star，阅读区渲染成可点卡片 */
+function isDeveloperLetter(e: HistoryEntry): boolean {
+  return e.app_id === "com.apple.mail" && /很高兴遇见你/.test(e.body);
+}
+
+/** 开发者来信卡片：按书信体排版（称呼→正文→落款右对齐）+ 维护者主页/Star 徽章可点 */
+function DeveloperLetterCard({ entry }: { entry: HistoryEntry }) {
+  const [badgeFailed, setBadgeFailed] = useState(false);
+  const open = (target: ProjectLink) => { void openProjectLink(target).catch(() => {}); };
+  const paragraphs = entry.body.split(/\n{2,}/).filter(Boolean);
+  const last = paragraphs[paragraphs.length - 1];
+  // 落款「—— lnsx521」从正文拆出：去掉破折号，署名 + 日期靠右分行，符合书信格式
+  const signOff = last && /^——\s*/.test(last) ? paragraphs.pop()!.replace(/^——\s*/, "") : null;
+  return (
+    <div className="developer-letter-card">
+      <div className="developer-letter-body">
+        {paragraphs.map((p, i) => (
+          <p key={i} className={i === 0 ? "developer-letter-salutation" : undefined}>{p}</p>
+        ))}
+        {signOff && (
+          <div className="developer-letter-signoff">
+            <span>{signOff}</span>
+            <span>2026 年 11 月 21 日</span>
+          </div>
+        )}
+      </div>
+      <div className="developer-letter-foot">
+        <span className="developer-letter-maintainer" role="link" tabIndex={0}
+          onClick={() => open("maintainer")} onKeyDown={(e) => { if (e.key === "Enter") open("maintainer"); }}>
+          维护者：<b>lnsx521</b> <Icon name="external" size={12} />
+        </span>
+        <span className="developer-letter-hint"><Icon name="star" size={14} />喜欢的话，去 GitHub 点个 Star</span>
+        <button className="developer-letter-stars" aria-label="在 GitHub 上给知信点 Star" onClick={() => open("repository")}>
+          {badgeFailed
+            ? <span className="about-badge-fallback">Star on GitHub</span>
+            : <img className="about-badge" src="https://img.shields.io/github/stars/lnsx521/zhixin?style=flat-square&label=Stars&color=737373" alt="Stars" referrerPolicy="no-referrer" onError={() => setBadgeFailed(true)} />}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 /** 列表行构建：聊天消息按会话合并（保留最新一条的位置），其余单条 */
@@ -70,16 +117,28 @@ export function HomeView({ onOpenSettings }: Props) {
   const [chat, setChat] = useState<Conv | null>(null);
   const [chatMsgs, setChatMsgs] = useState<Item[]>([]);
   const [icons, setIcons] = useState<Record<string, string>>({});
+  const [callStats, setCallStats] = useState<CallStats | null>(null);
+  // 未读跟踪：会话 key → 上次打开时的条数；条数超过它才显示徽章
+  const [readConvs, setReadConvs] = useState<Record<string, number>>({});
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const openSingle = (it: Item) => {
     setChat(null);
     setSelected(it);
   };
 
+  // 选中电话时拉同号码历史统计（来电次数 / 首次来电）；同时接收历史变更刷新
+  useEffect(() => {
+    if (!selected || !isCallEntry(selected)) { setCallStats(null); return; }
+    void getCallStats(selected.origin).then(setCallStats).catch(() => setCallStats(null));
+  }, [selected?.origin, selected?.received_at, entries]);
+
   const openConv = (conv: Conv) => {
     setSelected(null);
     setChat(conv);
     setChatMsgs(conv.items);
+    // 打开即标记已读：徽章基线 = 当前条数，再来新消息才重新亮
+    setReadConvs((prev) => ({ ...prev, [conv.key]: conv.items.length }));
     // 拉更长的历史补全聊天记录，按时间正序排列
     void listNotificationHistory(conv.origin, 200)
       .then((rows) => {
@@ -128,7 +187,14 @@ export function HomeView({ onOpenSettings }: Props) {
     const tick = () => void getLinkState().then((s) => setLink({ device_name: s.device_name, battery: s.battery, connected: s.ready || s.state === "subscribed" })).catch(() => {});
     tick();
     const timer = window.setInterval(tick, 5000);
-    return () => window.clearInterval(timer);
+    // 新通知入库 / 清空历史时后端广播，实时刷新列表（含微信会话合并）
+    const unlistenHistory = listen("history-updated", () => {
+      void listNotificationHistory("", 50).then((rows) => setEntries(rows)).catch(() => {});
+    });
+    return () => {
+      window.clearInterval(timer);
+      unlistenHistory.then((f) => f());
+    };
   }, []);
 
   useEffect(() => {
@@ -191,19 +257,33 @@ export function HomeView({ onOpenSettings }: Props) {
           <input className="home-search-input" placeholder="搜索消息" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
         <div className="home-list">
-          {groups.map((g) => (
+          {groups.map((g, gi) => (
             <div key={g.day}>
-              <div className="home-day">{g.day}</div>
+              <div className="home-day-row">
+                <span className="home-day">{g.day}</span>
+                {/* 只在第一组（最新日期）标题行显示清空按钮，避免每组重复 */}
+                {gi === 0 && g.rows.length > 0 && (
+                  <button
+                    className="home-clear-pill"
+                    title="清空全部历史消息"
+                    onClick={(e) => { e.stopPropagation(); setConfirmClear(true); }}
+                  >清空消息</button>
+                )}
+              </div>
               {g.rows.map((row) => {
                 if (row.kind === "single") {
                   const it = row.item;
-                  const key = `${it.received_at}-${it.origin}`;
+                  // 同一毫秒+同号码的重复旧数据曾导致 key 撞车（选中两条连蓝），
+                  // 拼上通话结果保证唯一；选中判断同步防撞
+                  const key = `${it.received_at}-${it.origin}-${it.call_outcome ?? ""}`;
                   const asset = brandAsset(it.app_id);
+                  const isSel = selected?.received_at === it.received_at && selected.origin === it.origin
+                    && (selected.call_outcome ?? "") === (it.call_outcome ?? "") && !chat;
                   return (
                     <div
                       key={key}
                       data-entry-key={encodeKey(it.received_at, it.origin)}
-                      className={`home-msg ${selected?.received_at === it.received_at && selected.origin === it.origin && !chat ? "selected" : ""}`}
+                      className={`home-msg ${isSel ? "selected" : ""}`}
                       onClick={() => openSingle(it)}
                     >
                       <div className="home-msg-icon">
@@ -236,7 +316,9 @@ export function HomeView({ onOpenSettings }: Props) {
                     <div className="home-msg-texts">
                       <div className="home-msg-line1">
                         <span className="home-msg-origin">{conv.origin}</span>
-                        {conv.items.length > 1 && <span className="home-msg-count">{conv.items.length}</span>}
+                        {conv.items.length - (readConvs[conv.key] ?? 0) > 0 && (
+                          <span className="home-msg-count">{conv.items.length - (readConvs[conv.key] ?? 0)}</span>
+                        )}
                         <span className="home-msg-time">{latest.timeText}</span>
                       </div>
                       <div className="home-msg-snippet">{latest.body}</div>
@@ -295,54 +377,44 @@ export function HomeView({ onOpenSettings }: Props) {
           <>
             <div className="home-read-head">
               <span className="home-read-title">{selected.origin}</span>
-              <span className="home-read-meta">{selected.timeText}{selected.category === 1 ? ` · ${getCallStatusText(selected.call_outcome, selected.body)}` : ""}</span>
+              <span className="home-read-meta">{selected.timeText}{isCallEntry(selected) ? ` · ${getCallStatusText(selected.call_outcome, selected.body)}` : ""}</span>
             </div>
             <section className="section" style={{ margin: "5px 16px 16px", padding: "18px 22px", flex: 1, overflowY: "auto" }}>
               {/* 来电参数面板 */}
-              {selected.category === 1 && (
+              {isCallEntry(selected) && (
                 <div className="call-meta">
-                  {/* 通话状态徽章 */}
+                  {/* 状态小药丸：固定在容器右下角给视觉焦点 */}
                   {selected.call_outcome && (
-                    <div className={`call-status-badge ${selected.call_outcome}`}>
-                      {selected.call_outcome === "answered" ? "✓ 已接通" : selected.call_outcome === "missed" ? "✗ 未接听" : ""}
-                      {extractDurationSecs(selected.body) > 0 ? (
-                        <span className="call-duration">持续 {extractDurationSecs(selected.body)} 秒</span>
-                      ) : null}
-                    </div>
+                    <span className={`call-status-pill ${selected.call_outcome}`}>
+                      {getCallStatusText(selected.call_outcome, selected.body)}
+                    </span>
                   )}
-                  {selected.carrier && (
+                  {/* 来电人（联系人名 / 号码，ANCS 只给显示名不给真实号） */}
+                  <div className="call-meta-group">
+                    <span className="call-meta-label">来电人</span>
+                    <span className="call-meta-value">{selected.title || selected.origin}</span>
+                  </div>
+                  {/* 来电时间（完整） */}
+                  <div className="call-meta-group">
+                    <span className="call-meta-label">来电时间</span>
+                    <span className="call-meta-value">{fmtFullTime(selected.received_at)}</span>
+                  </div>
+                  {/* 同号码历史来电统计 */}
+                  {callStats && callStats.count > 0 && (
                     <div className="call-meta-group">
-                      <span className="call-meta-label">运营商</span>
-                      <span className="call-meta-value">{selected.carrier}</span>
+                      <span className="call-meta-label">来电次数</span>
+                      <span className="call-meta-value">{callStats.count} 次</span>
                     </div>
                   )}
-                  {selected.device_name && (
-                    <div className="call-meta-group">
-                      <span className="call-meta-label">手机名称</span>
-                      <span className="call-meta-value">{selected.device_name}</span>
-                    </div>
-                  )}
-                  {selected.uid != null && (
-                    <div className="call-meta-group">
-                      <span className="call-meta-label">ANCS UID</span>
-                      <span className="call-meta-value">{selected.uid}</span>
-                    </div>
-                  )}
-                  {selected.device_id && (
-                    <div className="call-meta-group">
-                      <span className="call-meta-label">设备 ID</span>
-                      <span className="call-meta-value" style={{ fontSize: 11, fontFamily: "ui-monospace, monospace" }}>{selected.device_id}</span>
-                    </div>
-                  )}
-                  {selected.title && selected.title !== selected.origin && (
-                    <div className="call-meta-group">
-                      <span className="call-meta-label">标题</span>
-                      <span className="call-meta-value">{selected.title}</span>
-                    </div>
-                  )}
+                  {/* 运营商：联系人号码 ANCS 不给真实号，识别不出时明确标注而非空着 */}
+                  <div className="call-meta-group">
+                    <span className="call-meta-label">运营商</span>
+                    <span className="call-meta-value">{selected.carrier || "未知（联系人号码）"}</span>
+                  </div>
+                  {/* 号码标签（iOS 通话通知自带的副标题） */}
                   {selected.subtitle && (
                     <div className="call-meta-group">
-                      <span className="call-meta-label">副标题</span>
+                      <span className="call-meta-label">号码标签</span>
                       <span className="call-meta-value">{selected.subtitle}</span>
                     </div>
                   )}
@@ -354,10 +426,15 @@ export function HomeView({ onOpenSettings }: Props) {
                   )}
                 </div>
               )}
-              <div className="imsg-bubble">
-                <p className="imsg-text">{selected.body}</p>
-                <small className="imsg-time">{selected.timeText}</small>
-              </div>
+              {/* 电话的正文（"已接通 N秒"）已在上方药丸/参数面板体现，不重复显示气泡 */}
+              {!isCallEntry(selected) && (
+                isDeveloperLetter(selected)
+                  ? <DeveloperLetterCard entry={selected} />
+                  : <div className="imsg-bubble">
+                      <p className="imsg-text">{selected.body}</p>
+                      <small className="imsg-time">{selected.timeText}</small>
+                    </div>
+              )}
               <div className="home-read-actions">
                 {selected.code && (
                   <button
@@ -367,10 +444,14 @@ export function HomeView({ onOpenSettings }: Props) {
                     点击复制 {selected.code}
                   </button>
                 )}
-                <button className="imsg-copyall" onClick={async (e) => { e.stopPropagation(); await navigator.clipboard.writeText(selected.body); }}>
-                  复制全文
-                </button>
-                {selected.app_id && (
+                {/* 电话详情无正文可复制（时长已在药丸），不显示复制按钮 */}
+                {!isCallEntry(selected) && (
+                  <button className="imsg-copyall" onClick={async (e) => { e.stopPropagation(); await navigator.clipboard.writeText(selected.body); }}>
+                    复制全文
+                  </button>
+                )}
+                {/* 电话/短信/开发者来信没有对应的电脑应用可唤起，不显示「打开应用」 */}
+                {!isCallEntry(selected) && !isDeveloperLetter(selected) && !/mobilesms/i.test(selected.app_id ?? "") && selected.app_id && (
                   <button className="imsg-copyall" onClick={async (e) => { e.stopPropagation(); await openAppById(selected.app_id!).catch(() => {}); }}>
                     打开应用
                   </button>
@@ -383,6 +464,27 @@ export function HomeView({ onOpenSettings }: Props) {
         )}
       </section>
       </div>
+      {confirmClear && (
+        <div className="confirm-overlay" onClick={() => setConfirmClear(false)}>
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-title">清空历史消息</div>
+            <p className="confirm-desc">确定清空全部历史消息？此操作不可恢复。</p>
+            <div className="confirm-actions">
+              <button className="btn" onClick={() => setConfirmClear(false)}>取消</button>
+              <button className="btn danger" onClick={async () => {
+                setConfirmClear(false);
+                try {
+                  await clearNotificationHistory();
+                  setEntries([]);
+                  setSelected(null);
+                  setChat(null);
+                  setReadConvs({});
+                } catch { /* 后端广播会刷新列表 */ }
+              }}>清空</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -392,13 +494,21 @@ function fmtTime(receivedAt: number): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+/** 完整时间：2026-11-21 21:19:32 */
+function fmtFullTime(ms: number): string {
+  const d = new Date(ms);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
 function encodeKey(receivedAt: number, origin: string): string {
   return `${receivedAt}—${origin.replace(/[^a-zA-Z0-9]/g, "_")}`;
 }
 
-/** 来电状态文字：接通显示时长，未接显示"未接听" */
+/** 来电状态文字：接通显示时长，未接/拒接各自显示 */
 function getCallStatusText(outcome: string | null, body: string): string {
   if (outcome === "missed") return "未接听";
+  if (outcome === "rejected") return "已拒接";
   if (outcome === "answered") {
     const secs = extractDurationSecs(body);
     return secs > 0 ? `已接通 · ${secs}秒` : "已接通";
