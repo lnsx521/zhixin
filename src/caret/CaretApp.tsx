@@ -11,7 +11,6 @@ import {
 } from "../shared/api";
 import { dict, resolveLang, type Lang } from "../shared/i18n";
 import { useSavedTheme } from "../shared/theme";
-import { Icon } from "../shared/Icon";
 
 type Phase = "ready" | "inserting" | "done" | "failed";
 
@@ -114,11 +113,8 @@ export function CaretApp() {
       role="group"
       aria-label={t.caret.defaultSource}
     >
-      <span className="pill-identity">
-        <Icon name="code" size={17} />
-        <span className="pill-source" title={sourceHint ?? t.caret.defaultSource}>{sourceHint ?? t.caret.defaultSource}</span>
-      </span>
-      <span className="pill-code">{code}</span>
+      <span className="pill-code" title={sourceHint ?? t.caret.defaultSource}>{code}</span>
+      <span className="pill-divider" aria-hidden="true" />
       <button className="pill-action" onClick={onInsert} disabled={phase !== "ready"}
         aria-label={`${t.caret.fill} ${code}`}>
         {/* All labels participate in sizing so asynchronous feedback never shifts the bar. */}
