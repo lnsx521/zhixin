@@ -109,6 +109,19 @@ impl PhoneNotification {
             .join("\n")
     }
 
+    /// 是否为电话类通知。
+    ///
+    /// 不能只看 category==1：部分安卓厂商的 ANCS 兼容层（实测华为 Mate XTs）
+    /// 通话通知用的是自定义类别（实测 12），但 app_identifier 仍是
+    /// com.apple.mobilephone —— 所以按「类别 或 来源 App」双重判断。
+    pub fn is_call(&self) -> bool {
+        self.category == Some(1)
+            || self
+                .app_identifier
+                .as_deref()
+                .is_some_and(|id| id.eq_ignore_ascii_case("com.apple.mobilephone"))
+    }
+
     /// 弹窗上展示的一行摘要（优先正文）。
     pub fn summary(&self) -> String {
         match self.message.as_deref() {
