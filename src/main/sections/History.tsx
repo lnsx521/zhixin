@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { clearNotificationHistory, getAppIcon, historyExpand, listNotificationHistory, type HistoryEntry } from "../../shared/api";
 import { brandAsset } from "../../shared/brandIcons";
+import { listen } from "@tauri-apps/api/event";
 import { useT } from "../../shared/i18n";
 import { Section, Row } from "../components";
 
@@ -9,6 +10,7 @@ export function History({ query }: { query: string }) {
   const t = useT();
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const refresh = async (needle: string) => {
     try { setEntries(await listNotificationHistory(needle, 100)); }
@@ -16,6 +18,12 @@ export function History({ query }: { query: string }) {
   };
 
   useEffect(() => { void refresh(query); }, [query]);
+
+  // 新通知入库 / 清空历史时后端广播，实时刷新列表
+  useEffect(() => {
+    const unlisten = listen("history-updated", () => { void refresh(query); });
+    return () => { unlisten.then((f) => f()); };
+  }, [query]);
 
   // 每条通知前显示来源 App 图标：联网缓存/手动设置 > 内置品牌 > 纸飞机兜底
   const [cachedIcons, setCachedIcons] = useState<Record<string, string>>({});
@@ -59,10 +67,11 @@ export function History({ query }: { query: string }) {
           ))}
         </div>
         <Row label={t.history.manage}>
-          <button className="btn danger" onClick={async () => {
-            if (!confirm(t.history.clearConfirm)) return;
+          <button className={`btn danger ${confirmClear ? "confirming" : ""}`} onClick={async () => {
+            if (!confirmClear) { setConfirmClear(true); return; }
+            setConfirmClear(false);
             try { await clearNotificationHistory(); await refresh(query); } catch (err) { setError(String(err)); }
-          }}>{t.history.clear}</button>
+          }}>{confirmClear ? "确认清空？" : t.history.clear}</button>
         </Row>
       </Section>
     </>
