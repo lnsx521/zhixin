@@ -137,7 +137,6 @@ body {
 }
 .toast-call .toast-body { font-size: 12.5px; margin-top: 2px; }
 .toast-reject {
-  margin-top: 8px; width: 100%;
   border: 0; border-radius: 8px; padding: 5px 0;
   line-height: 1.6;
   background: rgba(192, 57, 43, 0.18); color: #ff8a80;
@@ -148,6 +147,28 @@ body {
   margin-top: 2px;
   padding: 5px 0;
 }
+
+/* 来电双按钮：拒接（红）+ 接听（绿），各占一半 */
+.toast-call-actions { display: flex; gap: 6px; margin-top: 8px; }
+.toast-call-actions .toast-reject,
+.toast-call-actions .toast-answer { flex: 1; margin-top: 0; }
+.toast-answer {
+  border: 0; border-radius: 8px; padding: 5px 0;
+  line-height: 1.6;
+  background: rgba(52, 199, 89, 0.18); color: #34c759;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.toast-answer:active { transform: scale(0.97); }
+
+/* 当前通话：长条挂断按钮（占满整行，红底 emphasizing 结束通话） */
+.toast-hangup {
+  flex: 1; width: 100%;
+  border: 0; border-radius: 8px; padding: 6px 0;
+  line-height: 1.6; margin-top: 0;
+  background: rgba(192, 57, 43, 0.28); color: #ff8a80;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.toast-hangup:active { transform: scale(0.98); }
 
 /* 验证码：品牌蓝胶囊，点一下即复制 */
 .toast-code {
