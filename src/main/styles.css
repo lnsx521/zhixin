@@ -897,6 +897,21 @@ body::before {
   max-height: 60vh; cursor: default;
 }
 
+/* 应用内确认框（WebView2 禁用原生 dialog，不用 window.confirm） */
+.confirm-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.38); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+}
+.confirm-box {
+  width: min(360px, 88vw); padding: 22px 24px;
+  background: var(--surface); border: 1px solid var(--glass-border);
+  border-radius: 16px; box-shadow: 0 16px 48px rgba(0,0,0,.28);
+}
+.confirm-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.confirm-desc { font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; margin: 0 0 18px; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
 /* 通用页：通知图标折叠区 */
 .icons-fold summary { list-style: none; }
 .icons-fold summary::-webkit-details-marker { display: none; }
@@ -977,10 +992,19 @@ body::before {
 .home-ver { font-size: 10.5px; color: var(--text-faint); }
 .home-bt { font-size: 11px; }
 .home-battery { font-size: 11.5px; color: var(--text-secondary); margin-top: 5px; display: flex; align-items: center; }
-.home-search { padding: 10px 14px 6px; border-bottom: 0.5px solid color-mix(in srgb, var(--border) 65%, transparent); }
+.home-search { padding: 4px 14px 12px; border-bottom: 1px solid var(--border); }
 .home-search-input { width: 100%; background: var(--bg); border: 0.5px solid var(--border); border-radius: 7px; padding: 5px 10px; font-size: 12px; color: var(--text); }
 .home-list { flex: 1; overflow-y: auto; }
-.home-day { padding: 6px 14px 3px; font-size: 11px; color: var(--text-faint); }
+.home-day-row { display: flex; align-items: center; justify-content: space-between; padding-right: 10px; }
+.home-day { padding: 8px 14px 11px; font-size: 11px; color: var(--text-faint); }
+.home-clear-pill {
+  flex-shrink: 0; border: 0.5px solid var(--border);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  color: var(--text-secondary); border-radius: 999px;
+  padding: 3px 12px; font-size: 11px; line-height: 1.4; cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.home-clear-pill:hover { background: color-mix(in srgb, var(--text) 12%, transparent); color: var(--text); }
 .home-msg { display: flex; gap: 10px; align-items: center; padding: 9px 12px; cursor: pointer; }
 .home-msg:not(.selected):not(:last-child) { border-bottom: 0.5px solid color-mix(in srgb, var(--border) 65%, transparent); }
 .home-msg:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
@@ -1095,10 +1119,26 @@ body::before {
 .home-read-actions .imsg-copyall:hover { filter: brightness(1.15); }
 .home-setbtn:hover { opacity: .8; }
 
+/* ── 开发者来信卡片 ── */
+/* 外层 .section 已是白底卡片，这里不再嵌套第二层背景，避免正文出现卡中卡白底 */
+/* 称呼顶格；正文每段首行缩进两字，符合中文书信格式 */
+.developer-letter-body p { margin: 0 0 12px; font-size: 13.5px; line-height: 1.8; color: var(--text); white-space: pre-wrap; word-break: break-word; user-select: text; text-indent: 2em; }
+.developer-letter-body p.developer-letter-salutation { text-indent: 0; }
+.developer-letter-body .developer-letter-signoff { margin-top: 20px; text-align: right; color: var(--text-secondary); font-size: 13.5px; line-height: 1.8; }
+.developer-letter-body .developer-letter-signoff span { display: block; }
+.developer-letter-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 18px; padding-top: 14px; border-top: 0.5px solid var(--border); }
+.developer-letter-maintainer { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); cursor: pointer; }
+.developer-letter-maintainer:hover { color: var(--text); }
+.developer-letter-maintainer b { color: #1D9E75; font-weight: 600; }
+.developer-letter-hint { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); margin-left: auto; }
+.developer-letter-hint svg { color: var(--warning); flex-shrink: 0; }
+.developer-letter-stars { display: inline-flex; align-items: center; border: 0; padding: 3px 0; border-radius: 3px; background: transparent; cursor: pointer; }
+.developer-letter-stars:hover { filter: brightness(1.15); }
+
 /* ── 来电详情卡片 ── */
 .call-meta {
   display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;
-  padding: 12px 14px;
+  padding: 12px 14px; position: relative;
   border: 0.5px solid var(--border); border-left: 3px solid #0a84ff;
   border-radius: 10px; background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
@@ -1139,3 +1179,12 @@ body::before {
 .call-status-badge.answered { background: rgba(52,199,89,.12); color: #2d8a4e; }
 .call-status-badge.missed  { background: rgba(226,75,74,.12);  color: #c0392b; }
 .call-duration { font-weight: 400; font-size: 12px; opacity: .85; }
+
+/* ── 通话状态小药丸（详情面板容器右下角） ── */
+.call-status-pill {
+  position: absolute; right: 14px; bottom: 12px;
+  padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 500;
+}
+.call-status-pill.answered { background: rgba(52,199,89,.15); color: #2d8a4e; }
+.call-status-pill.missed, .call-status-pill.rejected { background: rgba(226,75,74,.15); color: #c0392b; }
+.call-status-pill.ringing { background: rgba(10,132,255,.12); color: #185fa5; }
