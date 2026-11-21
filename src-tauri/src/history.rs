@@ -5,7 +5,7 @@
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 use zhixin_core::model::PhoneNotification;
 
 use crate::paths;
@@ -23,7 +23,7 @@ fn load(app: &AppHandle) -> Vec<HistoryEntry> {
         .unwrap_or_default()
 }
 
-fn save(app: &AppHandle, entries: &[HistoryEntry]) -> Result<(), String> {
+pub fn save(app: &AppHandle, entries: &[HistoryEntry]) -> Result<(), String> {
     let bytes = serde_json::to_vec_pretty(entries).map_err(|e| e.to_string())?;
     std::fs::write(history_path(app), bytes).map_err(|e| e.to_string())
 }
@@ -66,17 +66,50 @@ pub fn record(app: &AppHandle, notification: &PhoneNotification) {
         }
     };
     if !keep || days == 0 {
+        // 不保留或天数设为 0：直接清空存量记录，避免旧数据残留在主窗口。
+        let _ = save(app, &[]);
         return;
     }
     let mut entries = load(app);
+
+    let origin = notification.origin();
+    let received_at_ms = notification
+        .received_at
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+
+    // 来电合并：同一次通话（同 uid，或同号码 10 分钟内）只保留一条记录，
+    // 状态滚动更新（来电 → 已拒接/已接通/未接听）。否则响铃、拒接、
+    // iOS 的通话结束通知会各入一条，一次通话出现 2~3 条重复记录。
+    if notification.is_call() {
+        const CALL_MERGE_WINDOW_MS: u64 = 10 * 60_000;
+        let target = entries.iter_mut().find(|entry| {
+            entry.uid == Some(notification.uid)
+                || (entry.origin == origin
+                    && received_at_ms.saturating_sub(entry.received_at) < CALL_MERGE_WINDOW_MS)
+        });
+        if let Some(existing) = target {
+            // 保留首次响铃时间，正文与通话结果跟随最新事件
+            existing.body = notification.summary();
+            existing.call_outcome = notification.call_outcome.clone();
+            existing.title = notification.title.clone();
+            existing.subtitle = notification.subtitle.clone();
+            existing.message = notification.message.clone();
+            if existing.carrier.is_none() {
+                existing.carrier =
+                    zhixin_core::carrier::describe(&extract_longest_digits(&origin));
+            }
+            let _ = save(app, &entries);
+            let _ = app.emit("history-updated", ());
+            return;
+        }
+    }
+
     entries.push(HistoryEntry {
-        received_at: notification
-            .received_at
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64,
+        received_at: received_at_ms,
         app_id: notification.app_identifier.clone(),
-        origin: notification.origin(),
+        origin,
         body: notification.summary(),
         code: notification.code.clone(),
         category: notification.category,
@@ -86,7 +119,7 @@ pub fn record(app: &AppHandle, notification: &PhoneNotification) {
         title: notification.title.clone(),
         subtitle: notification.subtitle.clone(),
         message: notification.message.clone(),
-        carrier: if notification.category == Some(1) {
+        carrier: if notification.is_call() {
             zhixin_core::carrier::describe(&extract_longest_digits(&notification.origin()))
         } else {
             None
@@ -101,6 +134,38 @@ pub fn record(app: &AppHandle, notification: &PhoneNotification) {
         .saturating_sub((days as u64) * 86_400_000);
     entries.retain(|entry| entry.received_at >= cutoff_ms);
     let _ = save(app, &entries);
+    // 广播历史变更，主窗口监听后实时刷新列表（否则新消息要重开窗口才可见）。
+    let _ = app.emit("history-updated", ());
+}
+
+/// 某号码的历史来电统计（来电次数 / 首次 / 最近）。
+#[derive(Debug, Clone, Serialize)]
+pub struct CallStats {
+    pub count: u32,
+    pub first_at: Option<u64>,
+    pub last_at: Option<u64>,
+}
+
+/// 统计同一号码的历史来电（主窗口来电详情用）。
+#[tauri::command]
+pub fn get_call_stats(app: AppHandle, origin: String) -> CallStats {
+    let entries = load(&app);
+    let is_call_entry = |entry: &HistoryEntry| {
+        entry.category == Some(1)
+            || entry
+                .app_id
+                .as_deref()
+                .is_some_and(|id| id.eq_ignore_ascii_case("com.apple.mobilephone"))
+    };
+    let calls: Vec<&HistoryEntry> = entries
+        .iter()
+        .filter(|entry| entry.origin == origin && is_call_entry(entry))
+        .collect();
+    CallStats {
+        count: calls.len() as u32,
+        first_at: calls.iter().map(|entry| entry.received_at).min(),
+        last_at: calls.iter().map(|entry| entry.received_at).max(),
+    }
 }
 
 #[tauri::command]
@@ -125,7 +190,10 @@ pub fn list_notification_history(
 
 #[tauri::command]
 pub fn clear_notification_history(app: AppHandle) -> Result<(), String> {
-    save(&app, &[])
+    save(&app, &[])?;
+    // 广播给主窗口/历史页监听，实时清空左侧列表（否则 JSON 空了但界面还留着旧记录）
+    let _ = app.emit("history-updated", ());
+    Ok(())
 }
 
 /// 导出为文本文件（存到应用数据目录，导出后自动打开所在文件夹）。
