@@ -37,6 +37,8 @@ pub fn save_config(app: AppHandle, config: Config) -> Result<(), String> {
         }
     }
     let path = paths::config_path(&app);
+    // 在保存前先读取保留天数，用于后续判断是否需要清空历史
+    let history_limit = config.notifications.history_limit;
 
     config
         .save(&path)
@@ -45,6 +47,14 @@ pub fn save_config(app: AppHandle, config: Config) -> Result<(), String> {
     let theme = config.general.theme;
     app.state::<AppState>().apply_config(config);
     caret::config_applied(&app);
+    // 当保留天数设为 0（不保存）时，同步清空已存的存量历史，避免旧数据继续显示在主窗口。
+    if history_limit == 0 {
+        if let Err(e) = crate::history::save(&app, &[]) {
+            warn!("清空历史失败：{e}");
+        } else {
+            info!("保留时长设为 0，已清空历史");
+        }
+    }
     if let Err(error) = app.emit("theme-changed", theme) {
         warn!("广播外观设置失败：{error}");
     }
@@ -257,8 +267,8 @@ pub fn send_test_kind(app: AppHandle, kind: &str) {
             ),
             "mail" => (
                 "com.apple.mail",
-                "知信 · 开发者的一封信",
-                "亲爱的用户，您好！\n\n感谢您安装知信（SmsPop）。这封信想用一分钟，把这款软件能为您做什么讲清楚。\n\n一、它解决什么问题？\n手机放在口袋里，通知一条条闪过——验证码、快递、来电，总要拿起手机看。知信把 iPhone 的通知通过蓝牙实时推送到电脑：短信验证码自动复制、快递取件码一眼可见、来电直接在电脑上拒接。\n\n二、除了通知，还能传文件。\n手机与电脑在同一个 Wi-Fi 下，通过快捷指令即可把照片、文件、网页一键发送到电脑，也可以在电脑页面上浏览和下载手机收到的文件。\n\n三、关于隐私与安全。\n所有数据只在你自己的设备之间传输：通知走蓝牙直连，文件走局域网直连，不经过任何服务器。接入令牌是唯一的钥匙，泄露后一键重置即可。\n\n四、它是开源的。\n如果你懂开发，欢迎基于它的架构与代码做任何扩展——包括为它添加安卓支持。项目开源，随意改造。\n\n祝使用愉快！\n—— 知信开发者",
+                "写给刚认识的你",
+                "你好，朋友：\n\n很高兴遇见你。\n\n我是知信的作者。知信脱胎于 fxaxg 的「SmsPop」。做这东西，是因为我自己也烦一件事：验证码、快递、来电，一条接一条地往手机里钻，人明明坐在电脑前，手却总得往口袋里摸。很多时候，就为了看一眼那串数字。「知信」就是为这件事做的——把你 iPhone 上的通知，通过蓝牙送到这台电脑上。\n\n验证码来了，自动帮你复制好；快递到了，取件码一眼就能看见，不用再翻聊天记录；戴着耳机时电话响了，直接在这边拒接或者接起，手机都不用从桌上拿起来。你不用再为了看一条消息，把手头正做的事掐断。\n\n我还给它加了个本事：同一个 Wi-Fi 下，照片、文件、网页，从手机一键就发到了电脑，反过来也行。它不只是个通知工具，也算给两台设备之间搭了条近路。\n\n愿意把通知交给一个软件，是份信任，所以有件事我想说清楚：你的消息只在你自己的两台设备之间走——通知走蓝牙直连，文件走局域网直连，不经任何服务器，我也看不到。开关在你手里，觉得不对劲，随时一键重置。\n\n最后，知信是开源的。你若爱折腾，代码就摆在那里，改安卓、加功能、按自己的想法重做，都随你——它本来也不该只属于我一个人。\n\n当然，如果你用着觉得哪里别扭，欢迎告诉我。\n\n—— lnsx521",
                 Some(6u8),
             ),
             "generic" => (
@@ -270,7 +280,7 @@ pub fn send_test_kind(app: AppHandle, kind: &str) {
             "long_sms" => (
                 "com.apple.MobileSMS",
                 "106835812921010",
-                "【验证密码】882137，尊敬的客户，您正在中国移动线上渠道，订购“10元10GB流量日包（编号：123456789）”，资费“10.00元”，包含：\n资费名称：10元10GB流量日包；\n产品费用：10元/次；\n产品介绍：包含10GB全国通用流量（不含港澳台地区）；\n通用流量：10GB，24小时有效；\n生效时间：立即生效，24小时后自动失效，无需退订；\n在网期限：无要求；\n其他：流量不可共享，不可结转，不可转赠，流量优先级高于套内流量。本业务不可解除限速服务。本产品无合约期限、退订/销户/携转等无需承担违约责任。相同档次、不同档次均可叠加办理。\n办理成功后,您将收到提醒短信，了解业务生效时间及业务规则等详情，具体以办理成功短信提示为准！请注意查收。验证码有效期5分钟。若非本人操作请勿泄露，任何索取行为均可能涉嫌诈骗。【中国移动】",
+                "Hello, friend,\n\nNice to meet you.\n\nI'm the author of Zhixin. Zhixin grew out of SmsPop by fxaxg. I built it because of an annoyance I had myself: verification codes, delivery notices, and calls keep pouring into my phone, while I sit here at my computer, my hand constantly reaching for my pocket — often just to glance at a string of digits. Zhixin was made for exactly this: it sends your iPhone's notifications to this computer over Bluetooth.\n\nWhen a code arrives, it's copied for you automatically; when a package arrives, the pickup code is right there, no more digging through chat history; when the phone rings with your headphones on, you can reject or answer it right here without ever lifting the phone off the desk. You no longer need to break off what you're doing just to read one message.\n\nI also gave it another trick: over the same Wi-Fi, photos, files, and web pages go from your phone to the computer with one tap — and back the other way, too. It's more than a notification tool; it's a shortcut between your two devices.\n\nHanding your notifications to an app is a matter of trust, so let me be clear: your messages travel only between your own two devices — notifications over a direct Bluetooth link, files over the local network, through no server of mine, and I can't see them. The switch stays in your hands; if anything ever feels off, reset it with one tap.\n\nFinally, Zhixin is open source. If you like to tinker, the code is right there — port it to Android, add features, rebuild it however you like. It was never meant to belong to me alone.\n\nOf course, if anything feels awkward in use, do let me know.\n\nBest,\nlnsx521\nNovember 21, 2026",
                 None,
             ),
             // 默认：短信 · 验证码
@@ -521,7 +531,7 @@ pub fn toast_click_for_main(app: AppHandle, label: String, state: State<'_, AppS
             title: notification.title.clone(),
             subtitle: notification.subtitle.clone(),
             message: notification.message.clone(),
-            carrier: if notification.category == Some(1) {
+            carrier: if notification.is_call() {
                 zhixin_core::carrier::describe(&extract_longest_digits(&notification.origin()))
             } else {
                 None
