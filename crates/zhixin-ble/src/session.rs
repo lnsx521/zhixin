@@ -10,6 +10,7 @@
 //! * Data Source 的长度是**字节**，而且**可能分片** —— 累积到收满 tuple 才算完整
 //! * 同一时刻**只能有一个 Control Point 请求在飞**，所以写入必须串行
 
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Sender};
 use std::sync::{Arc, Condvar, Mutex};
@@ -58,6 +59,8 @@ struct Shared {
     expected_tuples: Mutex<usize>,
     pending_uid: Mutex<Option<u32>>,
     pending_category: Mutex<Option<u8>>,
+    /// 活跃来电：uid → 响铃时刻。Removed 时对上号就估算通话时长。
+    pending_calls: Mutex<HashMap<u32, std::time::Instant>>,
     response_ready: Condvar,
     stopping: AtomicBool,
     failed: AtomicBool,
@@ -303,6 +306,9 @@ impl AncsSession {
         // 闭包要把 sender 拿走一份，struct 里还要留一份用来在关闭时断开
         let ns_writer_tx = writer_tx.clone();
         let ns_shared = Arc::clone(&shared);
+        let ns_sink = Arc::clone(&sink);
+        let ns_device_id = device_id.to_string();
+        let ns_device_name = device_name.to_string();
 
         let ns_handler = TypedEventHandler::<GattCharacteristic, GattValueChangedEventArgs>::new(
             move |_sender, args| {
@@ -318,12 +324,48 @@ impl AncsSession {
                     return Ok(());
                 };
 
-                // Removed 只是"通知被划掉了"，我们不关心，也不要去回读属性
+                // ★ 通话计时：只对 category=12（接听后 iOS 推的「当前通话」通知）记起点，
+                //   Removed 时对上号算出的就是纯通话时长（不含响铃），准确、无需 ≈。
+                //   category=1 是响铃中的「来电」，接听时会先 Removed——那段不计入通话。
+                //   or_insert 防止后续 Modified 刷新起点导致时长被截短。
+                if matches!(event.event_id, ancs::EventId::Added | ancs::EventId::Modified)
+                    && event.category == 12
+                {
+                    ns_shared
+                        .pending_calls
+                        .lock()
+                        .unwrap()
+                        .entry(event.uid)
+                        .or_insert_with(std::time::Instant::now);
+                }
+
+                // Removed 只是"通知被划掉了"，通常不回读属性。
+                // 但「当前通话」(category=12) 的 Removed 是通话结束信号 —— 对上 uid 用通话起点算准确时长入库。
                 if !event.should_fetch_attributes() {
-                    debug!(
-                        "跳过事件 {:?} flags=0x{:02X} uid={}",
-                        event.event_id, event.flags, event.uid
-                    );
+                    let call_start = ns_shared.pending_calls.lock().unwrap().remove(&event.uid);
+                    if let Some(call_start) = call_start {
+                        let secs = call_start.elapsed().as_secs();
+                        let attrs = ancs::Attributes {
+                            uid: event.uid,
+                            app_identifier: Some("com.apple.mobilephone".to_string()),
+                            title: Some("通话".to_string()),
+                            subtitle: None,
+                            message: Some(format!("已接通 {secs}秒")),
+                        };
+                        let notification = zhixin_core::model::PhoneNotification::from_ancs(
+                            ns_device_id.clone(),
+                            Some(ns_device_name.clone()),
+                            attrs,
+                            Some(event.category),
+                        );
+                        info!("通话结束（uid={}）：时长约 {secs}秒，入库", event.uid);
+                        ns_sink(notification);
+                    } else {
+                        debug!(
+                            "跳过事件 {:?} flags=0x{:02X} uid={}",
+                            event.event_id, event.flags, event.uid
+                        );
+                    }
                     return Ok(());
                 }
 
@@ -426,16 +468,23 @@ impl AncsSession {
     }
 
     /// Reassert CCCDs without disconnecting a quiet, otherwise healthy phone.
-    /// 对指定 ANCS 通知执行负面动作（来电弹窗的"拒接"）。
-    pub fn perform_negative_action(&self, uid: u32) -> Result<()> {
+    /// 对指定 ANCS 通知执行动作（0=正面/接听，1=负面/拒接）。
+    fn perform_action(&self, uid: u32, action: u8) -> Result<()> {
         let Some(tx) = &self.writer_tx else {
             return Err(crate::BleError::Message("writer 线程已退出".into()));
         };
-        tx.send(WriterCommand::PerformAction(
-            uid.to_le_bytes(),
-            zhixin_core::ancs::ACTION_NEGATIVE,
-        ))
-        .map_err(|_| crate::BleError::Message("writer 通道已关闭".into()))
+        tx.send(WriterCommand::PerformAction(uid.to_le_bytes(), action))
+            .map_err(|_| crate::BleError::Message("writer 通道已关闭".into()))
+    }
+
+    /// 对指定 ANCS 通知执行负面动作（来电弹窗的"拒接"）。
+    pub fn perform_negative_action(&self, uid: u32) -> Result<()> {
+        self.perform_action(uid, zhixin_core::ancs::ACTION_NEGATIVE)
+    }
+
+    /// 接听来电（ANCS 正面动作，仅电话类通知有效）。
+    pub fn perform_positive_action(&self, uid: u32) -> Result<()> {
+        self.perform_action(uid, zhixin_core::ancs::ACTION_POSITIVE)
     }
 
     /// 当前活跃会话的 Control Point 写入通道（供链路层转发拒接指令）。
