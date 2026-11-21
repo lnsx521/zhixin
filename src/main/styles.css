@@ -622,6 +622,8 @@ body::before {
 .about-identity .about-hero-content p { font-size: 14px; }
 .about-update { padding: 4px 26px 20px; border: 1px solid var(--glass-border); border-radius: var(--radius-lg); background: var(--glass-fill); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); margin-bottom: 18px; }
 .about-update .row { align-items: center; padding-bottom: 8px; }
+/* 三个操作按钮可能超过 row-control 的 55% 上限，放开并允许换行，避免被顶出容器 */
+.about-update .row-control { max-width: none; flex-wrap: wrap; justify-content: flex-end; }
 .about-update .row-label > span { font-weight: 600; }
 .about-update .update-panel > p:first-child { margin: 0; font-size: 12px; }
 .about-update .update-panel { margin-bottom: 0; }
