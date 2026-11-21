@@ -96,6 +96,19 @@ pub fn run() {
                 }
             }
 
+            // 首次安装：启动约 3 秒后自动投递开发者来信（一次性，靠标记文件去重，
+            // 与配置/历史重置无关）。延后是为了等主窗口和弹窗池就绪，信能正常弹出。
+            let welcome_flag = paths::welcome_sent_path(app.handle());
+            if !welcome_flag.exists() {
+                let _ = std::fs::write(&welcome_flag, b"1");
+                let app_handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_secs(3));
+                    commands::send_test_kind(app_handle, "mail");
+                    info!("首次安装：已自动投递开发者来信");
+                });
+            }
+
             info!("知信 已启动");
 
             Ok(())
@@ -123,6 +136,7 @@ pub fn run() {
             icon_store::reset_app_icon,
             icon_store::clear_icon_cache,
             icon_store::open_icons_dir,
+            history::get_call_stats,
             history::list_notification_history,
             history::clear_notification_history,
             history::export_notification_history,
@@ -161,6 +175,8 @@ pub fn run() {
             transfer::set_transfer_folder,
             transfer::open_transfer_folder,
             link_handle::reject_call,
+            link_handle::answer_call,
+            link_handle::hangup_call,
             http_ingress::reset_token,
             popups::pick_sound_file,
             mdns::get_mdns_hostname,
