@@ -232,6 +232,11 @@ fn dispatch_with_policy(
 ) {
     let state = app.state::<AppState>();
 
+    // 通话结果通知（已接通N秒/未接/已拒接）必须跳过 dedup：
+    // 它沿用「当前通话」的 uid，会被设备+uid 去重键判为重复而丢弃，
+    // 导致时长更新写不进历史、call-ended 也广播不出去。
+    let is_call_result = notification.is_call() && notification.call_outcome.is_some();
+
     // 订阅成功后的宽限期里按内容去重 —— iOS 会把通知中心存量用新 uid 重推一遍。
     let in_grace = state
         .subscribed_at
@@ -239,7 +244,7 @@ fn dispatch_with_policy(
         .unwrap()
         .is_some_and(|t| t.elapsed() < Duration::from_secs(5));
 
-    let duplicate = if !ble {
+    let duplicate = if is_call_result || !ble {
         false
     } else if in_grace {
         state
@@ -253,6 +258,30 @@ fn dispatch_with_policy(
         info!("重复通知，忽略");
         return;
     }
+
+    // 通话结果通知的 title 是"通话"、uid 沿用「当前通话」，直接入库会因号码对不上
+    // 而新插一条"通话"记录。按 uid 找回弹窗时的原通知（带号码标题），克隆后覆盖
+    // 通话结果与时长正文，让 history::record 把时长合并进同一条号码记录。
+    let notification = if is_call_result {
+        let original = state
+            .phone_notifs
+            .lock()
+            .unwrap()
+            .values()
+            .find(|n| n.uid == notification.uid && n.is_call())
+            .cloned();
+        match original {
+            Some(mut orig) => {
+                orig.call_outcome = notification.call_outcome.clone();
+                orig.message = notification.message.clone();
+                info!("通话结果通知已还原号码身份：{}", orig.origin());
+                orig
+            }
+            None => notification,
+        }
+    } else {
+        notification
+    };
 
     let config = state.config();
 
