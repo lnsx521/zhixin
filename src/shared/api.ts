@@ -135,6 +135,15 @@ export interface HistoryEntry {
 }
 export const listNotificationHistory = (query: string, limit: number) =>
   invoke<HistoryEntry[]>("list_notification_history", { query, limit });
+
+/** 某号码的历史来电统计。 */
+export interface CallStats {
+  count: number;
+  first_at: number | null;
+  last_at: number | null;
+}
+export const getCallStats = (origin: string) =>
+  invoke<CallStats>("get_call_stats", { origin });
 export const clearNotificationHistory = () => invoke<void>("clear_notification_history");
 export const exportNotificationHistory = () => invoke<string>("export_notification_history");
 export const openBluetoothSettings = () => invoke<void>("open_bluetooth_settings");
