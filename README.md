@@ -4,6 +4,7 @@
   <p><strong>让手机偷个懒，我来传话。</strong></p>
   <p>通过蓝牙接收通知，复制验证码，按需填入，并打开对应的电脑应用。</p>
   <p>
+    <a href="https://github.com/lnsx521/zhixin/releases/latest"><img src="https://img.shields.io/github/v/release/lnsx521/zhixin?label=version&color=2f6feb" alt="最新版本" /></a>
     <a href="https://github.com/lnsx521/zhixin/actions/workflows/ci.yml"><img src="https://github.com/lnsx521/zhixin/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-informational" alt="MIT license" /></a>
     <img src="https://img.shields.io/badge/platform-Windows-555555" alt="Windows" />
@@ -26,7 +27,7 @@
 
 ## 开始使用
 
-从 [Releases](https://github.com/lnsx521/zhixin/releases) 下载最新的 `知信_1.0.0_x64-setup.exe`，双击安装即可（约 4MB，自带所需组件）。
+从 [Releases](https://github.com/lnsx521/zhixin/releases/latest) 下载最新版安装包（`zhixin_<版本号>_x64-setup.exe`），双击安装即可（约 4.5MB，自带所需组件）。
 
 ### 使用条件
 
