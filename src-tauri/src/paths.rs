@@ -31,6 +31,11 @@ pub fn background_image_path(app: &AppHandle) -> PathBuf {
     data_dir(app).join("background-image")
 }
 
+/// 首次安装欢迎信已发送标记（存在即不再自动发送，与配置重置无关）
+pub fn welcome_sent_path(app: &AppHandle) -> PathBuf {
+    data_dir(app).join("welcome-sent.flag")
+}
+
 pub fn log_dir(app: &AppHandle) -> PathBuf {
     let dir = app
         .path()
