@@ -117,39 +117,39 @@ export function General({ config, update }: Props) {
           </div>
         </Row>
       </Section>
-      <details className="icons-fold" style={{ borderTop: "0.5px solid var(--border)", marginTop: 12, paddingTop: 10 }}>
-        <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text)" }}>
-            {t.general.iconsTitle}
-            <span style={{ fontSize: 12, color: "var(--text-faint)", marginLeft: 8, fontWeight: 400 }}>{t.general.iconsDesc}</span>
-          </span>
-          <span onClick={(event) => event.stopPropagation()}>
-            <Toggle
-              checked={config.general.icon_fetch}
-              onChange={(value) => update((d) => void (d.general.icon_fetch = value))}
-            />
-          </span>
-        </summary>
-        <div style={{ marginTop: 10 }}>
-        <Row label={t.general.iconsOpenDir}>
-          <button className="btn" onClick={() => { void openIconsDir().catch((err) => setError(String(err))); }}>{t.general.iconsOpenDir}</button>
-        </Row>
-        <Row label={t.general.iconsClear}>
-          <button className="btn" onClick={async () => {
-            try { await clearIconCache(); await refreshIcons(); } catch (err) { setError(String(err)); }
-          }}>{t.general.iconsClear}</button>
-        </Row>
-        {iconCache.length === 0 && <Row label={t.general.iconsEmpty}><span /></Row>}
-        {iconCache.map((entry) => (
-          <Row key={entry.app_id} label={`${entry.name || entry.app_id}${entry.manual ? `（${t.general.iconsManual}）` : ""}`} hint={entry.app_id}>
-            <button className="btn" onClick={() => { replaceTarget.current = entry; replaceInput.current?.click(); }}>{t.general.iconsReplace}</button>
-            <button className="btn" onClick={async () => {
-              try { await resetAppIcon(entry.app_id); await refreshIcons(); } catch (err) { setError(String(err)); }
-            }}>{t.general.iconsReset}</button>
-          </Row>
-        ))}
-        </div>
-      </details>
+      <Section
+        title={t.general.iconsTitle}
+        description={t.general.iconsDesc}
+        action={
+          <Toggle
+            checked={config.general.icon_fetch}
+            onChange={(value) => update((d) => void (d.general.icon_fetch = value))}
+          />
+        }
+      >
+        <details className="icons-fold">
+          <summary style={{ cursor: "pointer", fontSize: 12.5, color: "var(--text-faint)" }}>管理已缓存图标</summary>
+          <div style={{ marginTop: 10 }}>
+            <Row label={t.general.iconsOpenDir}>
+              <button className="btn" onClick={() => { void openIconsDir().catch((err) => setError(String(err))); }}>{t.general.iconsOpenDir}</button>
+            </Row>
+            <Row label={t.general.iconsClear}>
+              <button className="btn" onClick={async () => {
+                try { await clearIconCache(); await refreshIcons(); } catch (err) { setError(String(err)); }
+              }}>{t.general.iconsClear}</button>
+            </Row>
+            {iconCache.length === 0 && <Row label={t.general.iconsEmpty}><span /></Row>}
+            {iconCache.map((entry) => (
+              <Row key={entry.app_id} label={`${entry.name || entry.app_id}${entry.manual ? `（${t.general.iconsManual}）` : ""}`} hint={entry.app_id}>
+                <button className="btn" onClick={() => { replaceTarget.current = entry; replaceInput.current?.click(); }}>{t.general.iconsReplace}</button>
+                <button className="btn" onClick={async () => {
+                  try { await resetAppIcon(entry.app_id); await refreshIcons(); } catch (err) { setError(String(err)); }
+                }}>{t.general.iconsReset}</button>
+              </Row>
+            ))}
+          </div>
+        </details>
+      </Section>
       <Section narrow title={t.general.startupTitle}>
         <Row label={t.general.autostart} hint={t.general.autostartHint}>
           <Toggle checked={meta?.autostart_enabled ?? false} disabled={!meta || busy} onChange={async (value) => {
