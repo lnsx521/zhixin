@@ -171,6 +171,18 @@ impl AncsLink {
         .map_err(|_| crate::BleError::Message("writer 通道已关闭".into()))
     }
 
+    /// 对当前会话的指定 ANCS 通知执行正面动作（来电弹窗的"接听"）。
+    pub fn perform_positive_action(&self, uid: u32) -> Result<()> {
+        let Some(sender) = self.active_writer.lock().unwrap().clone() else {
+            return Err(crate::BleError::Message("当前没有活跃的 ANCS 会话".into()));
+        };
+        sender.send(session::WriterCommand::PerformAction(
+            uid.to_le_bytes(),
+            zhixin_core::ancs::ACTION_POSITIVE,
+        ))
+        .map_err(|_| crate::BleError::Message("writer 通道已关闭".into()))
+    }
+
     pub fn with_options(mut self, options: LinkOptions) -> Self {
         self.options = options;
         self
