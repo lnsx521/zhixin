@@ -191,7 +191,8 @@ impl Default for NotificationOptions {
             enabled: true,
             filter: FilterOptions::default(),
             history_keep_apps: Vec::new(),
-            history_exclude_apps: Vec::new(),
+            // 与 serde 的 default_history_exclude_apps 保持一致（首次安装与代码默认值同一套）
+            history_exclude_apps: default_history_exclude_apps(),
             popup: PopupOptions::default(),
             history_limit: 3,
         }
