@@ -13,8 +13,8 @@ import { Icon, type IconName } from "../shared/Icon";
 import { applyTheme, watchSystemTheme } from "../shared/theme";
 import { AutoSave, type SaveStatus } from "../shared/autosave";
 import { Titlebar } from "./Titlebar";
-import { useUpdater } from "./useUpdater";
-import { UpdateNotice } from "./sections/SoftwareUpdate";
+import { useUpdater, type Updater } from "./useUpdater";
+import { UpdateDialog, UpdateNotice } from "./sections/SoftwareUpdate";
 
 type Page = "connection" | "notifications" | "proximity" | "transfer" | "general" | "about";
 
@@ -112,6 +112,8 @@ export function App() {
   };
 
   const lang = resolveLang(config?.general.language ?? "auto");
+  // 单一 updater 实例：所有入口共享同一份状态与控制器，避免点击与弹窗分属两个实例。
+  const updater = useUpdater();
 
   return (
     <LangContext.Provider value={lang}>
@@ -131,9 +133,11 @@ export function App() {
             error={error}
             retry={() => { void autosave.flush(); }}
             onBack={() => setView('home')}
+            updater={updater}
           />
         )}
-        <UpdateNotice updater={useUpdater()} />
+        {view === 'home' && <UpdateNotice updater={updater} />}
+        {updater.open && <UpdateDialog updater={updater} beforeInstall={() => Promise.resolve(autosave.flush())} />}
       </div>
     </LangContext.Provider>
   );
@@ -149,10 +153,10 @@ function SettingsView(props: {
   error: string | null;
   retry: () => void;
   onBack: () => void;
+  updater: Updater;
 }) {
   const t = useT();
-  const updater = useUpdater();
-  const { page, setPage, config, update, saveStatus, saveError, error, retry, onBack } = props;
+  const { page, setPage, config, update, saveStatus, saveError, error, retry, onBack, updater } = props;
 
   const nav: { key: Page; label: string }[] = [
     { key: "connection", label: t.nav.connection },
