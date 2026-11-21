@@ -136,10 +136,12 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
     // 来电类：
     // * 响铃阶段（call_outcome=None）→ 正常弹小窗提醒用户
     // * 已接通 / 未接听（call_outcome=Some）→ 直接写历史，不再打扰
-    if notification.category == Some(1) {
+    if notification.is_call() {
         if notification.call_outcome.is_some() {
             crate::history::record(app, notification);
             info!("电话结果通知已记录到历史（不弹小窗）");
+            // 通话结束（接听后 Removed 入库 / 未接）：让前端常驻的「当前通话」卡片自动关闭
+            let _ = app.emit("call-ended", ());
             return;
         }
         // call_outcome=None：来电响铃中，继续走下方弹窗逻辑
@@ -173,7 +175,7 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
         duration_secs: popup.duration_seconds,
         category: notification.category,
         uid: notification.uid,
-        carrier: if notification.category == Some(1) {
+        carrier: if notification.is_call() {
             zhixin_core::carrier::describe(&origin_digits(&notification.origin()))
         } else {
             None
@@ -182,6 +184,25 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
     };
 
     info!("弹窗：{} — {}", payload.origin, payload.body);
+
+    // ── 与显示路径无关的统一处理：池复用和新建窗口都必须执行 ──
+    // （之前池复用分支提前 return，导致复用时通知不入历史、不拉图标、不记来源）
+
+    // 通知历史留档（含验证码，敏感数据仅本地存储）
+    crate::history::record(app, notification);
+
+    // 联网获取 App 图标（开关打开时）：后台静默，失败不影响通知
+    if let Some(app_id) = payload.app_id.clone().filter(|id| !id.trim().is_empty()) {
+        crate::icon_store::spawn_fetch(app.clone(), app_id, payload.origin.clone());
+    }
+
+    // 记住来源（过滤规则页可直接选用），最新在前、去重、上限 50。
+    if let Some(app_id) = payload.app_id.clone().filter(|id| !id.trim().is_empty()) {
+        let mut known = state.known_apps.lock().unwrap();
+        known.retain(|(id, _)| id != &app_id);
+        known.insert(0, (app_id, payload.origin.clone()));
+        known.truncate(50);
+    }
 
     // 弹窗池热复用：常驻窗口空闲时直接换内容显示（零延迟，免 webview 冷加载）
     {
@@ -193,6 +214,12 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
                 .iter()
                 .any(|item| item == POOL_LABEL);
         if pool_free {
+            // 记录原始通知（池窗口 label），供点击/拒接反向查找
+            state
+                .phone_notifs
+                .lock()
+                .unwrap()
+                .insert(POOL_LABEL.to_string(), notification.clone());
             state
                 .pending_toasts
                 .lock()
@@ -210,31 +237,27 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
                 .insert(POOL_LABEL.to_string(), DEFAULT_HEIGHT);
             let _ = app.emit_to(POOL_LABEL, "toast-payload", ());
             reposition_all(app);
-            let duration = u64::from(popup.duration_seconds).max(2) + 2;
-            let app_for_timer = app.clone();
-            tauri::async_runtime::spawn(async move {
-                tokio::time::sleep(Duration::from_secs(duration)).await;
-                close_toast(&app_for_timer, POOL_LABEL);
-            });
+            // 「当前通话」卡片常驻：不受设置停留时长影响，由 call-ended 事件关闭
+            if notification.category != Some(12) {
+                let duration = u64::from(popup.duration_seconds).max(2) + 2;
+                let app_for_timer = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(Duration::from_secs(duration)).await;
+                    close_toast(&app_for_timer, POOL_LABEL);
+                });
+            }
             return;
         }
     }
 
-    // 通知历史留档（含验证码，敏感数据仅本地存储）
-    crate::history::record(app, notification);
+    // 通知历史留档已提前统一执行（见上方），此处只负责新建窗口展示
 
-    // 联网获取 App 图标（开关打开时）：后台静默，失败不影响通知
-    if let Some(app_id) = payload.app_id.clone().filter(|id| !id.trim().is_empty()) {
-        crate::icon_store::spawn_fetch(app.clone(), app_id, payload.origin.clone());
-    }
-
-    // 记住来源（过滤规则页可直接选用），最新在前、去重、上限 50。
-    if let Some(app_id) = payload.app_id.clone().filter(|id| !id.trim().is_empty()) {
-        let mut known = state.known_apps.lock().unwrap();
-        known.retain(|(id, _)| id != &app_id);
-        known.insert(0, (app_id, payload.origin.clone()));
-        known.truncate(50);
-    }
+    // 记录原始通知，供点击时反向查找历史 entry。
+    state
+        .phone_notifs
+        .lock()
+        .unwrap()
+        .insert(label.clone(), notification.clone());
 
     state
         .pending_toasts
@@ -276,11 +299,6 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
         let mut open = state.toasts.lock().unwrap();
         open.push_back(label.clone());
     }
-    // 记录原始通知，供点击时反向查找历史 entry。
-    {
-        let mut map = state.phone_notifs.lock().unwrap();
-        map.insert(label.clone(), notification.clone());
-    }
 
     // 窗口销毁（不管哪条路关的）→ 从堆里摘掉并重排
     let app_for_event = app.clone();
@@ -295,13 +313,16 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
     reposition_all(app);
 
     // 兜底定时关闭（前端崩溃/事件丢失也不至于留着窗口）
-    let app_for_timer = app.clone();
-    let label_for_timer = label.clone();
-    let duration = u64::from(popup.duration_seconds).max(2) + 2;
-    tauri::async_runtime::spawn(async move {
-        tokio::time::sleep(Duration::from_secs(duration)).await;
-        close_toast(&app_for_timer, &label_for_timer);
-    });
+    // 「当前通话」卡片除外：它常驻，等通话结束的 call-ended 事件关闭
+    if notification.category != Some(12) {
+        let app_for_timer = app.clone();
+        let label_for_timer = label.clone();
+        let duration = u64::from(popup.duration_seconds).max(2) + 2;
+        tauri::async_runtime::spawn(async move {
+            tokio::time::sleep(Duration::from_secs(duration)).await;
+            close_toast(&app_for_timer, &label_for_timer);
+        });
+    }
 }
 
 /// 点小弹窗展开 → 关小窗，开一个 Mac 风格大窗展示全文。
