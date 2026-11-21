@@ -9,7 +9,8 @@
 //! 2. 字段里已经就是这个验证码 → 不动
 //! 3. 字段里已经包含这个验证码（开头或结尾）→ 不动，别重复追加
 //! 4. 用户手打了前几位 → 补全成完整的
-//! 5. 其余情况 → **追加到已有内容后面**（早期版本是"有内容就不动"）
+//! 5. 其余情况 → **用验证码整体覆盖**（早期版本是"追加"，但 UIA 读到的
+//!    placeholder 会被当成已有内容拼进去，故改为不拼接、只写验证码）
 //!
 //! 计划里同时给出两种机制要用的内容：
 //!
@@ -107,8 +108,11 @@ pub fn plan(current_value: Option<&str>, code: Option<&str>) -> InsertionPlan {
         return InsertionPlan::write(code, tail, "用户已输入前几位，补全");
     }
 
-    // 其余情况 → 追加到已有内容后面（保留用户原有的内容和格式）
-    InsertionPlan::write(format!("{current_value}{code}"), code, "追加到已有内容后面")
+    // 其余情况 → 用验证码整体覆盖，不拼接 current。
+    // ★ 绝不把 current 写回去：UIA 的 CurrentValue 对 WebView2/富文本/浏览器输入框
+    //   返回的往往是 placeholder 文案而非用户真实输入，拼进去会把提示文字固化成真文本，
+    //   且受控输入框状态不同步、用户删不掉。验证码输入框里本就该只有验证码。
+    InsertionPlan::write(code, code, "字段里有其他内容，用验证码覆盖")
 }
 
 /// 自动填入不盲写、不追加普通文本；密码/只读/焦点检查由 UIA 执行层负责。
@@ -215,31 +219,33 @@ mod tests {
     }
 
     #[test]
-    fn 已有其他内容时追加而不是覆盖() {
-        // 早期版本这里是"不覆盖"，现在改成追加到后面
+    fn 已有其他内容时用验证码覆盖() {
+        // 早期"不覆盖"→"追加"→现在"覆盖"：绝不把 UIA 读到的内容写回去
         let plan = plan(Some("hello world"), Some("123456"));
 
         assert!(plan.should_write());
-        assert_eq!(plan.value.as_deref(), Some("hello world123456"));
+        assert_eq!(plan.value.as_deref(), Some("123456"));
         assert_eq!(plan.typed.as_deref(), Some("123456"));
-        assert_eq!(plan.reason, "追加到已有内容后面");
+        assert_eq!(plan.reason, "字段里有其他内容，用验证码覆盖");
     }
 
     #[test]
-    fn 追加保留用户原有的空白和格式() {
-        let plan = plan(Some("验证码："), Some("123456"));
+    fn placeholder_文案被当成已有内容时只写验证码() {
+        // ★ 回归测试：WebView2 输入框（如 WorkBuddy 对话栏）的 UIA CurrentValue
+        //   返回的是 placeholder，绝不能把它固化成真实文本
+        let plan = plan(Some("今天帮你做些什么? @添加上下文，/调用技能与指令"), Some("123456"));
 
         assert!(plan.should_write());
-        assert_eq!(plan.value.as_deref(), Some("验证码：123456"));
+        assert_eq!(plan.value.as_deref(), Some("123456"));
+        assert_eq!(plan.typed.as_deref(), Some("123456"));
     }
 
     #[test]
-    fn 上一个验证码会被追加() {
-        // 旧语义下这是"不覆盖"；新语义是追加（用户明确要追加）
+    fn 上一个验证码会被覆盖而不是累加() {
         let plan = plan(Some("111111"), Some("123456"));
 
         assert!(plan.should_write());
-        assert_eq!(plan.value.as_deref(), Some("111111123456"));
+        assert_eq!(plan.value.as_deref(), Some("123456"));
     }
 
     #[test]
@@ -276,18 +282,106 @@ mod tests {
     }
 
     #[test]
-    fn 追加时_setvalue_的值等于_current_加_typed() {
-        // 对"追加"这一类计划，value 必须等于 current + typed，
-        // 这样两种机制写入的结果才一致。
-        for current in ["hello ", "验证码：", "abc"] {
+    fn 两种机制写入的值始终一致() {
+        // 无论走 SetValue 还是逐字键入，写进去的都应该是纯验证码，
+        // 这样两种模式的结果才一致，也才不会把 UIA 读到的不可靠内容带进去。
+        for current in ["hello ", "验证码：", "abc", "今天帮你做些什么? @添加上下文"] {
             let plan = plan(Some(current), Some("123456"));
 
             assert_eq!(plan.decision, InsertionDecision::Write);
             assert_eq!(plan.typed.as_deref(), Some("123456"));
-            assert_eq!(
-                plan.value.as_deref(),
-                Some(format!("{current}123456").as_str())
-            );
+            assert_eq!(plan.value.as_deref(), Some("123456"));
+        }
+    }
+
+    // ── 压力测试：各种输入框怪状态 ────────────────────────────
+    // 核心不变量：写进去的值只可能是「纯验证码」或「验证码前缀补全」，
+    // 任何情况下都不得包含 UIA 读到的 current（可能是 placeholder / 默认文案）。
+
+    #[test]
+    fn 压力_common_placeholder_形态一律覆盖() {
+        let placeholders = [
+            "今天帮你做些什么? @添加上下文，/调用技能与指令", // WorkBuddy 对话栏（本次 bug）
+            "搜索消息",                                  // 搜索框 placeholder
+            "请输入验证码",                              // 验证码框 placeholder
+            "Message",                                   // 英文输入框
+            "Type your message here...",
+            "手机号码 / 邮箱",
+        ];
+        for p in placeholders {
+            let plan = plan(Some(p), Some("123456"));
+            assert!(plan.should_write(), "placeholder「{p}」应该覆盖写入");
+            assert_eq!(plan.value.as_deref(), Some("123456"), "不得把 placeholder 写回去");
+            assert!(!plan.value.as_ref().unwrap().contains(p));
+        }
+    }
+
+    #[test]
+    fn 压力_多行和特殊字符一律覆盖() {
+        let weird = [
+            "第一行\n第二行",
+            "a\tb\tc",
+            "🎉🎉🎉",
+            "—— — ——",
+            "\\n\\t literal",
+            "https://example.com/?a=1&b=2",
+            "   \u{00a0}\u{3000}  ", // 不间断空格 + 全角空格：trim 后为空
+        ];
+        for w in weird {
+            let plan = plan(Some(w), Some("123456"));
+            match plan.decision {
+                InsertionDecision::Write => {
+                    assert_eq!(plan.value.as_deref(), Some("123456"));
+                }
+                InsertionDecision::DoNotTouch => {
+                    // 只允许"已经有验证码"这类原因，不允许异常
+                    assert!(plan.reason.contains("验证码"));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn 压力_极长输入不会爆也不会拼进去() {
+        let long = "x".repeat(10_000);
+        let plan = plan(Some(&long), Some("123456"));
+        assert!(plan.should_write());
+        assert_eq!(plan.value.as_deref(), Some("123456"));
+    }
+
+    #[test]
+    fn 压力_各种验证码位数和字符() {
+        for code in ["1", "12", "123456", "12345678", "ABC123", "000000"] {
+            // 空框
+            let p = plan(Some(""), Some(code));
+            assert_eq!(p.value.as_deref(), Some(code));
+            // 有 placeholder
+            let p = plan(Some("请输入内容"), Some(code));
+            assert_eq!(p.value.as_deref(), Some(code));
+            // 部分前缀补全
+            if code.len() > 2 {
+                let partial = &code[..code.len() - 1];
+                let p = plan(Some(partial), Some(code));
+                assert_eq!(p.value.as_deref(), Some(code));
+                assert_eq!(p.typed.as_deref(), Some(&code[code.len() - 1..]));
+            }
+        }
+    }
+
+    #[test]
+    fn 压力_none和全空白始终只写验证码() {
+        assert_eq!(plan(None, Some("123456")).value.as_deref(), Some("123456"));
+        for blank in ["", " ", "\t", "\n", "  \n\t  "] {
+            assert_eq!(plan(Some(blank), Some("123456")).value.as_deref(), Some("123456"));
+        }
+    }
+
+    #[test]
+    fn 压力_已含验证码时不重复写入() {
+        for current in ["123456", " 123456 ", "收到 123456", "123456 已过期"] {
+            let plan = plan(Some(current), Some("123456"));
+            assert!(!plan.should_write(), "「{current}」已含验证码，不应再写");
+            assert!(plan.value.is_none());
         }
     }
 }
