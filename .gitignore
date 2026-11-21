@@ -22,6 +22,11 @@ Thumbs.db
 !.vscode/settings.json
 .idea/
 
+# 开发过程设计稿（示意图，不属于软件构建入口；四个入口 HTML 见 vite.config.ts）
+design-home.html
+layout-editor.html
+receiver-layout.html
+
 # Logs
 *.log
 
