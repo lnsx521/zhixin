@@ -7,8 +7,6 @@ Cargo.lock.bak
 node_modules/
 /dist
 /.cache/
-website/.vitepress/cache/
-website/.vitepress/dist/
 *.local
 
 # Tauri
@@ -26,6 +24,11 @@ Thumbs.db
 design-home.html
 layout-editor.html
 receiver-layout.html
+
+# 项目配套（文档站/测试脚本/AI 说明，不参与软件构建，单独归档在「项目配套」目录）
+website/
+tools/
+AGENTS.md
 
 # Logs
 *.log
