@@ -22,8 +22,13 @@ export function Transfer() {
   const [error, setError] = useState<string | null>(null);
   const [busy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [tokenWarning, setTokenWarning] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => () => clearTimeout(copyTimer.current), []);
+  const warningTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => {
+    clearTimeout(copyTimer.current);
+    clearTimeout(warningTimer.current);
+  }, []);
 
   useEffect(() => {
     let disposed = false;
@@ -41,13 +46,14 @@ export function Transfer() {
     try { setInfo(await getTransferInfo()); } catch (e) { setError(String(e)); }
   };
 
-  const copy = async (value: string) => {
+  const copy = async (value: string): Promise<boolean> => {
     try {
       await writeText(value);
       clearTimeout(copyTimer.current);
       setCopied(true);
       copyTimer.current = setTimeout(() => setCopied(false), 2000);
-    } catch { setError(text("复制失败", "Copy failed")); }
+      return true;
+    } catch { setError(text("复制失败", "Copy failed")); return false; }
   };
 
 
@@ -94,13 +100,18 @@ export function Transfer() {
           <p>{text("手机与电脑连同一 Wi-Fi，Safari 扫码打开页面：选文件上传、拍照上传，也能把电脑上的文件下载到手机。固定域名换网络不用重新扫码。", "With both devices on the same Wi-Fi, open the page in Safari: pick files or shoot photos to upload, and download files from this PC. The fixed domain survives network changes.")}</p>
           <div className="hero-actions">
             {domainUrl && <button className="btn primary" onClick={() => {
-              void copy(domainUrl);
-              window.setTimeout(() => window.alert(text(
-                "令牌已复制。请勿将令牌分享给他人——拿到这条地址即可上传、下载和删除电脑文件。",
-                "Token copied. Do NOT share it - anyone with this link can upload, download and delete files on this PC."
-              )), 150);
+              void copy(domainUrl).then((ok) => {
+                if (ok) {
+                  setTokenWarning(true);
+                  clearTimeout(warningTimer.current);
+                  warningTimer.current = setTimeout(() => setTokenWarning(false), 6000);
+                }
+              });
             }}>{copied ? text("✓ 已复制", "✓ Copied") : text("复制令牌", "Copy token")}</button>}
           </div>
+          {tokenWarning && <p className="token-warning" role="status">
+            {text("令牌已复制。请勿将令牌分享给他人——拿到这条地址即可上传、下载和删除电脑文件。", "Token copied. Do NOT share it - anyone with this link can upload, download and delete files on this PC.")}
+          </p>}
         </div>
       </div>
 
