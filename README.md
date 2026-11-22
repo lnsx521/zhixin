@@ -2,30 +2,39 @@
   <img src="src-tauri/icons/128x128.png" width="112" height="112" alt="知信 logo" />
   <h1>知信</h1>
   <p><strong>让手机偷个懒，我来传话。</strong></p>
-  <p>通过蓝牙接收通知，复制验证码，按需填入，并打开对应的电脑应用。</p>
+  <p>通过蓝牙接收 iPhone 通知，复制验证码，按需填入，并打开对应的电脑应用。本地处理，不经过服务器。</p>
   <p>
     <a href="https://github.com/lnsx521/zhixin/releases/latest"><img src="https://img.shields.io/github/v/release/lnsx521/zhixin?label=version&color=2f6feb" alt="最新版本" /></a>
     <a href="https://github.com/lnsx521/zhixin/actions/workflows/ci.yml"><img src="https://github.com/lnsx521/zhixin/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-informational" alt="MIT license" /></a>
     <img src="https://img.shields.io/badge/platform-Windows-555555" alt="Windows" />
   </p>
-  <p><a href="#开始使用">开始使用</a> · <a href="#连接-iphone">连接 iPhone</a> · <a href="#开发">开发</a> · <a href="CONTRIBUTING.md">参与贡献</a></p>
+  <p><a href="#一句话让-ai-帮你装好">AI 帮你装</a> · <a href="#自己动手安装">手动安装</a> · <a href="#连接-iphone">连接 iPhone</a> · <a href="#它能做什么">功能</a> · <a href="#参与开发">开发</a></p>
 </div>
 
-## 它能做什么
+## 一句话让 AI 帮你装好
 
-- **通知直投**：iPhone 通过蓝牙 ANCS 直连 Windows，通知实时弹到右下角——毛玻璃质感、macOS 风格右上角堆叠，短信、微信、邮件等常用应用显示品牌图标。
-- **验证码全自动**：收到验证码自动复制到剪贴板；光标候选条跟随输入框出现，点击即填入，验证码少一次切换。
-- **文件互传**：手机扫码即可与电脑双向传文件；iPhone 分享菜单直达（选照片点分享就上电脑）；mDNS 固定域名，换了 Wi-Fi 也不用重新扫码。
-- **低电量提醒**：手机电量跌破阈值时自动弹窗提醒充电，电池图标实时显示电量。
-- **点击打开应用**：按通知来源配置 URL 规则（如 `weixin://`、`tencent://`），点击通知直接唤起对应应用。
-- **HTTP 网络接入**：安卓与 iOS 也可由第三方工具（如 SmsForwarder）通过 HTTP 转发接入，支持 GET / POST 与统一令牌，见 [接入指南](website/guide/network.md)。
-- **后台自动恢复**：手机离开后自动重试连接，返回后重建失效的通知会话。
-- **个性化**：浅色 / 深色 / 跟随系统，四套渐变背景 + 自定义背景图，玻璃质感界面；中英文界面。
-- **管理偏好**：开机自启、设备首选、应用与关键词过滤、弹窗时长与同屏数量，全部自动保存。
-- **软件更新**：内置更新检查，有新版本时提示下载并一键安装，无需手动跑来仓库看。
+不太会用电脑？把下面这段话**整段复制**，发给 WorkBuddy、豆包等 AI 助手，它会一步步带你装好知信。
 
-## 开始使用
+<details>
+<summary><strong>点开复制这段提示词</strong></summary>
+
+```text
+请帮我安装「知信」——一个把 iPhone 通知和短信验证码接到 Windows 的开源小工具。按顺序执行，每一步都告诉我结果：
+
+1. 打开 https://github.com/lnsx521/zhixin/releases/latest ，下载最新的 zhixin_x.x.x_x64-setup.exe 安装包（约 4.5 MB）。
+2. 双击安装包，按默认选项完成安装（当前用户安装，不需要管理员权限）。
+3. 安装后启动知信，在「连接」页点「添加设备」，然后按提示用 iPhone 蓝牙配对，并在 iPhone 上打开「共享系统通知」。
+4. 让 iPhone 收到一条通知，确认电脑弹窗正常。
+
+安全要求（重要）：只从上面这个 GitHub 仓库下载，不要安装其它来源的文件；不要修改防火墙、注册表、网络设置或任何系统配置，遇到这类步骤先停下来问我；不要填写任何手机号、账号、密码或付款信息；任何一步失败，把报错原文发给我，不要自行绕过。
+```
+
+</details>
+
+AI 助手只是帮你完成下载和安装；蓝牙配对需要在电脑和 iPhone 上各点几下，它给的步骤照着做即可。装完想自己核对，看下面的手动步骤。
+
+## 自己动手安装
 
 从 [Releases](https://github.com/lnsx521/zhixin/releases/latest) 下载最新版安装包（`zhixin_<版本号>_x64-setup.exe`），双击安装即可（约 4.5MB，自带所需组件）。
 
@@ -53,6 +62,19 @@
 
 点击通知主体或“打开”按钮后，系统将 URL 交给对应应用处理。验证码按钮只复制，不触发打开。此功能不保证进入具体聊天或消息，协议行为取决于目标应用。
 
+## 它能做什么
+
+- **通知直投**：iPhone 通过蓝牙 ANCS 直连 Windows，通知实时弹到右下角——毛玻璃质感、macOS 风格右上角堆叠，短信、微信、邮件等常用应用显示品牌图标。
+- **验证码全自动**：收到验证码自动复制到剪贴板；光标候选条跟随输入框出现，点击即填入，验证码少一次切换。
+- **文件互传**：手机扫码即可与电脑双向传文件；iPhone 分享菜单直达（选照片点分享就上电脑）；mDNS 固定域名，换了 Wi-Fi 也不用重新扫码。
+- **低电量提醒**：手机电量跌破阈值时自动弹窗提醒充电，电池图标实时显示电量。
+- **点击打开应用**：按通知来源配置 URL 规则（如 `weixin://`、`tencent://`），点击通知直接唤起对应应用。
+- **HTTP 网络接入**：安卓与 iOS 也可由第三方工具（如 SmsForwarder）通过 HTTP 转发接入，支持 GET / POST 与统一令牌，见 [接入指南](website/guide/network.md)。
+- **后台自动恢复**：手机离开后自动重试连接，返回后重建失效的通知会话。
+- **个性化**：浅色 / 深色 / 跟随系统，四套渐变背景 + 自定义背景图，玻璃质感界面；中英文界面。
+- **管理偏好**：开机自启、设备首选、应用与关键词过滤、弹窗时长与同屏数量，全部自动保存。
+- **软件更新**：内置更新检查，有新版本时提示下载并一键安装，无需手动跑来仓库看。
+
 ## 隐私与边界
 
 通知传输与验证码识别在本机完成，不需要云端转发服务。用户点击配置的 HTTPS 链接或应用协议后，目标浏览器或应用可能访问网络。
@@ -68,7 +90,7 @@
 
 安全问题请阅读 [SECURITY.md](SECURITY.md)，不要在公开 Issue 中披露敏感内容。
 
-## 开发
+## 参与开发
 
 ### 文档站
 
