@@ -11,7 +11,7 @@ import {
   type ManagedDevice,
 } from "../../shared/api";
 import { useT } from "../../shared/i18n";
-import { Section } from "../components";
+import { Modal, Section } from "../components";
 import { Icon } from "../../shared/Icon";
 import { ConnectionGuide } from "./ConnectionGuide";
 
@@ -22,6 +22,7 @@ export function Connection() {
   const [devices, setDevices] = useState<ManagedDevice[]>([]);
   const [deviceError, setDeviceError] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [forgetTarget, setForgetTarget] = useState<string | null>(null);
   // 配对修复引导：已配对但通知共享未开启（长时间不就绪）→ 显示修复指引
   const [notReadySince, setNotReadySince] = useState<number | null>(null);
   const [, tick] = useState(0);
@@ -149,11 +150,7 @@ export function Connection() {
                   <button
                     className="btn danger"
                     disabled={device.current}
-                    onClick={() => {
-                      if (confirm(t.connection.forgetConfirm)) {
-                        runDeviceAction(() => forgetDevice(device.id));
-                      }
-                    }}
+                    onClick={() => setForgetTarget(device.id)}
                   >
                     {t.connection.forgetDevice}
                   </button>
@@ -175,6 +172,17 @@ export function Connection() {
       {failed && <button className="btn" onClick={() => setShowGuide(true)}>{t.connection.diagnostics}</button>}
       {displayLink?.detail && <details className="diagnostic-details"><summary>{t.connection.details}</summary><p className="status-detail">{displayLink.detail}</p></details>}
       {showGuide && <ConnectionGuide onClose={() => setShowGuide(false)} />}
+      {forgetTarget !== null && <Modal title={t.connection.forgetDevice} onClose={() => setForgetTarget(null)}>
+        <p>{t.connection.forgetConfirm}</p>
+        <footer className="modal-actions">
+          <button className="btn" onClick={() => setForgetTarget(null)}>{t.rules.cancel}</button>
+          <button className="btn danger" onClick={() => {
+            const id = forgetTarget;
+            setForgetTarget(null);
+            void runDeviceAction(() => forgetDevice(id));
+          }}>{t.connection.forgetDevice}</button>
+        </footer>
+      </Modal>}
     </>
   );
 }
