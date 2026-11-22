@@ -764,6 +764,7 @@ body::before {
 .hero-body h2 { margin: 0 0 8px; font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
 .hero-body p { margin: 0 0 16px; color: var(--text-secondary); font-size: 13px; line-height: 1.65; }
 .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.token-warning { margin: 12px 0 0 !important; padding: 9px 12px; border-radius: 8px; background: color-mix(in srgb, var(--warning) 12%, transparent); color: var(--warning) !important; font-size: 12px !important; line-height: 1.55 !important; }
 .hero-off { display: flex; align-items: center; gap: 18px; }
 .hero-off .hero-icon {
   width: 56px; height: 56px; flex-shrink: 0; border-radius: 14px;
