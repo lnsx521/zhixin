@@ -489,12 +489,15 @@ body::before {
   border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
   background: var(--glass-fill); backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-soft); margin: 16px 0; padding: 0 22px;
+  box-shadow: var(--glass-shadow); margin: 16px 0; padding: 0 22px;
 }
 .disclosure summary { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 18px 0; font-size: 14px; font-weight: 600; list-style: none; }
 .disclosure summary::before { content: '›'; font-size: 18px; font-weight: 400; color: var(--text-faint); transition: transform 0.2s ease-out; }
 .disclosure[open] summary::before { transform: rotate(90deg); }
 .disclosure summary small { margin-left: auto; color: var(--text-faint); font-weight: 400; font-size: 11px; }
+/* 标题栏右侧的按钮（添加规则）：有按钮时条数不再占满右侧 */
+.disclosure summary small:has(+ .disclosure-action) { margin-left: 0; }
+.disclosure-action { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; cursor: default; }
 .disclosure-body { padding: 0 0 16px; }
 .disclosure[open] > summary { border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); margin-bottom: 14px; }
 .modal .disclosure { padding: 0 14px; background: var(--bg); box-shadow: none; }
@@ -522,6 +525,8 @@ body::before {
 .otp-fill-options:disabled .otp-fill-option:hover span { color: var(--text-secondary); }
 .otp-fill-options:disabled .otp-fill-option input:checked + span { background: var(--accent); color: var(--on-accent); }
 .otp-fill-hint { margin: 10px 0 0; color: var(--text-secondary); font-size: 12px; }
+/* 验证码折叠区里，高级选项与上方填入设置的分隔 */
+.advanced-fields { display: block; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
 .settings-fields:disabled, .toggle:disabled { opacity: .45; }
 .toggle:disabled { cursor: default; }
 
@@ -541,6 +546,8 @@ body::before {
   color: var(--text-secondary); background: color-mix(in srgb, var(--text) 6%, transparent);
   width: 44px; height: 50px; border-radius: 10px; flex-shrink: 0;
 }
+/* 设备大图标：iPhone 灵动岛 + 对勾，淡绿底承托白色机身 */
+.device-symbol.iphone { background: color-mix(in srgb, var(--success) 14%, var(--glass-fill)); }
 .device-state { margin-top: 14px; }
 .device-last-seen { margin: -4px 0 14px; color: var(--text-faint); font-size: 11px; }
 .device-actions { border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent); padding-top: 13px; flex-wrap: wrap; }
@@ -808,6 +815,10 @@ body::before {
 * { scrollbar-width: none; }
 *::-webkit-scrollbar { width: 0; height: 0; }
 
+/* 消息过滤：弹窗过滤 / 主窗口记录 两组小标题 */
+.filter-group-title { margin: 18px 0 4px; font-size: 13px; font-weight: 600; color: var(--text); }
+.filter-group-title:first-of-type { margin-top: 8px; }
+
 /* 最近通知来源：胶囊 chips，点选后加入白名单 */
 .known-apps {
   display: flex;
@@ -916,11 +927,6 @@ body::before {
 .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
 /* 通用页：通知图标折叠区 */
-.icons-fold summary { list-style: none; }
-.icons-fold summary::-webkit-details-marker { display: none; }
-.icons-fold summary::after { content: "▾"; color: var(--text-faint); font-size: 11px; margin-left: 8px; }
-.icons-fold[open] summary::after { content: "▴"; }
-
 /* 配对提醒：紧凑单行（小叹号 + 文字 + 连接帮助） */
 .pairing-hint {
   display: flex; align-items: center; gap: 8px;
@@ -965,8 +971,8 @@ body::before {
 }
 .home-top-row { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
 .home-phone-row { display: flex; align-items: center; gap: 11px; }
-.home-phone-icon { width: 44px; height: 44px; border-radius: 12px; background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.home-phone-icon svg { width: 20px; height: 20px; }
+.home-phone-icon { width: 44px; height: 44px; border-radius: 12px; background: color-mix(in srgb, var(--success) 14%, var(--glass-fill)); color: var(--text); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.home-phone-icon svg { width: 30px; height: 30px; }
 .home-phone-col { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
 .home-phone-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .home-phone-wrap { flex: 0 1 auto; min-width: 0; position: relative; }
