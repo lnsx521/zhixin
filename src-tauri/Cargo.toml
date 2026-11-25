@@ -3,7 +3,6 @@ name = "zhixin-app"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "把 iPhone 的通知和验证码接到 Windows 上"
 
 [lib]
 name = "zhixin_app_lib"
