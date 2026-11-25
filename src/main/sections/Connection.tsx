@@ -97,7 +97,7 @@ export function Connection() {
         {deviceError && <p className="bad-text">{deviceError}</p>}
         {devices.length === 0 ? (
           <div className="empty-device">
-            <span className="device-symbol"><Icon name="phone" size={28} /></span>
+            <span className="device-symbol iphone"><Icon name="iphone" size={28} /></span>
             <strong>{t.connection.emptyTitle}</strong>
             <p>{t.connection.emptyDesc}</p>
             <button className="btn primary" onClick={() => setShowGuide(true)}>{t.connection.addDevice}</button>
@@ -108,7 +108,7 @@ export function Connection() {
               <article className={`device-card ${device.current ? "current" : ""}`} key={device.id}>
                 <div className="device-main">
                    <div className="device-identity">
-                     <span className="device-symbol"><Icon name="phone" size={24} /></span>
+                     <span className="device-symbol iphone"><Icon name="iphone" size={24} /></span>
                      <div className="device-name-col">
                        <div className="device-title-row">
                          <strong>{device.name}</strong>
