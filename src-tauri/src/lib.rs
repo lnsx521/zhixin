@@ -6,6 +6,7 @@ mod app_launcher;
 mod caret;
 mod commands;
 mod devices;
+mod dnd;
 mod history;
 mod http_ingress;
 mod icon_store;
@@ -64,7 +65,12 @@ pub fn run() {
             http_ingress::start(app.handle().clone());
 
             tray::setup(app.handle())?;
+            // 启动时后台补齐旧图标缓存缺失的官方 App 名（只查 iTunes，不重下图标）
+            icon_store::spawn_fill_names(app.handle().clone());
             popups::ensure_pool(app.handle());
+            // 启动 10 秒后自动检查更新（受通用设置开关控制）
+            updater::start_auto_check(app.handle().clone());
+            dnd::start_watch(app.handle().clone());
             link_worker::spawn(app.handle().clone());
             proximity::spawn(app.handle().clone());
             mdns::spawn(app.handle().clone());
@@ -165,6 +171,8 @@ pub fn run() {
             commands::get_background_image,
             commands::toast_close,
             commands::toast_resize,
+            commands::dnd_choice,
+            updater::update_ask_install,
             commands::get_caret_offer,
             commands::caret_layout,
             commands::caret_insert,
@@ -180,7 +188,6 @@ pub fn run() {
             http_ingress::reset_token,
             popups::pick_sound_file,
             mdns::get_mdns_hostname,
-            popups::list_known_apps,
         ])
         .build(tauri::generate_context!())
         .expect("构建 Tauri 应用失败")
