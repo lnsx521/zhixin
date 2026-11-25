@@ -438,6 +438,12 @@ pub fn toast_resize(app: AppHandle, label: String, height: f64) {
     popups::resize_and_show(&app, &label, height);
 }
 
+/// 用户在勿扰询问弹窗上点了选择：同意开启静默 / 保持提醒。
+#[tauri::command]
+pub fn dnd_choice(accept: bool) {
+    crate::dnd::set_choice(accept);
+}
+
 // ── 候选条窗口 ────────────────────────────────────────────────
 
 /// caret 前端加载完成后主动来取当前提议。
@@ -508,10 +514,33 @@ fn extract_longest_digits(text: &str) -> String {
 
 // ── Toast 点击 → 主窗口 ────────────────────────────────────────
 
-/// 用户点了小弹窗通知：先把对应原始通知发回主窗口（让主页直接展示），再按普通 click 走一遍（验证码复制等）。
+/// 用户点了小弹窗通知。
+/// 配了规则且成功打开应用 → 只打开应用；没配或打开失败 → 发回主窗口定位该条消息。
+/// 两条路径都保留验证码复制。
 #[tauri::command]
 pub fn toast_click_for_main(app: AppHandle, label: String, state: State<'_, AppState>) -> Option<String> {
-    // 先尝试把完整历史 entry 发给主窗口，让它自动定位到这条消息。
+    let source_id = state
+        .phone_notifs
+        .lock()
+        .unwrap()
+        .get(&label)
+        .and_then(|notification| notification.app_identifier.clone());
+
+    // 配了规则就打开应用；成功则不再定位主窗口（微信等消息后期不进主窗口）。
+    let opened = source_id.as_deref().and_then(|id| {
+        let config = state.config();
+        let rule = zhixin_core::app_rules::matching_rule(&config.notifications.app_rules, Some(id))?;
+        Some(crate::app_launcher::open(rule))
+    });
+    if matches!(opened, Some(Ok(()))) {
+        info!("点通知卡片：已按规则打开应用 {}", source_id.unwrap_or_default());
+        return toast_click(app, label, state);
+    }
+    if let Some(Err(error)) = opened {
+        warn!("点通知卡片：打开应用失败，回落主窗口：{error}");
+    }
+
+    // 没配规则 / 打开失败：把完整历史 entry 发给主窗口，让它自动定位到这条消息。
     if let Some(notification) = state.phone_notifs.lock().unwrap().get(&label).cloned() {
         let received_at = notification
             .received_at
@@ -532,7 +561,7 @@ pub fn toast_click_for_main(app: AppHandle, label: String, state: State<'_, AppS
             subtitle: notification.subtitle.clone(),
             message: notification.message.clone(),
             carrier: if notification.is_call() {
-                zhixin_core::carrier::describe(&extract_longest_digits(&notification.origin()))
+                zhixin_core::carrier::describe(&notification.origin())
             } else {
                 None
             },
@@ -544,5 +573,5 @@ pub fn toast_click_for_main(app: AppHandle, label: String, state: State<'_, AppS
     }
 
     // 仍然走原来的点击逻辑（验证码复制）
-    toast_click(app.clone(), label, state)
+    toast_click(app, label, state)
 }
