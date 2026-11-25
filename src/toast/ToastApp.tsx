@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import {
   getConfig,
   getAppIcon,
+  dndChoice,
+  updateAskInstall,
   getToastPayload,
   toastClickForMain,
   toastClose,
   toastResize,
-  toastOpenApp,
   type ToastPayload,
 } from "../shared/api";
 import { dict, resolveLang, type Lang } from "../shared/i18n";
@@ -29,7 +30,6 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
   useSavedTheme();
   const [payload, setPayload] = useState<ToastPayload | null>(null);
   const [copied, setCopied] = useState(false);
-  const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lang, setLang] = useState<Lang>("zh");
   const [cachedIcon, setCachedIcon] = useState<string | null>(null);
@@ -76,7 +76,8 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
     if (!payload) return;
     const card = document.querySelector(".toast");
     if (!card) return;
-    const height = Math.ceil(card.getBoundingClientRect().height) + 8; // body 上下各 4px 留白
+    // +36 = body 上下各 18px 留白，给阴影留出空间，避免被窗口边界切断
+    const height = Math.ceil(card.getBoundingClientRect().height) + 36;
     toastResize(height);
   }, [payload, error, lang]);
 
@@ -98,6 +99,10 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
   const t = dict(lang);
   // 电话类：category=1 或来源是系统电话（部分安卓 ANCS 兼容层用自定义类别）
   const isCall = payload.category === 1 || payload.category === 12 || /mobilephone/i.test(payload.app_id ?? "");
+  // 演示勿扰询问卡：category=2（Rust 检测到全屏演示时弹出，非真实通知）
+  const isDnd = payload.category === 2;
+  // 更新询问卡：category=3（启动 10 秒自动检查到新版本时弹出，非真实通知）
+  const isUpdateAsk = payload.category === 3;
   // 「当前通话」：category=12（接听后 iOS 推的第二条通知）→ 只留挂断、常驻不倒计时
   const isInCall = payload.category === 12 || /当前通话|通话中/.test(payload.body);
   const asset = isCall ? "/brands/phone.png" : (cachedIcon ?? brandAsset(payload.app_id));
@@ -113,14 +118,6 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
     }
   };
 
-  const onOpen = async () => {
-    if (!payload.open_app_name) { await onCopy(); return; }
-    if (opening) return;
-    setOpening(true); setError(null);
-    try { await toastOpenApp(); await toastClose(); }
-    catch (err) { setError(String(err)); setOpening(false); }
-  };
-
   // 小窗：点卡片任意处（除按钮）→ 关闭弹窗并通知主窗口定位到该消息
   const onCardClick = async () => {
     try {
@@ -131,6 +128,78 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
       toastClose();
     }
   };
+
+  // 更新询问卡：蓝色系（更新语义），两按钮；30 秒无操作自动按「稍后再说」关闭
+  if (isUpdateAsk) {
+    const now = new Date().toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { hour: "2-digit", minute: "2-digit" });
+    return (
+      <div className="toast toast-update">
+        <div className="toast-icon update-icon">
+          <svg viewBox="0 0 64 64" style={{ width: "100%", height: "100%", display: "block" }}>
+            <path d="M32 10 L44 26 H36 V40 H28 V26 H20 Z" fill="#ffffff" />
+            <path d="M16 46 H48 V52 H16 Z" fill="#ffffff" />
+          </svg>
+        </div>
+        <div className="toast-text">
+          <div className="toast-origin">
+            <span className="toast-origin-title">{payload.origin}</span>
+            <span className="toast-time">{now}</span>
+          </div>
+          <p className="toast-body">{payload.body}</p>
+          <div className="toast-dnd-actions">
+            <button className="toast-later" onClick={() => toastClose()}>
+              {t.ui.updateLater}
+            </button>
+            <button className="toast-install" onClick={() => { void updateAskInstall().catch(() => {}); toastClose(); }}>
+              {t.ui.updateInstall}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 演示勿扰询问卡：复用来电卡格式（紫边框 / 紫底月牙 / 铃铛双按钮），点选择即生效
+  if (isDnd) {
+    const now = new Date().toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { hour: "2-digit", minute: "2-digit" });
+    const choose = (accept: boolean) => {
+      void dndChoice(accept).catch(() => {});
+      toastClose();
+    };
+    return (
+      <div className="toast toast-dnd">
+        <div className="toast-icon dnd-icon">
+          <svg viewBox="0 0 64 64" style={{ width: "100%", height: "100%", display: "block" }}>
+            <g transform="translate(-10.56,-6) scale(0.38)" fill="#ffffff">
+              <path d="M 102.81 30.06 A 70 70 0 1 0 150.29 148.70 A 64 64 0 0 1 102.81 30.06 Z" />
+            </g>
+          </svg>
+        </div>
+        <div className="toast-text">
+          <div className="toast-origin">
+            <span className="toast-origin-title">{payload.origin}</span>
+            <span className="toast-time">{now}</span>
+          </div>
+          <p className="toast-body">{payload.body}</p>
+          <div className="toast-dnd-actions">
+            <button className="toast-keep" onClick={() => choose(false)}>
+              <svg viewBox="0 0 24 24" style={{ width: 14, height: 14, verticalAlign: "-2px", marginRight: 4 }}>
+                <path d="M12 22a2.2 2.2 0 0 0 2.2-2.2H9.8A2.2 2.2 0 0 0 12 22zm6.4-5.2c-.7-.6-1.4-1.5-1.4-3V9.5C17 6.5 15.2 4 12 4S7 6.5 7 9.5v4.3c0 1.5-.7 2.4-1.4 3-.3.2-.4.6-.3.9.1.4.5.6.9.6h11.6c.4 0 .8-.2.9-.6.1-.3 0-.7-.3-.9z" fill="currentColor" />
+              </svg>
+              {t.ui.dndKeep}
+            </button>
+            <button className="toast-enable" onClick={() => choose(true)}>
+              <svg viewBox="0 0 24 24" style={{ width: 14, height: 14, verticalAlign: "-2px", marginRight: 4 }}>
+                <path d="M12 22a2.2 2.2 0 0 0 2.2-2.2H9.8A2.2 2.2 0 0 0 12 22zm6.4-5.2c-.7-.6-1.4-1.5-1.4-3V9.5C17 6.5 15.2 4 12 4S7 6.5 7 9.5v4.3c0 1.5-.7 2.4-1.4 3-.3.2-.4.6-.3.9.1.4.5.6.9.6h11.6c.4 0 .8-.2.9-.6.1-.3 0-.7-.3-.9z" fill="currentColor" />
+                <path d="M4 3L20 21" stroke="currentColor" strokeWidth={2} strokeLinecap="round" fill="none" />
+              </svg>
+              {t.ui.dndEnable}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // 大窗：仿 macOS 信息（iMessage）阅读窗口
   if (expanded && payload) {
@@ -285,13 +354,10 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
             </div>
           )
         )}
-        {(payload.open_app_name || payload.code) && <div className="toast-actions">
-          {payload.code && (
-            <button className={`toast-code ${copied ? "copied" : ""}`} onClick={(event) => { event.stopPropagation(); void onCopy(); }}>
-              {copied ? t.toast.copied : t.toast.copyCode(payload.code)}
-            </button>
-          )}
-          {payload.open_app_name && <button className="toast-open" disabled={opening} onClick={(event) => { event.stopPropagation(); void onOpen(); }}>{opening ? t.rules.opening : t.rules.open(payload.open_app_name)}</button>}
+        {payload.code && <div className="toast-actions">
+          <button className={`toast-code ${copied ? "copied" : ""}`} onClick={(event) => { event.stopPropagation(); void onCopy(); }}>
+            {copied ? t.toast.copied : t.toast.copyCode(payload.code)}
+          </button>
         </div>}
         {error && <p className="toast-error" role="alert">{error}</p>}
       </div>
