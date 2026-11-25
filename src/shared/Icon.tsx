@@ -1,9 +1,16 @@
 import type { CSSProperties, ReactNode } from "react";
 
-export type IconName = "phone" | "bell" | "code" | "settings" | "message" | "plus" | "chevron" | "info" | "star" | "external" | "lock" | "folder" | "app-sms" | "app-wechat" | "app-mail";
+export type IconName = "phone" | "iphone" | "bell" | "code" | "settings" | "message" | "plus" | "chevron" | "info" | "star" | "external" | "lock" | "folder" | "app-sms" | "app-wechat" | "app-mail";
 
 const paths: Record<IconName, ReactNode> = {
   phone: <><rect x="6" y="2.5" width="12" height="19" rx="2.5" /><path d="M10 5h4M11 18.5h2" /></>,
+  /* 设备卡片大图标：iPhone 造型（灵动岛 + 对勾），用显式配色不跟随 currentColor */
+  iphone: <>
+    <rect x="6" y="1.8" width="12" height="20.4" rx="3" fill="#fff" stroke="#3B6D11" strokeWidth="1.5" />
+    <rect x="9.6" y="3.5" width="4.8" height="1.6" rx="0.8" fill="#3B6D11" stroke="none" />
+    <path d="M9.5 15.5 11 17l3.5-3.5" fill="none" stroke="#639922" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M10 19.6h4" stroke="#3B6D11" strokeWidth="1.2" strokeLinecap="round" />
+  </>,
   bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4" /></>,
   code: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m8 10-2 2 2 2m8-4 2 2-2 2m-3-4-2 4" /></>,
   settings: <><path d="M4 6h16M4 12h16M4 18h16" /><path d="M8 4v4m8 2v4m-6 2v4" /></>,
