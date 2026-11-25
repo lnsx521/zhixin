@@ -11,7 +11,7 @@ import {
 } from "../../shared/api";
 import { useT } from "../../shared/i18n";
 import { clearIconCache, listIconCache, openIconsDir, resetAppIcon, setAppIcon, type IconCacheEntry } from "../../shared/api";
-import { NumberField, Row, Section, Toggle } from "../components";
+import { Disclosure, NumberField, Row, Toggle } from "../components";
 
 interface Props {
   config: Config;
@@ -40,7 +40,7 @@ export function General({ config, update }: Props) {
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
-      await setAppIcon(target.app_id, target.name, dataUrl);
+      await setAppIcon(target.app_id, dataUrl);
       await refreshIcons();
     } catch (err) { setError(String(err)); }
     event.target.value = "";
@@ -63,12 +63,15 @@ export function General({ config, update }: Props) {
   useEffect(() => {
     getSettingsMeta().then(setMeta).catch(() => {});
     void refreshIcons();
+    // 后端在后台补齐旧缓存的官方 App 名，稍后回刷一次显示出来
+    const timer = window.setTimeout(() => { void refreshIcons(); }, 3000);
+    return () => window.clearTimeout(timer);
   }, []);
 
   return (
     <>
       <input ref={replaceInput} type="file" accept="image/png" style={{ display: "none" }} onChange={(event) => { void onReplaceFile(event); }} />
-      <Section narrow title={t.general.appearanceTitle}>
+      <Disclosure title={t.general.appearanceTitle}>
         <Row label={t.general.theme} hint={t.general.themeHint}>
           <select className="select" aria-label={t.general.theme}
             value={config.general.theme}
@@ -116,10 +119,9 @@ export function General({ config, update }: Props) {
             <input ref={bgFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => void onPickBackground(e)} />
           </div>
         </Row>
-      </Section>
-      <Section
+      </Disclosure>
+      <Disclosure
         title={t.general.iconsTitle}
-        description={t.general.iconsDesc}
         action={
           <Toggle
             checked={config.general.icon_fetch}
@@ -127,10 +129,8 @@ export function General({ config, update }: Props) {
           />
         }
       >
-        <details className="icons-fold">
-          <summary style={{ cursor: "pointer", fontSize: 12.5, color: "var(--text-faint)" }}>管理已缓存图标</summary>
-          <div style={{ marginTop: 10 }}>
-            <Row label={t.general.iconsOpenDir}>
+        <p className="connection-help">{t.general.iconsDesc}</p>
+        <Row label={t.general.iconsOpenDir}>
               <button className="btn" onClick={() => { void openIconsDir().catch((err) => setError(String(err))); }}>{t.general.iconsOpenDir}</button>
             </Row>
             <Row label={t.general.iconsClear}>
@@ -140,35 +140,49 @@ export function General({ config, update }: Props) {
             </Row>
             {iconCache.length === 0 && <Row label={t.general.iconsEmpty}><span /></Row>}
             {iconCache.map((entry) => (
-              <Row key={entry.app_id} label={`${entry.name || entry.app_id}${entry.manual ? `（${t.general.iconsManual}）` : ""}`} hint={entry.app_id}>
+              <Row key={entry.app_id} label={`${entry.app_name || entry.app_id}${entry.manual ? `（${t.general.iconsManual}）` : ""}`} hint={entry.app_name ? entry.app_id : undefined}>
                 <button className="btn" onClick={() => { replaceTarget.current = entry; replaceInput.current?.click(); }}>{t.general.iconsReplace}</button>
                 <button className="btn" onClick={async () => {
                   try { await resetAppIcon(entry.app_id); await refreshIcons(); } catch (err) { setError(String(err)); }
                 }}>{t.general.iconsReset}</button>
               </Row>
             ))}
-          </div>
-        </details>
-      </Section>
-      <Section narrow title={t.general.startupTitle}>
-        <Row label={t.general.autostart} hint={t.general.autostartHint}>
-          <Toggle checked={meta?.autostart_enabled ?? false} disabled={!meta || busy} onChange={async (value) => {
-            setBusy(true); setError(null);
-            try { const enabled = await setAutostart(value); setMeta((prev) => prev ? { ...prev, autostart_enabled: enabled } : prev); }
-            catch (err) { setError(String(err)); }
-            finally { setBusy(false); }
-          }} />
-        </Row>
+      </Disclosure>
+      <Disclosure
+        title={t.general.startupTitle}
+        action={
+          <Toggle
+            checked={meta?.autostart_enabled ?? false}
+            disabled={!meta || busy}
+            onChange={async (value) => {
+              setBusy(true); setError(null);
+              try { const enabled = await setAutostart(value); setMeta((prev) => prev ? { ...prev, autostart_enabled: enabled } : prev); }
+              catch (err) { setError(String(err)); }
+              finally { setBusy(false); }
+            }}
+          />
+        }
+      >
+        <p className="connection-help">{t.general.autostartHint}</p>
         {error && <p className="bad-text" role="alert">{error}</p>}
-      </Section>
+        <Row label={t.general.autoCheckUpdateTitle}>
+          <Toggle
+            checked={config.general.auto_check_update}
+            onChange={(value) => update((d) => void (d.general.auto_check_update = value))}
+          />
+        </Row>
+      </Disclosure>
 
-      <Section title={t.general.lowBatteryTitle} description={t.general.lowBatteryDesc}>
-        <Row label={t.general.lowBatteryNotify} hint={t.general.lowBatteryNotifyHint}>
+      <Disclosure
+        title={t.general.lowBatteryTitle}
+        action={
           <Toggle
             checked={config.general.low_battery_notify}
             onChange={(value) => update((d) => void (d.general.low_battery_notify = value))}
           />
-        </Row>
+        }
+      >
+        <p className="connection-help">{t.general.lowBatteryDesc}</p>
         <Row label={t.general.lowBatteryThreshold} hint={t.general.lowBatteryThresholdHint}>
           <NumberField
             value={config.general.low_battery_threshold}
@@ -180,8 +194,8 @@ export function General({ config, update }: Props) {
             }
           />
         </Row>
-      </Section>
-      <Section title={t.general.filesTitle}>
+      </Disclosure>
+      <Disclosure title={t.general.filesTitle}>
         <Row label={t.general.configFile} hint={meta?.config_path}>
           <button className="btn" onClick={() => openConfigDir()}>
             {t.general.openDir}
@@ -192,7 +206,7 @@ export function General({ config, update }: Props) {
             {t.general.openDir}
           </button>
         </Row>
-      </Section>
+      </Disclosure>
 
     </>
   );
