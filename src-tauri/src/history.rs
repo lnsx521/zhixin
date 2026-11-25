@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
+use zhixin_core::config::Config;
 use zhixin_core::model::PhoneNotification;
 
 use crate::paths;
@@ -26,6 +27,39 @@ fn load(app: &AppHandle) -> Vec<HistoryEntry> {
 pub fn save(app: &AppHandle, entries: &[HistoryEntry]) -> Result<(), String> {
     let bytes = serde_json::to_vec_pretty(entries).map_err(|e| e.to_string())?;
     std::fs::write(history_path(app), bytes).map_err(|e| e.to_string())
+}
+
+/// 修剪：按保留天数清掉过期记录（新通知到达、主窗口打开历史时都会触发）。
+pub fn prune(app: &AppHandle) {
+    let days = {
+        match Config::load_or_default(paths::config_path(app)) {
+            Ok(config) => config.notifications.history_limit,
+            Err(_) => 3,
+        }
+    };
+    if days == 0 {
+        if let Ok(_) = save(app, &[]) {
+            let _ = app.emit("history-updated", ());
+        }
+        return;
+    }
+    let mut entries = load(app);
+    let before = entries.len();
+    let cutoff_ms = rolling_cutoff_ms(days);
+    entries.retain(|entry| entry.received_at >= cutoff_ms);
+    if entries.len() != before {
+        let _ = save(app, &entries);
+        let _ = app.emit("history-updated", ());
+    }
+}
+
+/// 滚动覆盖截止线：从现在往前数 N 个 24 小时（监控录像式，新的覆盖旧的）。
+fn rolling_cutoff_ms(days: u32) -> u64 {
+    (std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64)
+        .saturating_sub((days as u64) * 86_400_000)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -56,7 +90,6 @@ pub struct HistoryEntry {
 /// 保留天数跟随设置（notifications.history_limit = 天数，滚动覆盖；0 = 不保存）。
 pub fn record(app: &AppHandle, notification: &PhoneNotification) {
     let (keep, days) = {
-        use zhixin_core::config::Config;
         match Config::load_or_default(paths::config_path(app)) {
             Ok(config) => (
                 config.notifications.keeps_in_history(notification.app_identifier.as_deref().unwrap_or("")),
@@ -79,26 +112,61 @@ pub fn record(app: &AppHandle, notification: &PhoneNotification) {
         .unwrap_or_default()
         .as_millis() as u64;
 
-    // 来电合并：同一次通话（同 uid，或同号码 10 分钟内）只保留一条记录，
-    // 状态滚动更新（来电 → 已拒接/已接通/未接听）。否则响铃、拒接、
-    // iOS 的通话结束通知会各入一条，一次通话出现 2~3 条重复记录。
-    if notification.is_call() {
+    // 来电合并：同一次通话的状态滚动更新（来电 → 当前通话 → 已接通/未接），
+    // 否则 iOS 会把一轮通话拆成 2~3 条通知，历史里出现好几条重复记录。
+    //
+    // ★ 判据不能用 uid 或号码（实测都会变）：
+    //   - ANCS uid 跨 App、跨天复用（uid=30 先后属于电话和微信）
+    //   - 一轮通话里 iOS 会换 uid：来电 uid=52「宽带号-电商」→ 接听 uid=53「通话」
+    //   所以改用「同包名 + 10 分钟内 + 上一条尚未终结」：
+    //   一轮通话的来电/当前通话都是 call_outcome=None，会被合并；一终结就不认。
+    let is_ongoing_call = notification.is_call()
+        || notification.category == Some(12)
+        || matches!(
+            notification.app_identifier.as_deref(),
+            Some(id) if id.eq_ignore_ascii_case("com.tencent.xin")
+        );
+    if is_ongoing_call {
         const CALL_MERGE_WINDOW_MS: u64 = 10 * 60_000;
-        let target = entries.iter_mut().find(|entry| {
-            entry.uid == Some(notification.uid)
-                || (entry.origin == origin
-                    && received_at_ms.saturating_sub(entry.received_at) < CALL_MERGE_WINDOW_MS)
+        let target = entries.iter_mut().rev().find(|entry| {
+            let entry_is_call = entry.category == Some(1)
+                || entry.category == Some(12)
+                || entry
+                    .app_id
+                    .as_deref()
+                    .is_some_and(|id| id.eq_ignore_ascii_case("com.apple.mobilephone"));
+            entry.app_id.as_deref() == notification.app_identifier.as_deref()
+                && received_at_ms.saturating_sub(entry.received_at) < CALL_MERGE_WINDOW_MS
+                && (entry.call_outcome.is_none() || entry.uid == Some(notification.uid))
+                && (entry_is_call || entry.call_outcome.is_some())
         });
         if let Some(existing) = target {
-            // 保留首次响铃时间，正文与通话结果跟随最新事件
+            // 保留首次响铃时间与来电人：后续「当前通话」会把 title 改成占位符"通话"，
+            // 直接用它覆盖会丢掉真正的号码/联系人名（如"宽带号-电商"）。
+            // 正文与通话结果跟随最新事件。
             existing.body = notification.summary();
             existing.call_outcome = notification.call_outcome.clone();
-            existing.title = notification.title.clone();
-            existing.subtitle = notification.subtitle.clone();
+            let placeholder_title = notification
+                .title
+                .as_deref()
+                .is_some_and(|t| t == "通话" || t.trim().is_empty());
+            if !placeholder_title || existing.title.as_deref().unwrap_or("").trim().is_empty() {
+                existing.title = notification.title.clone();
+            }
+            // subtitle 同样是 iOS 附加信息：「当前通话」那条常常不给（None），
+            // 直接覆盖会把来电阶段的归属地/通讯录标签冲掉。空值则保留原值。
+            if notification
+                .subtitle
+                .as_deref()
+                .is_some_and(|s| !s.trim().is_empty())
+            {
+                existing.subtitle = notification.subtitle.clone();
+            }
             existing.message = notification.message.clone();
             if existing.carrier.is_none() {
-                existing.carrier =
-                    zhixin_core::carrier::describe(&extract_longest_digits(&origin));
+                // describe() 内部会过滤空格/分隔符，直接传原号码即可；
+                // 不能用 extract_longest_digits（"137 7444 0207" 只会取到 "7444"）。
+                existing.carrier = zhixin_core::carrier::describe(&origin);
             }
             let _ = save(app, &entries);
             let _ = app.emit("history-updated", ());
@@ -120,18 +188,14 @@ pub fn record(app: &AppHandle, notification: &PhoneNotification) {
         subtitle: notification.subtitle.clone(),
         message: notification.message.clone(),
         carrier: if notification.is_call() {
-            zhixin_core::carrier::describe(&extract_longest_digits(&notification.origin()))
+            zhixin_core::carrier::describe(&notification.origin())
         } else {
             None
         },
         call_outcome: notification.call_outcome.clone(),
     });
-    // 滚动覆盖：只保留最近 N 天（含今天），更早的直接丢弃
-    let cutoff_ms = (std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as u64)
-        .saturating_sub((days as u64) * 86_400_000);
+    // 滚动覆盖（监控录像式）：从现在往前数 N 个 24 小时，过期的直接丢弃
+    let cutoff_ms = rolling_cutoff_ms(days);
     entries.retain(|entry| entry.received_at >= cutoff_ms);
     let _ = save(app, &entries);
     // 广播历史变更，主窗口监听后实时刷新列表（否则新消息要重开窗口才可见）。
@@ -144,6 +208,22 @@ pub struct CallStats {
     pub count: u32,
     pub first_at: Option<u64>,
     pub last_at: Option<u64>,
+}
+
+/// 按号码找最近一次通话留下的非空副标题（归属地/通讯录标签）。
+/// iOS 的「当前通话」「通话结束」通知常不带 subtitle，弹窗靠这里回填。
+pub fn recent_call_subtitle(app: &AppHandle, origin: &str) -> Option<String> {
+    load(app)
+        .into_iter()
+        .rev()
+        .find(|entry| {
+            entry.origin == origin
+                && entry
+                    .subtitle
+                    .as_deref()
+                    .is_some_and(|value| !value.trim().is_empty())
+        })
+        .and_then(|entry| entry.subtitle)
 }
 
 /// 统计同一号码的历史来电（主窗口来电详情用）。
@@ -174,6 +254,8 @@ pub fn list_notification_history(
     query: Option<String>,
     limit: Option<u32>,
 ) -> Vec<HistoryEntry> {
+    // 主窗口打开历史时先按保留天数修剪一次：跨天后的过期记录立即消失，不必等下一条消息
+    prune(&app);
     let mut entries = load(&app);
     entries.reverse(); // 最新在前
     if let Some(query) = query.as_deref().filter(|q| !q.trim().is_empty()) {
@@ -185,7 +267,24 @@ pub fn list_notification_history(
         });
     }
     entries.truncate(limit.unwrap_or(100) as usize);
+    // 存量记录（旧版本写入时 carrier 可能为空）在这里补算一次，不改磁盘文件：
+    // 通话类且运营商为空时，从号码实时识别（如 "137 7444 0207" → 中国移动 · 手机号）。
+    for entry in &mut entries {
+        if entry.carrier.is_none() && is_call_history_entry(entry) {
+            entry.carrier = zhixin_core::carrier::describe(&entry.origin);
+        }
+    }
     entries
+}
+
+/// 这条历史记录是否是通话类（跟详情面板 isCallEntry 保持同一判据）。
+fn is_call_history_entry(entry: &HistoryEntry) -> bool {
+    entry.category == Some(1)
+        || entry.category == Some(12)
+        || entry
+            .app_id
+            .as_deref()
+            .is_some_and(|id| id.eq_ignore_ascii_case("com.apple.mobilephone"))
 }
 
 #[tauri::command]
