@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useT } from "../shared/i18n";
 
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
@@ -6,14 +7,18 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
   useEffect(() => { const dialog = ref.current; dialog?.showModal(); return () => dialog?.close(); }, []);
-  return <dialog ref={ref} className="modal" aria-labelledby={id} onCancel={(event) => { event.preventDefault(); onClose(); }}>
-    <header className="modal-head"><h2 id={id}>{title}</h2><button className="btn modal-close" aria-label={t.toast.dismiss} onClick={onClose}>×</button></header>
-    <div className="modal-body">{children}</div>
-  </dialog>;
+  const dialog = (
+    <dialog ref={ref} className="modal" aria-labelledby={id} onCancel={(event) => { event.preventDefault(); onClose(); }}>
+      <header className="modal-head"><h2 id={id}>{title}</h2><button className="btn modal-close" aria-label={t.toast.dismiss} onClick={onClose}>×</button></header>
+      <div className="modal-body">{children}</div>
+    </dialog>
+  );
+  // 服务端渲染测试没有 document，直接返回；浏览器里挂到 body 避开 .content > * 的 margin-left: 0
+  return typeof document === "undefined" ? dialog : createPortal(dialog, document.body);
 }
 
-export function Disclosure({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
-  return <details className="disclosure"><summary><span>{title}</span>{hint && <small>{hint}</small>}</summary><div className="disclosure-body">{children}</div></details>;
+export function Disclosure({ title, hint, action, children }: { title: string; hint?: string; action?: ReactNode; children: ReactNode }) {
+  return <details className="disclosure"><summary><span>{title}</span>{hint && <small>{hint}</small>}{action && <span className="disclosure-action" onClick={(event) => event.preventDefault()}>{action}</span>}</summary><div className="disclosure-body">{children}</div></details>;
 }
 
 /** 一个设置分区卡片 */
@@ -131,7 +136,7 @@ export function NumberField({
   );
 }
 
-/** 字符串列表：一行一条 */
+/** 字符串列表：一行一条。内部保留原始文本（含尾随换行），对外只传非空行 */
 export function TextList({
   value,
   onChange,
@@ -141,15 +146,28 @@ export function TextList({
   onChange: (value: string[]) => void;
   placeholder?: string;
 }) {
+  const [text, setText] = useState(() => value.join("\n"));
+  const emitted = useRef(value.join("\n"));
+  useEffect(() => {
+    const incoming = value.join("\n");
+    if (incoming !== emitted.current) {
+      emitted.current = incoming;
+      setText(incoming);
+    }
+  }, [value]);
   return (
     <textarea
       className="text-list"
       rows={3}
-      value={value.join("\n")}
+      value={text}
       placeholder={placeholder}
-      onChange={(event) =>
-        onChange(event.target.value.split("\n").filter((line) => line.trim() !== ""))
-      }
+      onChange={(event) => {
+        const next = event.target.value;
+        const lines = next.split("\n").filter((line) => line.trim() !== "");
+        emitted.current = lines.join("\n");
+        setText(next);
+        onChange(lines);
+      }}
       spellCheck={false}
     />
   );
