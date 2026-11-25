@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listKnownApps, sendTestNotification, type Config, type KnownApp } from "../../shared/api";
+import { openUpdateLink, sendTestNotification, type Config } from "../../shared/api";
 import { useT } from "../../shared/i18n";
-import { Disclosure, NumberField, Row, Section, TextList, Toggle } from "../components";
+import { Disclosure, NumberField, Row, TextList, Toggle } from "../components";
 import { AppRules } from "./AppRules";
 import { Otp } from "./Otp";
 
@@ -19,20 +19,55 @@ export function Notifications({ config, update }: Props) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [known, setKnown] = useState<KnownApp[]>([]);
-  useEffect(() => {
-    listKnownApps().then(setKnown).catch(() => {});
-  }, []);
   const filterCount = Object.values(notifications.filter).reduce((total, entries) => total + entries.length, 0);
+
+  // 常用 App 胶囊：点一下复制 bundle id，由用户决定粘到「排除」还是「只接受」。
+  const quickApps = [
+    { id: "com.apple.mobilephone", name: t.rules.phone },
+    { id: "com.apple.mobilesms", name: t.rules.sms },
+    { id: "com.tencent.xin", name: t.rules.wechat },
+    { id: "com.tencent.mqq", name: t.rules.qq },
+    { id: "com.tencent.wework", name: t.rules.workWechat },
+    { id: "com.laiwang.DingTalk", name: t.rules.dingtalk },
+    { id: "com.ss.iphone.lark", name: t.rules.feishu },
+  ];
+  const bundleIdLookupUrl = "https://commandnotfound.cn/tools/ios-app-bundle-id";
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const copyChip = async (id: string) => {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 1200);
+    } catch { /* 复制失败不打断 */ }
+  };
+  const openLookup = async () => {
+    try { await navigator.clipboard.writeText(bundleIdLookupUrl); } catch { /* 复制失败不影响打开 */ }
+    setCopiedId(bundleIdLookupUrl);
+    setTimeout(() => setCopiedId(null), 1200);
+    try { await openUpdateLink(bundleIdLookupUrl); } catch { /* 打开失败不打断 */ }
+  };
+  const quickChips = (
+    <div className="known-apps">
+      {quickApps.map((app) => <button key={app.id} className={`known-chip ${copiedId === app.id ? "active" : ""}`}
+        title={`点击复制：${app.id}`} onClick={() => void copyChip(app.id)}>
+        {copiedId === app.id ? "已复制" : app.name}
+      </button>)}
+      <button className={`known-chip ${copiedId === bundleIdLookupUrl ? "active" : ""}`}
+        title={`打开浏览器：${bundleIdLookupUrl}`} onClick={() => void openLookup()}>
+        {t.notifications.queryMore}
+      </button>
+    </div>
+  );
 
   return (
     <>
-      <Section title={t.ui.popups} description={t.ui.popupHint} action={
+      <Disclosure title={t.ui.popups} action={
           <Toggle
             checked={notifications.enabled}
             onChange={(value) => update((d) => void (d.notifications.enabled = value))}
           />
         }>
+        <p className="connection-help">{t.ui.popupHint}</p>
         <Row label={t.notifications.duration} hint={t.notifications.durationHint}>
           <NumberField
             value={notifications.popup.duration_seconds}
@@ -107,12 +142,70 @@ export function Notifications({ config, update }: Props) {
         </select>
         <button className="btn" disabled={sending} onClick={async () => { setError(null); setSending(true); setSent(false); try { await sendTestNotification(testKind); setSending(false); setSent(true); setTimeout(() => setSent(false), 1500); } catch (err) { setError(String(err)); setSending(false); } }}>{sending ? t.connection.sending : sent ? t.connection.sent : t.connection.sendTest}</button>
       </div>
-      </Section>
+      </Disclosure>
+
+      <Disclosure title={t.notifications.dndTitle}>
+        <Row label={t.notifications.dndAsk} hint={t.notifications.dndAskHint}>
+          <Toggle
+            checked={notifications.dnd_ask_enabled}
+            onChange={(value) => update((d) => void (d.notifications.dnd_ask_enabled = value))}
+          />
+        </Row>
+        <Row label={t.notifications.dndRecover} hint={t.notifications.dndRecoverHint}>
+          <NumberField
+            value={notifications.dnd_recover_secs}
+            min={5}
+            max={300}
+            suffix={t.common.seconds}
+            onChange={(value) =>
+              update((d) => void (d.notifications.dnd_recover_secs = Math.round(value)))
+            }
+          />
+        </Row>
+      </Disclosure>
 
       <AppRules config={config} update={update} />
-      <Disclosure title={t.notifications.filterTitle} hint={filterCount ? t.ui.configured(filterCount) : t.ui.unset}>
+      <Disclosure title={t.notifications.filterTitle} hint={filterCount ? t.ui.configured(filterCount) : undefined}>
         <p className="connection-help">{t.ui.filterNote}</p>
-        <p className="connection-help">{t.notifications.filterDesc}</p>
+
+        <h3 className="filter-group-title">{t.notifications.quickApps}</h3>
+        {quickChips}
+        <h3 className="filter-group-title">{t.notifications.popupGroup}</h3>
+        <p className="connection-help">{t.notifications.popupGroupDesc}</p>
+        <Row label={t.notifications.excludeApps} hint={t.notifications.excludeAppsHint}>
+          <TextList
+            value={notifications.filter.exclude_apps}
+            placeholder={"com.tencent.xin"}
+            onChange={(value) => update((d) => void (d.notifications.filter.exclude_apps = value))}
+          />
+        </Row>
+        <Row label={t.notifications.includeApps} hint={t.notifications.includeAppsHint}>
+          <TextList
+            value={notifications.filter.include_apps}
+            placeholder={"com.apple.MobileSMS"}
+            onChange={(value) => update((d) => void (d.notifications.filter.include_apps = value))}
+          />
+        </Row>
+        <Row label={t.notifications.excludeKeywords} hint={t.notifications.excludeKeywordsHint}>
+          <TextList
+            value={notifications.filter.exclude_keywords}
+            placeholder={t.notifications.excludeKeywords}
+            onChange={(value) =>
+              update((d) => void (d.notifications.filter.exclude_keywords = value))
+            }
+          />
+        </Row>
+        <Row label={t.notifications.includeKeywords} hint={t.notifications.includeKeywordsHint}>
+          <TextList
+            value={notifications.filter.include_keywords}
+            onChange={(value) =>
+              update((d) => void (d.notifications.filter.include_keywords = value))
+            }
+          />
+        </Row>
+
+        <h3 className="filter-group-title">{t.notifications.historyGroup}</h3>
+        <p className="connection-help">{t.notifications.historyGroupDesc}</p>
         <Row label={t.notifications.keepHistoryApps} hint={t.notifications.keepHistoryHint}>
           <TextList
             value={notifications.history_keep_apps}
@@ -135,63 +228,6 @@ export function Notifications({ config, update }: Props) {
             suffix="天"
             onChange={(value) =>
               update((d) => void (d.notifications.history_limit = Math.max(0, Math.min(3650, value))))
-            }
-          />
-        </Row>
-        <Row label={t.notifications.excludeApps} hint={t.notifications.excludeAppsHint}>
-          <TextList
-            value={notifications.filter.exclude_apps}
-            placeholder={"com.tencent.xin"}
-            onChange={(value) => update((d) => void (d.notifications.filter.exclude_apps = value))}
-          />
-        </Row>
-        <Row label={t.notifications.includeApps} hint={t.notifications.includeAppsHint}>
-          <TextList
-            value={notifications.filter.include_apps}
-            placeholder={"com.apple.MobileSMS"}
-            onChange={(value) => update((d) => void (d.notifications.filter.include_apps = value))}
-          />
-        </Row>
-        {known.length > 0 && (
-          <Row label={t.notifications.knownApps} hint={t.notifications.knownAppsHint}>
-            <div className="known-apps">
-              {known.map((app) => {
-                const active = notifications.filter.include_apps.includes(app.id);
-                return (
-                  <button
-                    key={app.id}
-                    className={`known-chip ${active ? "active" : ""}`}
-                    title={app.id}
-                    onClick={() =>
-                      update((d) => {
-                        const list = d.notifications.filter.include_apps;
-                        const index = list.indexOf(app.id);
-                        if (index >= 0) list.splice(index, 1);
-                        else list.push(app.id);
-                      })
-                    }
-                  >
-                    {app.name}
-                  </button>
-                );
-              })}
-            </div>
-          </Row>
-        )}
-        <Row label={t.notifications.excludeKeywords} hint={t.notifications.excludeKeywordsHint}>
-          <TextList
-            value={notifications.filter.exclude_keywords}
-            placeholder={t.notifications.excludeKeywords}
-            onChange={(value) =>
-              update((d) => void (d.notifications.filter.exclude_keywords = value))
-            }
-          />
-        </Row>
-        <Row label={t.notifications.includeKeywords} hint={t.notifications.includeKeywordsHint}>
-          <TextList
-            value={notifications.filter.include_keywords}
-            onChange={(value) =>
-              update((d) => void (d.notifications.filter.include_keywords = value))
             }
           />
         </Row>
