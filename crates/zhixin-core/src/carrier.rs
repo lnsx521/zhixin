@@ -25,6 +25,21 @@ pub fn describe(raw: &str) -> Option<String> {
     Some(format!("{carrier} · {desc}"))
 }
 
+/// 通话弹窗副标题：陌生号码显示「运营商 · 归属地」（归属地来自 iOS 通知的 subtitle，
+/// 如「辽宁 沈阳」）；没有归属地时退回 describe() 的结果。识别不出号码返回 None，
+/// 这样通讯录来电（origin 是联系人名）保持原样、不显示副标题。
+pub fn describe_with_region(raw: &str, region: Option<&str>) -> Option<String> {
+    let base = describe(raw)?;
+    let Some(region) = region.filter(|value| !value.trim().is_empty()) else {
+        return Some(base);
+    };
+    Some(match base.rsplit_once(" · ") {
+        Some((carrier, _kind)) => format!("{carrier} · {region}"),
+        // 座机/服务号没有运营商前缀，直接追加归属地
+        None => format!("{base} · {region}"),
+    })
+}
+
 fn type_only(digits: &str) -> &'static str {
     match type_desc(digits) {
         Some(d) => d,
@@ -68,5 +83,32 @@ mod tests {
         assert_eq!(describe("02164228888").as_deref(), Some("座机"));
         assert!(describe("95123456").unwrap().contains("服务号"));
         assert!(describe("4001234567").unwrap().contains("服务号"));
+    }
+
+    #[test]
+    fn describe_with_region_cases() {
+        use super::describe_with_region;
+        // 陌生号码：运营商 + iOS 给的归属地
+        assert_eq!(
+            describe_with_region("132 8424 8432", Some("辽宁 沈阳")).as_deref(),
+            Some("中国联通 · 辽宁 沈阳")
+        );
+        // 没有归属地时退回「运营商 · 手机号」
+        assert_eq!(
+            describe_with_region("13284248432", None).as_deref(),
+            Some("中国联通 · 手机号")
+        );
+        // 空字符串同样退回
+        assert_eq!(
+            describe_with_region("13284248432", Some("  ")).as_deref(),
+            Some("中国联通 · 手机号")
+        );
+        // 座机没运营商前缀，直接追加
+        assert_eq!(
+            describe_with_region("02164228888", Some("上海")).as_deref(),
+            Some("座机 · 上海")
+        );
+        // 联系人名（通讯录来电）：识别不出号码 → None，保持原样
+        assert_eq!(describe_with_region("刘志阳-上海琼琪", Some("家庭")).as_deref(), None);
     }
 }
