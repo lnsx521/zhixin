@@ -1,14 +1,14 @@
 import { useId } from "react";
 import type { Config, InsertMode } from "../../shared/api";
 import { useT } from "../../shared/i18n";
-import { Disclosure, NumberField, Row, Section, Toggle } from "../components";
+import { Disclosure, NumberField, Row, Toggle } from "../components";
 
 interface Props {
   config: Config;
   update: (mutate: (draft: Config) => void) => void;
 }
 
-/** 「验证码」页：识别、复制、候选条、填入方式。 */
+/** 验证码：识别、复制、填入、高级选项，合并为一个可折叠分区。 */
 export function Otp({ config, update }: Props) {
   const t = useT();
   const otp = config.otp;
@@ -21,23 +21,24 @@ export function Otp({ config, update }: Props) {
   ] as const;
 
   return (
-    <>
-      <Section narrow title={t.ui.detect} action={
-          <Toggle
-            checked={otp.enabled}
-            onChange={(value) => update((d) => void (d.otp.enabled = value))}
-          />
-        }>
-        <Row label={t.otp.autoCopy} hint={t.ui.copyHint}>
-          <Toggle
-            checked={otp.auto_copy}
-            disabled={!otp.enabled}
-            onChange={(value) => update((d) => void (d.otp.auto_copy = value))}
-          />
-        </Row>
-      </Section>
+    <Disclosure title={t.otp.title}>
+      {/* 识别 */}
+      <Row label={t.ui.detect} hint={t.ui.copyHint}>
+        <Toggle
+          checked={otp.enabled}
+          onChange={(value) => update((d) => void (d.otp.enabled = value))}
+        />
+      </Row>
+      <Row label={t.otp.autoCopy} hint={t.ui.copyHint}>
+        <Toggle
+          checked={otp.auto_copy}
+          disabled={!otp.enabled}
+          onChange={(value) => update((d) => void (d.otp.auto_copy = value))}
+        />
+      </Row>
 
-      <Section narrow title={t.otp.insertionTitle} action={
+      {/* 填入方式 */}
+      <Row label={t.otp.insertionTitle}>
         <fieldset className="otp-fill-options" role="radiogroup" aria-label={t.otp.insertionTitle}
           aria-describedby={`${groupId}-hint`} disabled={!otp.enabled}>
           {fillOptions.map((option) => <label key={option.value} className="otp-fill-option">
@@ -49,9 +50,9 @@ export function Otp({ config, update }: Props) {
             <span>{option.label}</span>
           </label>)}
         </fieldset>
-      }>
-        <p className="otp-fill-hint" id={`${groupId}-hint`}>{fillOptions.find((option) => option.value === fillMode)?.hint}</p>
-        {fillMode === "candidate" && <fieldset className="settings-fields" disabled={!otp.enabled}>
+      </Row>
+      <p className="otp-fill-hint" id={`${groupId}-hint`}>{fillOptions.find((option) => option.value === fillMode)?.hint}</p>
+      {fillMode === "candidate" && <fieldset className="settings-fields" disabled={!otp.enabled}>
         <Row label={t.otp.caretDuration}>
           <NumberField
             value={otp.caret.duration_seconds}
@@ -61,11 +62,10 @@ export function Otp({ config, update }: Props) {
             onChange={(value) => update((d) => void (d.otp.caret.duration_seconds = value))}
           />
         </Row>
-        </fieldset>
-        }
-      </Section>
-      {fillMode !== "off" && <Disclosure title={t.ui.advanced}>
-        <fieldset className="settings-fields" disabled={!otp.enabled}>
+      </fieldset>}
+
+      {/* 高级选项：填入关闭时无意义，隐藏 */}
+      {fillMode !== "off" && <fieldset className="settings-fields advanced-fields" disabled={!otp.enabled}>
         <Row label={t.otp.watchSeconds} hint={t.otp.watchSecondsHint}>
           <NumberField
             value={otp.caret.watch_seconds}
@@ -76,15 +76,15 @@ export function Otp({ config, update }: Props) {
           />
         </Row>
         {fillMode === "candidate" && <>
-        <Row label={t.otp.gap} hint={t.otp.gapHint}>
-          <NumberField
-            value={otp.caret.gap}
-            min={0}
-            max={100}
-            suffix="px"
-            onChange={(value) => update((d) => void (d.otp.caret.gap = value))}
-          />
-        </Row>
+          <Row label={t.otp.gap} hint={t.otp.gapHint}>
+            <NumberField
+              value={otp.caret.gap}
+              min={0}
+              max={100}
+              suffix="px"
+              onChange={(value) => update((d) => void (d.otp.caret.gap = value))}
+            />
+          </Row>
         </>}
         <Row label={t.otp.mode} hint={t.otp.modeHint}>
           <select
@@ -109,8 +109,7 @@ export function Otp({ config, update }: Props) {
             />
           </Row>
         )}
-        </fieldset>
-      </Disclosure>}
-    </>
+      </fieldset>}
+    </Disclosure>
   );
 }
