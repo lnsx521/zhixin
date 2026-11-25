@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { testAppRule, validateAppRule, type AppRule, type Config } from "../../shared/api";
 import { useT } from "../../shared/i18n";
-import { Modal, Section, Toggle } from "../components";
+import { Disclosure, Modal, Toggle } from "../components";
 
 export function AppRules({ config, update }: { config: Config; update: (mutate: (draft: Config) => void) => void }) {
   const t = useT();
@@ -21,17 +21,30 @@ export function AppRules({ config, update }: { config: Config; update: (mutate: 
     update((config) => { if (editing === null) config.notifications.app_rules.push(rule); else config.notifications.app_rules[editing] = rule; });
     setDraft(null);
   };
-  const presets = [["com.tencent.xin", t.rules.wechat, "weixin://"], ["com.tencent.mqq", "QQ", "tencent://"], ["com.apple.mobilemail", t.rules.mail, ""]];
-  return <Section wide title={t.rules.title} action={<button className="btn" onClick={() => start({ app_id: "com.tencent.xin", name: t.rules.wechat, enabled: false, target: "weixin://" })}>{t.rules.add}</button>}>
-    {rules.length === 0 && <p className="connection-help">{t.ui.selectTemplate}</p>}
-    {rules.map((rule, index) => <div className="app-rule" key={`${rule.app_id}-${index}`}>
-      <div className="app-rule-info"><strong>{rule.name}</strong><small>{t.rules.open(rule.name)}</small></div>
-      <div className="rule-controls"><Toggle checked={rule.enabled} onChange={async (enabled) => {
-        if (enabled) { if (rules.some((other, otherIndex) => otherIndex !== index && other.enabled && other.app_id.toLowerCase() === rule.app_id.toLowerCase())) { start(rule, index); setError(t.rules.duplicate); return; } try { await validateAppRule(rule); } catch (err) { start(rule, index); setError(String(err)); return; } }
-        update((d) => { d.notifications.app_rules[index].enabled = enabled; });
-      }} />
-         <button className="btn" onClick={() => start(rule, index)}>{t.rules.edit}</button><button className="btn danger" onClick={() => setRemoveIndex(index)}>{t.rules.remove}</button></div>
-    </div>)}
+  // 常用 App 内置规则：选中后 app_id / 名称 / 打开协议自动填好，直接点完成即可。
+  const presets = [
+    ["com.tencent.xin", t.rules.wechat, "weixin://"],
+    ["com.tencent.wework", t.rules.workWechat, "wxwork://"],
+    ["com.tencent.mqq", t.rules.qq, "mqq://"],
+    ["com.laiwang.DingTalk", t.rules.dingtalk, "dingtalk://"],
+    ["com.ss.iphone.lark", t.rules.feishu, "lark://"],
+    ["com.apple.mobilemail", t.rules.mail, ""],
+  ];
+  return <>
+    <Disclosure title={t.rules.title} hint={rules.length ? t.ui.configured(rules.length) : t.ui.unset}>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button className="btn" onClick={() => start({ app_id: "com.tencent.xin", name: t.rules.wechat, enabled: false, target: "weixin://" })}>{t.rules.add}</button>
+      </div>
+      {rules.length === 0 && <p className="connection-help">{t.ui.selectTemplate}</p>}
+      {rules.map((rule, index) => <div className="app-rule" key={`${rule.app_id}-${index}`}>
+        <div className="app-rule-info"><strong>{rule.name}</strong><small>{t.rules.open(rule.name)}</small></div>
+        <div className="rule-controls"><Toggle checked={rule.enabled} onChange={async (enabled) => {
+          if (enabled) { if (rules.some((other, otherIndex) => otherIndex !== index && other.enabled && other.app_id.toLowerCase() === rule.app_id.toLowerCase())) { start(rule, index); setError(t.rules.duplicate); return; } try { await validateAppRule(rule); } catch (err) { start(rule, index); setError(String(err)); return; } }
+          update((d) => { d.notifications.app_rules[index].enabled = enabled; });
+        }} />
+           <button className="btn" onClick={() => start(rule, index)}>{t.rules.edit}</button><button className="btn danger" onClick={() => setRemoveIndex(index)}>{t.rules.remove}</button></div>
+      </div>)}
+    </Disclosure>
     {draft && <Modal title={editing === null ? t.rules.add : t.rules.edit} onClose={() => { if (!busy) setDraft(null); }}>
       <div className="rule-editor">
       <label>{t.ui.chooseSource}<select value={presets.some(([id]) => id === draft.app_id) ? draft.app_id : "custom"} onChange={(event) => {
@@ -46,5 +59,5 @@ export function AppRules({ config, update }: { config: Config; update: (mutate: 
       <div className="modal-actions"><button className="btn" disabled={busy} onClick={async () => { setBusy(true); setError(null); try { await testAppRule(draft); } catch (err) { setError(String(err)); } finally { setBusy(false); } }}>{t.rules.test}</button><button className="btn" disabled={busy} onClick={() => setDraft(null)}>{t.rules.cancel}</button><button className="btn primary" disabled={busy} onClick={save}>{t.ui.done}</button></div>
     </div></Modal>}
     {removeIndex !== null && <Modal title={t.rules.remove} onClose={() => setRemoveIndex(null)}><p>{t.rules.removeConfirm}</p><footer className="modal-actions"><button className="btn" onClick={() => setRemoveIndex(null)}>{t.rules.cancel}</button><button className="btn danger" onClick={() => { update((d) => { d.notifications.app_rules.splice(removeIndex, 1); }); setRemoveIndex(null); }}>{t.rules.remove}</button></footer></Modal>}
-  </Section>;
+  </>;
 }
