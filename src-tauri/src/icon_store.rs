@@ -1,7 +1,8 @@
 //! App 图标仓库：联网获取（苹果 iTunes 接口）+ 本地缓存 + 手动替换。
 //!
 //! 优先级：用户手动设置的 > 联网缓存的 > 内置品牌图标（前端 BRAND_ASSETS）。
-//! 缓存目录：应用数据目录 /icons/{bundle_id}.png；索引用 sidecar JSON 记录名称与手动标记。
+//! 缓存目录：应用数据目录 /icons/{bundle_id}.png；索引用 sidecar JSON 记录官方 App 名与手动标记。
+//! 绝不把通知的 origin（好友备注/群名/手机号）写入索引——那是隐私，不是 App 名。
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -27,18 +28,30 @@ struct IconIndex {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 struct IconEntry {
-    #[serde(default)]
+    /// 旧索引可能存过 origin（好友备注/群名/手机号）。只在读取时兼容，绝不写回磁盘。
+    #[serde(default, skip_serializing)]
     name: String,
+    /// 苹果接口返回的官方 App 名（非会话标题，不含隐私）。
+    #[serde(default)]
+    app_name: String,
     #[serde(default)]
     manual: bool,
 }
 
 fn load_index(app: &AppHandle) -> IconIndex {
     let path = index_path(app);
-    std::fs::read(&path)
+    let mut index: IconIndex = std::fs::read(&path)
         .ok()
         .and_then(|bytes| serde_json::from_slice(&bytes).ok())
-        .unwrap_or_default()
+        .unwrap_or_default();
+    // 迁移：清掉旧索引里写入的会话标题，并回写覆盖磁盘原文。
+    if index.entries.values().any(|entry| !entry.name.is_empty()) {
+        for entry in index.entries.values_mut() {
+            entry.name.clear();
+        }
+        let _ = save_index(app, &index);
+    }
+    index
 }
 
 fn save_index(app: &AppHandle, index: &IconIndex) -> Result<(), String> {
@@ -81,19 +94,21 @@ pub fn get_app_icon(
 #[derive(Debug, Clone, Serialize)]
 pub struct IconCacheEntry {
     pub app_id: String,
-    pub name: String,
+    pub app_name: String,
     pub manual: bool,
 }
 
 #[tauri::command]
 pub fn list_icon_cache(app: AppHandle) -> Vec<IconCacheEntry> {
+    // 旧缓存只有图标没名字：后台补一次（只查名字，不重下图标），前端稍后回刷。
+    spawn_fill_names(app.clone());
     let index = load_index(&app);
     index
         .entries
         .iter()
         .map(|(id, entry)| IconCacheEntry {
             app_id: id.clone(),
-            name: entry.name.clone(),
+            app_name: entry.app_name.clone(),
             manual: entry.manual,
         })
         .collect()
@@ -104,7 +119,6 @@ pub fn list_icon_cache(app: AppHandle) -> Vec<IconCacheEntry> {
 pub fn set_app_icon(
     app: AppHandle,
     app_id: String,
-    name: String,
     data_url: String,
 ) -> Result<(), String> {
     let bytes = decode_data_url(&data_url)?;
@@ -117,10 +131,8 @@ pub fn set_app_icon(
     std::fs::write(dir.join(format!("{safe}.png")), bytes).map_err(|e| e.to_string())?;
 
     let mut index = load_index(&app);
-    index.entries.insert(
-        app_id.clone(),
-        IconEntry { name, manual: true },
-    );
+    let entry = index.entries.entry(app_id.clone()).or_default();
+    entry.manual = true;
     save_index(&app, &index)
 }
 
@@ -166,12 +178,18 @@ const LOOKUP_URL: &str = "https://itunes.apple.com/lookup?country=cn&entity=soft
 
 /// 后台联网获取图标：按 bundle id 查苹果官方接口 → 下载 512px 图标 → 写缓存。
 /// 失败静默（下次通知再试）；成功后下一条该 App 的通知就用新图标。
-pub fn spawn_fetch(app: AppHandle, app_id: String, name_hint: String) {
+pub fn spawn_fetch(app: AppHandle, app_id: String) {
     if app_id.trim().is_empty() {
         return;
     }
     if cached_path(&app, &app_id).is_some() {
-        return;
+        let index = load_index(&app);
+        let known = index.entries.get(&app_id);
+        // 手动图标绝不动；已有官方名的缓存也不用再联网。
+        // 旧缓存只有图标没名字时，补一次请求把名字取回来。
+        if known.map(|e| e.manual || !e.app_name.is_empty()).unwrap_or(false) {
+            return;
+        }
     }
     {
         use zhixin_core::config::Config;
@@ -183,22 +201,21 @@ pub fn spawn_fetch(app: AppHandle, app_id: String, name_hint: String) {
         }
     }
     tauri::async_runtime::spawn(async move {
-        if let Err(error) = fetch_icon(app, app_id.clone(), name_hint).await {
+        if let Err(error) = fetch_icon(app, app_id.clone()).await {
             log::warn!("图标获取失败（{app_id}）：{error}");
         }
     });
 }
 
-async fn fetch_icon(app: AppHandle, app_id: String, name_hint: String) -> Result<(), String> {
+async fn fetch_icon(app: AppHandle, app_id: String) -> Result<(), String> {
     {
             let lookup = format!("https://itunes.apple.com/lookup?country=cn&entity=software&bundleId={}", urlencoding_encode(&app_id));
             let response = reqwest::get(&lookup).await.map_err(|e| e.to_string())?;
             let parsed: iTunesResponse = response.json().await.map_err(|e| e.to_string())?;
-            let artwork = parsed
-                .results
-                .into_iter()
-                .next()
-                .and_then(|r| r.artwork_url_512)
+            let result = parsed.results.into_iter().next().ok_or("苹果接口未找到该 App")?;
+            let track_name = result.track_name.unwrap_or_default();
+            let artwork = result
+                .artwork_url_512
                 .ok_or("苹果接口未找到该 App 的图标")?;
             let bytes = reqwest::get(&artwork)
                 .await
@@ -215,10 +232,8 @@ async fn fetch_icon(app: AppHandle, app_id: String, name_hint: String) -> Result
                 .collect();
             std::fs::write(dir.join(format!("{safe}.png")), bytes).map_err(|e| e.to_string())?;
             let mut index = load_index(&app);
-            index.entries.entry(app_id.clone()).or_insert(IconEntry {
-                name: name_hint,
-                manual: false,
-            });
+            let entry = index.entries.entry(app_id.clone()).or_default();
+            entry.app_name = track_name;
             save_index(&app, &index)
     }
 }
@@ -245,6 +260,59 @@ struct iTunesResponse {
 struct iTunesResult {
     #[serde(rename = "artworkUrl512", default)]
     artwork_url_512: Option<String>,
+    #[serde(rename = "trackName", default)]
+    track_name: Option<String>,
+}
+
+/// 打开图标设置页时后台补齐旧缓存缺失的官方名：只查 iTunes，不重新下载图标。
+pub fn spawn_fill_names(app: AppHandle) {
+    use zhixin_core::config::Config;
+    let enabled = Config::load_or_default(paths::config_path(&app))
+        .map(|config| config.general.icon_fetch)
+        .unwrap_or(false);
+    if !enabled {
+        return;
+    }
+    let targets: Vec<String> = load_index(&app)
+        .entries
+        .iter()
+        .filter(|(_, entry)| entry.app_name.is_empty() && !entry.manual)
+        .map(|(id, _)| id.clone())
+        .collect();
+    for app_id in targets {
+        let app = app.clone();
+        tauri::async_runtime::spawn(async move {
+            let lookup = format!(
+                "https://itunes.apple.com/lookup?country=cn&entity=software&bundleId={}",
+                urlencoding_encode(&app_id)
+            );
+            let name = async {
+                let response = reqwest::get(&lookup).await.map_err(|e| e.to_string())?;
+                let parsed: iTunesResponse = response.json().await.map_err(|e| e.to_string())?;
+                Ok::<String, String>(
+                    parsed
+                        .results
+                        .into_iter()
+                        .next()
+                        .and_then(|result| result.track_name)
+                        .unwrap_or_default(),
+                )
+            }
+            .await;
+            let Ok(name) = name else { return };
+            if name.is_empty() {
+                return;
+            }
+            let mut index = load_index(&app);
+            if let Some(entry) = index.entries.get_mut(&app_id) {
+                if !entry.app_name.is_empty() {
+                    return;
+                }
+                entry.app_name = name;
+                let _ = save_index(&app, &index);
+            }
+        });
+    }
 }
 
 /// 打开图标缓存目录（用户可手动替换 PNG）。
