@@ -30,65 +30,13 @@ const DEFAULT_HEIGHT: f64 = 96.0;
 const MIN_HEIGHT: f64 = 56.0;
 const MAX_HEIGHT: f64 = 600.0;
 
-const MARGIN: f64 = 16.0;
-const GAP: f64 = 8.0;
+const MARGIN: f64 = 2.0;
+// 卡片 CSS 为阴影留了上下各 18px 透明 padding，窗口高度含这 36px。
+// 用 -18 抵消下边距：窗口正好贴着上一个卡片底边（不重叠、不拦鼠标），
+// 可见卡片间距 = -18 + 36 = 18px（原来 GAP=8 时是 44px）。
+const GAP: f64 = -18.0;
 
-#[derive(serde::Serialize, Clone)]
-pub struct KnownApp {
-    pub id: String,
-    pub name: String,
-}
-
-/// 最近弹过通知的来源列表（设置页快捷选用）。
-#[tauri::command]
-pub fn list_known_apps(
-    window: tauri::WebviewWindow,
-    app: AppHandle,
-) -> Result<Vec<KnownApp>, String> {
-    if window.label() != "main" {
-        return Err("Settings window required".into());
-    }
-    let known = app.state::<AppState>().known_apps.lock().unwrap().clone();
-    Ok(known
-        .into_iter()
-        .map(|(id, name)| KnownApp { id, name })
-        .collect())
-}
-
-/// 全屏勿扰：检测系统进入全屏（视频/投屏/游戏）时通知暂存，退出全屏后自动补弹。
-fn is_fullscreen() -> bool {
-    use windows::Win32::UI::Shell::SHQueryUserNotificationState;
-    unsafe {
-        match SHQueryUserNotificationState() {
-            Ok(state) => matches!(
-                state,
-                windows::Win32::UI::Shell::QUERY_USER_NOTIFICATION_STATE(2)
-                    | windows::Win32::UI::Shell::QUERY_USER_NOTIFICATION_STATE(4)
-                    | windows::Win32::UI::Shell::QUERY_USER_NOTIFICATION_STATE(6)
-            ),
-            Err(_) => false,
-        }
-    }
-}
-
-/// 全屏退出轮询：每 2 秒检查一次，退出全屏后按序补弹暂存通知。
-pub fn start_fullscreen_watch(app: &AppHandle) {
-    let app = app.clone();
-    std::thread::spawn(move || loop {
-        std::thread::sleep(Duration::from_secs(2));
-        if is_fullscreen() {
-            continue;
-        }
-        let pending: Vec<PhoneNotification> = {
-            let state = app.state::<AppState>();
-            let mut queue = state.deferred_notifications.lock().unwrap();
-            std::mem::take(&mut *queue)
-        };
-        for notification in pending {
-            show(&app, &notification);
-        }
-    });
-}
+/// 全屏检测已移到 `crate::dnd`（三层信号 + 询问 + 静默 + 补弹统一管理）。
 
 /// 预建常驻弹窗池窗口（隐藏、无负载）。前端发现自己是池窗口且无负载时保持隐藏待命。
 pub fn ensure_pool(app: &AppHandle) {
@@ -123,10 +71,20 @@ pub fn ensure_pool(app: &AppHandle) {
 
 /// 弹一条通知。
 pub fn show(app: &AppHandle, notification: &PhoneNotification) {
-    if is_fullscreen() {
+    // 特殊询问卡：category=2 演示勿扰、category=3 更新询问——不是真实通知，不入历史
+    let is_dnd_ask = notification.category == Some(2);
+    let is_update_ask = notification.category == Some(3);
+    if !is_dnd_ask && (crate::dnd::system_fullscreen() || crate::dnd::silent()) {
         let state = app.state::<AppState>();
-        state.deferred_notifications.lock().unwrap().push(notification.clone());
-        info!("全屏勿扰：通知暂存（{} 条待补弹）", state.deferred_notifications.lock().unwrap().len());
+        state
+            .deferred_notifications
+            .lock()
+            .unwrap()
+            .push(notification.clone());
+        info!(
+            "全屏勿扰：通知暂存（{} 条待补弹）",
+            state.deferred_notifications.lock().unwrap().len()
+        );
         return;
     }
     let state = app.state::<AppState>();
@@ -172,11 +130,29 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
         origin: notification.origin(),
         body: notification.summary(),
         code: notification.code.clone(),
-        duration_secs: popup.duration_seconds,
+        duration_secs: if is_dnd_ask {
+            // 勿扰询问卡多停留一会儿，8 秒倒计时来不及点
+            45
+        } else if is_update_ask {
+            // 更新询问卡 30 秒无操作 = 稍后再说
+            30
+        } else {
+            popup.duration_seconds
+        },
         category: notification.category,
         uid: notification.uid,
         carrier: if notification.is_call() {
-            zhixin_core::carrier::describe(&origin_digits(&notification.origin()))
+            // 陌生号码副标题显示「运营商 · 归属地」；归属地优先用本条通知的 subtitle，
+            // 「当前通话」那条 iOS 常不给，就按号码回历史取最近一次留下的值。
+            // 通讯录来电（origin 是联系人名）describe_with_region 返回 None，保持原样。
+            let origin = notification.origin();
+            let region = notification
+                .subtitle
+                .as_deref()
+                .filter(|value| !value.trim().is_empty())
+                .map(str::to_string)
+                .or_else(|| crate::history::recent_call_subtitle(app, &origin));
+            zhixin_core::carrier::describe_with_region(&origin, region.as_deref())
         } else {
             None
         },
@@ -188,20 +164,14 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
     // ── 与显示路径无关的统一处理：池复用和新建窗口都必须执行 ──
     // （之前池复用分支提前 return，导致复用时通知不入历史、不拉图标、不记来源）
 
-    // 通知历史留档（含验证码，敏感数据仅本地存储）
-    crate::history::record(app, notification);
+    // 通知历史留档（含验证码，敏感数据仅本地存储）；勿扰/更新询问卡不是真实通知，不入库
+    if !is_dnd_ask && !is_update_ask {
+        crate::history::record(app, notification);
+    }
 
     // 联网获取 App 图标（开关打开时）：后台静默，失败不影响通知
     if let Some(app_id) = payload.app_id.clone().filter(|id| !id.trim().is_empty()) {
-        crate::icon_store::spawn_fetch(app.clone(), app_id, payload.origin.clone());
-    }
-
-    // 记住来源（过滤规则页可直接选用），最新在前、去重、上限 50。
-    if let Some(app_id) = payload.app_id.clone().filter(|id| !id.trim().is_empty()) {
-        let mut known = state.known_apps.lock().unwrap();
-        known.retain(|(id, _)| id != &app_id);
-        known.insert(0, (app_id, payload.origin.clone()));
-        known.truncate(50);
+        crate::icon_store::spawn_fetch(app.clone(), app_id);
     }
 
     // 弹窗池热复用：常驻窗口空闲时直接换内容显示（零延迟，免 webview 冷加载）
@@ -565,9 +535,12 @@ fn toast_expand_impl(app: AppHandle, window: tauri::WebviewWindow) -> Result<(),
 pub async fn pick_sound_file(window: tauri::WebviewWindow) -> Result<Option<String>, String> {
     use tauri_plugin_dialog::DialogExt;
     let (tx, rx) = tokio::sync::oneshot::channel();
+    // 默认落在 Windows 自带声音库目录，一点就看到系统那一堆 wav
+    let sound_library = std::path::PathBuf::from(std::env::var("WINDIR").unwrap_or_else(|_| r"C:\Windows".into())).join("Media");
     window
         .dialog()
         .file()
+        .set_directory(&sound_library)
         .add_filter("WAV 音频", &["wav"])
         .pick_file(move |path| {
             let _ = tx.send(path.map(|p| p.to_string()));
