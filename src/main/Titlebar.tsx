@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useT } from "../shared/i18n";
+import { getSettingsMeta } from "../shared/api";
 
 export function Titlebar({ beforeClose, closeOnly = false }: { beforeClose: () => Promise<void>; closeOnly?: boolean }) {
   const t = useT();
   const [maximized, setMaximized] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [version, setVersion] = useState("");
 
   useEffect(() => {
     let disposed = false;
@@ -20,6 +22,13 @@ export function Titlebar({ beforeClose, closeOnly = false }: { beforeClose: () =
       disposed = true;
       void unlisten.then((fn) => fn()).catch(() => {});
     };
+  }, []);
+
+  // 版本号从后端动态读（跟关于页同源），不再硬编码——避免发版后标题栏与关于页对不上
+  useEffect(() => {
+    let disposed = false;
+    void getSettingsMeta().then((meta) => { if (!disposed) setVersion(meta.version); }).catch(() => {});
+    return () => { disposed = true; };
   }, []);
 
   const run = async (action: () => Promise<void>) => {
@@ -38,7 +47,7 @@ export function Titlebar({ beforeClose, closeOnly = false }: { beforeClose: () =
             Keep nested decoration pointer-transparent so the entire region works. */}
         <span className="brand">
           <span className="brand-name">知信</span>
-          <span className="brand-ver">v2.0.0</span>
+          {version && <span className="brand-ver">v{version}</span>}
         </span>
         <div className="titlebar-drag" data-tauri-drag-region />
         <div className="window-controls">
