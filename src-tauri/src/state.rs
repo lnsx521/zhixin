@@ -57,10 +57,6 @@ pub struct AppState {
     /// 还没来得及被前端取走的 toast 负载（label → payload）。
     pub pending_toasts: Mutex<HashMap<String, ToastPayload>>,
 
-    /// 最近弹过通知的来源（app_identifier → 显示名），供过滤规则快捷选用。
-    /// 最新在前，去重，上限 50 条。
-    pub known_apps: Mutex<Vec<(String, String)>>,
-
     /// 每个 toast 的实际高度（DIP）—— 内容多长窗口多高，前端量完报上来。
     pub toast_heights: Mutex<HashMap<String, f64>>,
 
@@ -114,7 +110,6 @@ impl AppState {
             devices: Mutex::new(DeviceRegistry::load(paths::devices_path(app))),
             toasts: Mutex::new(VecDeque::new()),
             pending_toasts: Mutex::new(HashMap::new()),
-            known_apps: Mutex::new(Vec::new()),
             toast_heights: Mutex::new(HashMap::new()),
             toast_seq: AtomicU64::new(0),
             phone_notifs: Mutex::new(HashMap::new()),
