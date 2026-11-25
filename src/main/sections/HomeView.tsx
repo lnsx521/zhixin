@@ -23,6 +23,11 @@ function dayGroup(receivedAt: number): string {
   return `${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
+/** origin 是联系人名（含文字）→ subtitle 是通讯录标签；纯号码 → subtitle 是归属地 */
+function hasContactName(origin: string): boolean {
+  return /[^\d\s()\-+]/.test(origin);
+}
+
 /** 只有微信消息按会话合并（来电/验证码/其他应用都保持单条） */
 function isChatEntry(e: HistoryEntry): boolean {
   return e.category !== 1 && !e.code && /tencent\.xin|wechat/i.test(e.app_id ?? "");
@@ -232,7 +237,7 @@ export function HomeView({ onOpenSettings }: Props) {
       <aside className="home-side">
         <div className="home-top">
           <div className="home-phone-row">
-            <span className="home-phone-icon"><Icon name="phone" /></span>
+            <span className="home-phone-icon"><Icon name="iphone" size={30} /></span>
             <div className="home-phone-col">
               <div className="home-phone-line">
                 <span className="home-phone-wrap" data-tip={link?.device_name || undefined}>
@@ -411,10 +416,10 @@ export function HomeView({ onOpenSettings }: Props) {
                     <span className="call-meta-label">运营商</span>
                     <span className="call-meta-value">{selected.carrier || "未知（联系人号码）"}</span>
                   </div>
-                  {/* 号码标签（iOS 通话通知自带的副标题） */}
+                  {/* iOS 通话通知的副标题：有名=通讯录标签，纯号码=归属地 */}
                   {selected.subtitle && (
                     <div className="call-meta-group">
-                      <span className="call-meta-label">号码标签</span>
+                      <span className="call-meta-label">{hasContactName(selected.origin) ? "号码标签" : "归属地"}</span>
                       <span className="call-meta-value">{selected.subtitle}</span>
                     </div>
                   )}
