@@ -91,6 +91,9 @@ pub struct GeneralOptions {
     /// 低电量阈值（百分比，5-50）。
     #[serde(default = "default_low_battery_threshold")]
     pub low_battery_threshold: u8,
+    /// 启动 10 秒后自动检查更新（关闭后完全静默，手动检查不受影响）。
+    #[serde(default = "default_auto_check_update")]
+    pub auto_check_update: bool,
 }
 
 fn default_low_battery_notify() -> bool {
@@ -103,6 +106,10 @@ fn default_low_battery_threshold() -> u8 {
 
 fn default_background() -> String {
     "classic".to_string()
+}
+
+fn default_auto_check_update() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -123,6 +130,7 @@ impl Default for GeneralOptions {
             low_battery_notify: true,
             low_battery_threshold: 20,
             icon_fetch: false,
+            auto_check_update: true,
         }
     }
 }
@@ -176,9 +184,17 @@ pub struct NotificationOptions {
     #[serde(default = "default_history_exclude_apps")]
     pub history_exclude_apps: Vec<String>,
 
-    /// 通知历史保留天数（滚动覆盖；0 = 不保存，上限 7）。
+    /// 通知历史保留天数（自然日语义滚动覆盖：含今天的最近 N 天，到期自动消失；0 = 不保存，上限 7）。
     #[serde(default = "default_history_limit")]
     pub history_limit: u32,
+
+    /// 演示勿扰：检测到全屏演示时弹窗询问是否静默。
+    #[serde(default = "default_dnd_ask")]
+    pub dnd_ask_enabled: bool,
+
+    /// 勿扰静默的全屏退出恢复延时（秒）。
+    #[serde(default = "default_dnd_recover")]
+    pub dnd_recover_secs: u32,
 
     /// 弹窗外观与行为。
     pub popup: PopupOptions,
@@ -195,6 +211,8 @@ impl Default for NotificationOptions {
             history_exclude_apps: default_history_exclude_apps(),
             popup: PopupOptions::default(),
             history_limit: 3,
+            dnd_ask_enabled: true,
+            dnd_recover_secs: 30,
         }
     }
 }
@@ -283,10 +301,19 @@ fn default_history_limit() -> u32 {
         3
     }
 
+fn default_dnd_ask() -> bool {
+    true
+}
+
+fn default_dnd_recover() -> u32 {
+    30
+}
+
 fn default_history_exclude_apps() -> Vec<String> {
     vec![
         "com.tencent.xin".to_string(),      // 微信
-        "com.tencent.wechat".to_string(),   // 企业微信
+        "com.tencent.ww".to_string(),       // 企业微信（iPhone 实测 bundle id）
+        "com.tencent.wechat".to_string(),   // 企业微信旧 id，兼容保留
         "com.laiwang.DingTalk".to_string(), // 钉钉
         "com.ss.iphone.lark".to_string(),   // 飞书
         "com.tencent.mqq".to_string(),      // QQ
