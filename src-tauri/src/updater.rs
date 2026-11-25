@@ -6,6 +6,9 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_updater::{Update, UpdaterExt};
 use tokio::sync::watch;
+use zhixin_core::model::PhoneNotification;
+
+use crate::popups;
 
 /// Only checks are scheduled. A generation invalidates timers superseded by manual actions.
 #[derive(Clone, Default)]
@@ -254,6 +257,11 @@ pub async fn check_update(window: tauri::WebviewWindow, app: AppHandle) -> Resul
 pub async fn download_update(window: tauri::WebviewWindow, app: AppHandle) -> Result<(), String> {
     main_only(&window)?;
     enabled()?;
+    download_core(&app).await
+}
+
+/// 下载核心（供手动与勿扰/更新询问卡共用）。
+async fn download_core(app: &AppHandle) -> Result<(), String> {
     let state = app.state::<UpdateState>();
     let _operation = state
         .operation
@@ -315,6 +323,11 @@ pub async fn download_update(window: tauri::WebviewWindow, app: AppHandle) -> Re
 pub async fn install_update(window: tauri::WebviewWindow, app: AppHandle) -> Result<(), String> {
     main_only(&window)?;
     enabled()?;
+    install_core(&app).await
+}
+
+/// 安装核心（供手动与更新询问卡共用）。
+async fn install_core(app: &AppHandle) -> Result<(), String> {
     let state = app.state::<UpdateState>();
     let _operation = state
         .operation
@@ -352,6 +365,84 @@ pub async fn install_update(window: tauri::WebviewWindow, app: AppHandle) -> Res
         }
         Err(e) => Err(failure(&app, "download_error", e.to_string())),
     }
+}
+
+/// 更新询问卡上的「立即更新」：下载完成后直接静默安装（passive），供弹窗窗口调用。
+#[tauri::command]
+pub async fn update_ask_install(
+    window: tauri::WebviewWindow,
+    app: AppHandle,
+) -> Result<(), String> {
+    if window.label() != "main" && !window.label().starts_with("toast") {
+        return Err("Updates are only available in the settings window".into());
+    }
+    enabled()?;
+    download_core(&app).await?;
+    install_core(&app).await
+}
+
+/// 启动自动检查：运行 10 分钟后后台静默查一次（受通用设置开关控制，dev 构建跳过）。
+pub fn start_auto_check(app: AppHandle) {
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(10 * 60));
+        // 开发构建：更新器被禁用，无法真检查。弹一张样例卡供验收 UI（release 构建不走这段）。
+        if cfg!(debug_assertions) {
+            let enabled = {
+                let state = app.state::<crate::state::AppState>();
+                state.config().general.auto_check_update
+            };
+            if !enabled {
+                return;
+            }
+            let ask = PhoneNotification {
+                device_id: "updater".into(),
+                device_name: None,
+                uid: u32::MAX - 1,
+                app_identifier: None,
+                title: Some("发现新版本".into()),
+                subtitle: None,
+                message: Some("新版本 2.0.5 可用。是否现在更新？".into()),
+                code: None,
+                category: Some(3),
+                call_outcome: None,
+                received_at: std::time::SystemTime::now(),
+            };
+            popups::show(&app, &ask);
+            return;
+        }
+        let enabled = {
+            let state = app.state::<crate::state::AppState>();
+            state.config().general.auto_check_update
+        };
+        if !enabled {
+            return;
+        }
+        let app_for_check = app.clone();
+        let result = tauri::async_runtime::block_on(async move { check(app_for_check, None).await });
+        if result.is_err() {
+            return; // 检查失败静默放弃，不打扰用户（手动检查不受影响）
+        }
+        let state = app.state::<UpdateState>();
+        let status = state.status.lock().unwrap().clone();
+        if status.phase != "available" {
+            return;
+        }
+        let version = status.version.clone().unwrap_or_default();
+        let ask = PhoneNotification {
+            device_id: "updater".into(),
+            device_name: None,
+            uid: u32::MAX - 1,
+            app_identifier: None,
+            title: Some("发现新版本".into()),
+            subtitle: None,
+            message: Some(format!("新版本 {version} 可用。是否现在更新？")),
+            code: None,
+            category: Some(3),
+            call_outcome: None,
+            received_at: std::time::SystemTime::now(),
+        };
+        popups::show(&app, &ask);
+    });
 }
 
 fn validate_notes_link(url: &str) -> Result<(), String> {
