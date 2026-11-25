@@ -37,6 +37,10 @@ export interface NotificationOptions {
   history_exclude_apps: string[];
   /** 通知历史保留条数（0 = 不保存） */
   history_limit: number;
+  /** 演示勿扰：检测到全屏演示时弹窗询问是否静默 */
+  dnd_ask_enabled: boolean;
+  /** 勿扰静默的全屏退出恢复延时（秒） */
+  dnd_recover_secs: number;
   popup: PopupOptions;
 }
 
@@ -48,7 +52,6 @@ export interface AppRule {
 }
 export const testAppRule = (rule: AppRule) => invoke<void>("test_app_rule", { rule });
 export const validateAppRule = (rule: AppRule) => invoke<void>("validate_app_rule", { rule });
-export const toastOpenApp = () => invoke<void>("toast_open_app");
 
 export interface CaretOptions {
   enabled: boolean;
@@ -83,6 +86,8 @@ export interface Config {
     low_battery_notify: boolean;
     low_battery_threshold: number;
     icon_fetch: boolean;
+    /** 启动 10 秒后自动检查更新（关闭后完全静默） */
+    auto_check_update: boolean;
   };
   proximity: {
     enabled: boolean; // 感应锁屏总开关
@@ -109,11 +114,11 @@ export const setAutostart = (enabled: boolean) =>
   invoke<boolean>("set_autostart", { enabled });
 export const openConfigDir = () => invoke<void>("open_config_dir");
 export const openLogsDir = () => invoke<void>("open_logs_dir");
-export interface IconCacheEntry { app_id: string; name: string; manual: boolean }
+export interface IconCacheEntry { app_id: string; app_name: string; manual: boolean }
 export const listIconCache = () => invoke<IconCacheEntry[]>("list_icon_cache");
 export const getAppIcon = (appId: string) => invoke<string | null>("get_app_icon", { appId });
-export const setAppIcon = (appId: string, name: string, dataUrl: string) =>
-  invoke<void>("set_app_icon", { appId, name, dataUrl });
+export const setAppIcon = (appId: string, dataUrl: string) =>
+  invoke<void>("set_app_icon", { appId, dataUrl });
 export const resetAppIcon = (appId: string) => invoke<void>("reset_app_icon", { appId });
 export const clearIconCache = () => invoke<void>("clear_icon_cache");
 export const openIconsDir = () => invoke<void>("open_icons_dir");
@@ -259,8 +264,6 @@ export interface ToastPayload {
 }
 
 export const getToastPayload = () => invoke<ToastPayload | null>("get_toast_payload");
-export interface KnownApp { id: string; name: string }
-export const listKnownApps = () => invoke<KnownApp[]>("list_known_apps");
 export const toastClick = () =>
   invoke<string | null>("toast_click", { label: getCurrentWindow().label });
 export const toastClickForMain = () =>
@@ -271,6 +274,11 @@ export const toastClose = () =>
   invoke<void>("toast_close", { label: getCurrentWindow().label });
 export const toastResize = (height: number) =>
   invoke<void>("toast_resize", { label: getCurrentWindow().label, height });
+/** 勿扰询问弹窗的用户选择：true = 开启勿扰静默，false = 保持提醒 */
+export const dndChoice = (accept: boolean) =>
+  invoke<void>("dnd_choice", { accept });
+/** 更新询问弹窗的「立即更新」：下载完成后直接静默安装 */
+export const updateAskInstall = () => invoke<void>("update_ask_install");
 
 // ── 候选条窗口 ────────────────────────────────────────────────
 
