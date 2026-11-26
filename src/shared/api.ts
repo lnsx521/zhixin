@@ -261,6 +261,8 @@ export interface ToastPayload {
   carrier: string | null;
   /** 展示时间（历史展开为原始收信时间；实时弹窗为空 = 显示当前时间） */
   time?: string | null;
+  /** 来电常驻卡（响铃中/通话中）：无定时关闭、不被顶掉，仅按钮和 × 可关 */
+  call_sticky: boolean;
 }
 
 export const getToastPayload = () => invoke<ToastPayload | null>("get_toast_payload");
