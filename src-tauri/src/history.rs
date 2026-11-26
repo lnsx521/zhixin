@@ -98,9 +98,14 @@ pub fn record(app: &AppHandle, notification: &PhoneNotification) {
             Err(_) => (true, 3),
         }
     };
-    if !keep || days == 0 {
-        // 不保留或天数设为 0：直接清空存量记录，避免旧数据残留在主窗口。
+    if days == 0 {
+        // 用户全局关闭历史（天数=0）：清空存量记录，避免旧数据残留在主窗口。
         let _ = save(app, &[]);
+        return;
+    }
+    if !keep {
+        // 该应用在排除名单：只跳过这一条，不动已有记录。
+        // （此前 !keep 也走清空分支——被排除的 App 每来一条消息就把历史全清掉，已修复。）
         return;
     }
     let mut entries = load(app);
