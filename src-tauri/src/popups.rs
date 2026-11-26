@@ -105,15 +105,28 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
         // call_outcome=None：来电响铃中，继续走下方弹窗逻辑
     }
 
-    // 超上限先关最旧的
+    // 超上限先关最旧的；来电常驻卡（响铃中/通话中）豁免被顶掉
     {
         let open: Vec<String> = state.toasts.lock().unwrap().iter().cloned().collect();
-        let excess = open
+        let mut excess = open
             .len()
             .saturating_add(1)
             .saturating_sub(popup.max_visible.max(1));
-        for label in open.into_iter().take(excess) {
+        for label in open {
+            if excess == 0 {
+                break;
+            }
+            let sticky = state
+                .pending_toasts
+                .lock()
+                .unwrap()
+                .get(&label)
+                .is_some_and(|p| p.call_sticky);
+            if sticky {
+                continue;
+            }
             close_toast(app, &label);
+            excess -= 1;
         }
     }
 
@@ -130,6 +143,8 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
         origin: notification.origin(),
         body: notification.summary(),
         code: notification.code.clone(),
+        call_sticky: (notification.is_call() && notification.call_outcome.is_none())
+            || notification.category == Some(12),
         duration_secs: if is_dnd_ask {
             // 勿扰询问卡多停留一会儿，8 秒倒计时来不及点
             45
@@ -283,8 +298,9 @@ pub fn show(app: &AppHandle, notification: &PhoneNotification) {
     reposition_all(app);
 
     // 兜底定时关闭（前端崩溃/事件丢失也不至于留着窗口）
-    // 「当前通话」卡片除外：它常驻，等通话结束的 call-ended 事件关闭
-    if notification.category != Some(12) {
+    // 来电常驻卡（响铃中/通话中）除外：响铃卡等用户拒接/接听，通话卡等 call-ended 事件
+    if !notification.is_call() || notification.call_outcome.is_some() {
+        // 非来电，或已终结的来电（未接/已接结果通知）：正常定时关
         let app_for_timer = app.clone();
         let label_for_timer = label.clone();
         let duration = u64::from(popup.duration_seconds).max(2) + 2;
@@ -372,6 +388,7 @@ fn history_expand_impl(app: AppHandle, entry: crate::history::HistoryEntry) -> R
         uid: 0,
         carrier: None,
         time: Some(time_text),
+        call_sticky: false,
     };
     state.pending_toasts.lock().unwrap().insert(label.clone(), payload);
     open_expanded_window(&app, &label)?;
