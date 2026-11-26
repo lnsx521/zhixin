@@ -66,6 +66,9 @@ pub struct ToastPayload {
     pub carrier: Option<String>,
     /// 展示时间（实时弹窗为空 = 显示当前时间；历史展开为原始收信时间）
     pub time: Option<String>,
+    /// 来电常驻：true = 响铃中/通话中的卡，无定时关闭、不被新通知顶掉（仅按钮和 × 可关）
+    #[serde(default)]
+    pub call_sticky: bool,
 }
 
 /// 当前生效的候选条提议。
