@@ -249,7 +249,7 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
   }
 
   return (
-    <div className={`toast ${expanded ? "toast-expanded" : ""} ${isCall ? "toast-call" : ""}`} onClick={onCardClick}>
+    <div className={`toast ${expanded ? "toast-expanded" : ""} ${isCall ? "toast-call" : ""}`} onClick={isCall ? undefined : onCardClick}>
       <div className={`toast-icon ${asset ? "brand-official" : ""}`}>
         {asset ? (
           <img className="toast-icon-img" src={asset} alt="" />
@@ -371,7 +371,7 @@ export function ToastApp({ mode = "small" }: { mode?: "small" | "expanded" }) {
       >
         ×
       </button>
-      {!expanded && !isInCall && (
+      {!expanded && !payload.call_sticky && (
         <div
           className="toast-countdown"
           style={{ animationDuration: `${payload.duration_secs}s` }}
